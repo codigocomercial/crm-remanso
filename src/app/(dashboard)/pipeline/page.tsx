@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  DndContext, 
-  DragEndEvent, 
-  DragStartEvent, 
-  closestCorners, 
-  useDraggable, 
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  closestCorners,
+  useDraggable,
   useDroppable,
   DragOverlay,
   defaultDropAnimationSideEffects
@@ -21,7 +21,7 @@ import { formatCurrency } from '@/lib/utils'
 interface Stage {
   id: string
   name: string
-  order_index?: number
+  position?: number
 }
 
 interface Lead {
@@ -46,11 +46,11 @@ function KanbanCard({ lead }: { lead: Lead }) {
   }
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...attributes} 
-      {...listeners} 
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       className="bg-card p-3.5 rounded-xl border border-border shadow-sm cursor-grab active:cursor-grabbing mb-3 hover:border-primary/50 transition-colors"
     >
       <h4 className="font-semibold text-sm text-foreground mb-1 leading-tight">{lead.title}</h4>
@@ -62,9 +62,9 @@ function KanbanCard({ lead }: { lead: Lead }) {
           {lead.value ? formatCurrency(lead.value) : 'R$ 0,00'}
         </span>
         {lead.source && (
-           <span className="text-[10px] font-medium text-muted-foreground uppercase opacity-70">
-             {lead.source}
-           </span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase opacity-70">
+            {lead.source}
+          </span>
         )}
       </div>
     </div>
@@ -76,7 +76,6 @@ function KanbanColumn({ stage, leads }: { stage: Stage, leads: Lead[] }) {
     id: stage.id,
   })
 
-  // Calcula o valor total deste stage
   const stageTotalValue = leads.reduce((acc, curr) => acc + (curr.value || 0), 0)
 
   return (
@@ -94,19 +93,18 @@ function KanbanColumn({ stage, leads }: { stage: Stage, leads: Lead[] }) {
           </p>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-           <MoreHorizontal className="w-5 h-5" />
+          <MoreHorizontal className="w-5 h-5" />
         </Button>
       </div>
 
-      <div 
-        ref={setNodeRef} 
-        className={`flex-1 p-3 transition-colors overflow-y-auto min-h-[150px] ${
-          isOver ? 'bg-primary/5' : 'bg-transparent'
-        }`}
+      <div
+        ref={setNodeRef}
+        className={`flex-1 p-3 transition-colors overflow-y-auto min-h-[150px] ${isOver ? 'bg-primary/5' : 'bg-transparent'
+          }`}
       >
-         {leads.map(lead => (
-           <KanbanCard key={lead.id} lead={lead} />
-         ))}
+        {leads.map(lead => (
+          <KanbanCard key={lead.id} lead={lead} />
+        ))}
       </div>
     </div>
   )
@@ -122,16 +120,38 @@ export default function PipelinePage() {
     async function loadBoard() {
       setLoading(true)
       const supabase = createClient()
-      
-      // Load stages and leads in parallel
+
       const [stagesRes, leadsRes] = await Promise.all([
-        supabase.from('pipeline_stages').select('*').order('order_index', { ascending: true }),
-        supabase.from('leads').select('*')
+        // ✅ Corrigido: order by position (não order_index)
+        supabase.from('pipeline_stages').select('*').order('position', { ascending: true }),
+        // ✅ Corrigido: join com contacts para pegar o nome
+        supabase.from('leads').select(`
+          id,
+          title,
+          value,
+          source,
+          stage_id,
+          contacts (
+            full_name
+          )
+        `)
       ])
 
       if (stagesRes.data) setStages(stagesRes.data)
-      if (leadsRes.data) setLeads(leadsRes.data)
-      
+
+      if (leadsRes.data) {
+        // Mapeia o contact_name a partir do join
+        const mappedLeads: Lead[] = leadsRes.data.map((l: any) => ({
+          id: l.id,
+          title: l.title,
+          value: l.value,
+          source: l.source,
+          stage_id: l.stage_id,
+          contact_name: l.contacts?.full_name ?? null,
+        }))
+        setLeads(mappedLeads)
+      }
+
       setLoading(false)
     }
     loadBoard()
@@ -152,7 +172,6 @@ export default function PipelinePage() {
     const activeLeadId = active.id as string
     const targetStageId = over.id as string
 
-    // Find current lead and avoid unnecessary DB updates
     const currentLead = leads.find(l => l.id === activeLeadId)
     if (!currentLead || currentLead.stage_id === targetStageId) return
 
@@ -192,15 +211,15 @@ export default function PipelinePage() {
         </div>
       ) : stages.length === 0 ? (
         <div className="flex-1 border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-10 bg-card/50">
-           <KanbanSquare className="w-12 h-12 text-muted-foreground/30 mb-4" />
-           <h2 className="text-xl font-semibold text-foreground">Nenhuma etapa encontrada</h2>
-           <p className="text-muted-foreground text-sm mt-2 max-w-sm">
-             Parece que o seu pipeline ainda não possui etapas configuradas ou a tabela "pipeline_stages" está vazia no Supabase.
-           </p>
+          <KanbanSquare className="w-12 h-12 text-muted-foreground/30 mb-4" />
+          <h2 className="text-xl font-semibold text-foreground">Nenhuma etapa encontrada</h2>
+          <p className="text-muted-foreground text-sm mt-2 max-w-sm">
+            Configure as etapas do pipeline em Configurações.
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-          <DndContext 
+          <DndContext
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -208,21 +227,19 @@ export default function PipelinePage() {
           >
             <div className="flex gap-4 h-full">
               {stages.map(stage => (
-                <KanbanColumn 
-                  key={stage.id} 
-                  stage={stage} 
-                  leads={leads.filter(l => l.stage_id === stage.id)} 
+                <KanbanColumn
+                  key={stage.id}
+                  stage={stage}
+                  leads={leads.filter(l => l.stage_id === stage.id)}
                 />
               ))}
 
-               {/* Botão de adicionar nova etapa visual (desativado/placeholder) */}
-               <div className="min-w-[320px] w-[320px] h-[100px] flex-shrink-0 bg-muted/10 border-2 border-dashed border-border rounded-2xl flex flex-col flex-center items-center justify-center text-muted-foreground/60 hover:bg-muted/30 hover:text-muted-foreground cursor-pointer transition-colors">
-                  <Plus className="w-6 h-6 mb-1" />
-                  <span className="font-medium text-sm">Nova etapa</span>
-               </div>
+              <div className="min-w-[320px] w-[320px] h-[100px] flex-shrink-0 bg-muted/10 border-2 border-dashed border-border rounded-2xl flex flex-col flex-center items-center justify-center text-muted-foreground/60 hover:bg-muted/30 hover:text-muted-foreground cursor-pointer transition-colors">
+                <Plus className="w-6 h-6 mb-1" />
+                <span className="font-medium text-sm">Nova etapa</span>
+              </div>
             </div>
 
-            {/* DragOverlay for smooth animation */}
             <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }) }}>
               {activeLead ? (
                 <div className="opacity-90 rotate-2 scale-105 transition-transform cursor-grabbing">
