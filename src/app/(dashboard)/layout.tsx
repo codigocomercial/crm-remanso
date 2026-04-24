@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, KanbanSquare, Users, Building2,
   MessageSquare, CheckSquare, BarChart2, Settings,
-  Zap, Menu, X, Bell, Search, ChevronDown,
+  Zap, Menu, X, Bell, Search, ChevronDown, Megaphone,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -17,16 +18,17 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const NAV_ITEMS = [
-  { href: '/',              label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/pipeline',      label: 'Pipeline',     icon: KanbanSquare },
-  { href: '/clientes',      label: 'Clientes',     icon: Users },
-  { href: '/empresas',      label: 'Empresas',     icon: Building2 },
-  { href: '/recompra',      label: 'Recompra',     icon: CheckSquare },
-  { href: '/atendimentos',  label: 'Atendimentos', icon: MessageSquare },
-  { href: '/tarefas',       label: 'Tarefas',      icon: CheckSquare },
-  { href: '/relatorios',    label: 'Relatórios',   icon: BarChart2 },
-  { href: '/integracoes',   label: 'Integrações',  icon: Zap },
-  { href: '/configuracoes', label: 'Configurações',icon: Settings },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
+  { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/empresas', label: 'Empresas', icon: Building2 },
+  { href: '/recompra', label: 'Recompra', icon: RefreshCw },
+  { href: '/campanhas', label: 'Campanhas', icon: Megaphone },
+  { href: '/atendimentos', label: 'Atendimentos', icon: MessageSquare },
+  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
+  { href: '/relatorios', label: 'Relatórios', icon: BarChart2 },
+  { href: '/integracoes', label: 'Integrações', icon: Zap },
+  { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
