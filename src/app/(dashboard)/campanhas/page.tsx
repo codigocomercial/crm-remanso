@@ -57,7 +57,7 @@ const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 // ─── Campaign Card ────────────────────────────────────────────────────────────
 
-function CampaignCard({ campaign, onSelect }: { campaign: Campaign; onSelect: () => void }) {
+function CampaignCard({ campaign, onSelect, onDisparar }: { campaign: Campaign; onSelect: () => void; onDisparar: (id: string) => void }) {
     const cfg = STATUS_CONFIG[campaign.status]
     const Icon = cfg.icon
     const progress = campaign.total_contacts > 0
@@ -129,6 +129,16 @@ function CampaignCard({ campaign, onSelect }: { campaign: Campaign; onSelect: ()
                         />
                     </div>
                 </div>
+            )}
+
+            {campaign.status === 'draft' && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDisparar(campaign.id) }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                    <Send className="w-3.5 h-3.5" />
+                    Disparar Campanha
+                </button>
             )}
         </div>
     )
@@ -348,6 +358,32 @@ export default function CampanhasPage() {
         setLoading(false)
     }
 
+    const handleDisparar = async (campaignId: string) => {
+        if (!confirm('Confirma o disparo desta campanha para todos os contatos?')) return
+
+        try {
+            // Atualizar status para 'sending'
+            const supabase = createClient()
+            await supabase.from('campaigns').update({ status: 'sending' }).eq('id', campaignId)
+
+            // Chamar webhook n8n
+            const response = await fetch('https://n8n.promptcomercial.com.br/webhook/disparar-campanha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campaign_id: campaignId })
+            })
+
+            if (response.ok) {
+                alert('Campanha disparada com sucesso!')
+                loadCampaigns()
+            } else {
+                alert('Erro ao disparar campanha. Tente novamente.')
+            }
+        } catch {
+            alert('Erro ao disparar campanha.')
+        }
+    }
+
     useEffect(() => { loadCampaigns() }, [])
 
     const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter)
@@ -438,7 +474,7 @@ export default function CampanhasPage() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filtered.map(c => (
-                        <CampaignCard key={c.id} campaign={c} onSelect={() => { }} />
+                        <CampaignCard key={c.id} campaign={c} onSelect={() => { }} onDisparar={handleDisparar} />
                     ))}
                 </div>
             )}
