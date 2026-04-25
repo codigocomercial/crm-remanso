@@ -16,6 +16,45 @@ interface LeadWebhookPayload {
   metadata?: Record<string, unknown>
 }
 
+/* ────────────────────────────────────────────────
+   Sanitiza o full_name caso venha como JSON string
+   Ex: '{"nome":"Andréa","whatsapp":"557799..."}' → 'Andréa'
+──────────────────────────────────────────────── */
+function sanitizeName(raw: string): string {
+  if (!raw) return raw
+
+  // Se começa com '{', tenta extrair o nome do JSON
+  if (raw.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(raw)
+      return (
+        parsed.nome ||
+        parsed.name ||
+        parsed.full_name ||
+        parsed.pushName ||
+        parsed.notifyName ||
+        raw  // fallback: retorna o bruto se não achar nenhum campo de nome
+      )
+    } catch {
+      return raw
+    }
+  }
+
+  // Se começa com '[', pode ser array — pega o primeiro
+  if (raw.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed[0]) {
+        return sanitizeName(String(parsed[0]))
+      }
+    } catch {
+      return raw
+    }
+  }
+
+  return raw.trim()
+}
+
 export async function POST(request: NextRequest) {
   // 1. Validar secret
   const secret = request.headers.get('x-webhook-secret')
@@ -39,7 +78,10 @@ export async function POST(request: NextRequest) {
 
   const { org_id, title, source, contact, notes, metadata } = payload
 
-  if (!org_id || !title || !contact?.full_name || !contact?.whatsapp) {
+  // 3. Sanitizar full_name — protege contra JSON bruto vindo da Laura
+  const fullName = sanitizeName(contact?.full_name ?? '')
+
+  if (!org_id || !title || !fullName || !contact?.whatsapp) {
     return NextResponse.json(
       { success: false, error: 'Missing required fields: org_id, title, contact.full_name, contact.whatsapp' },
       { status: 422 },
@@ -49,7 +91,7 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
   try {
-    // 3. Verificar se contato já existe pelo whatsapp
+    // 4. Verificar se contato já existe pelo whatsapp
     const { data: existingContact } = await supabase
       .from('contacts')
       .select('id')
@@ -67,7 +109,7 @@ export async function POST(request: NextRequest) {
       }, { status: 200 })
     }
 
-    // 4. Contato novo — buscar estágio default do pipeline
+    // 5. Contato novo — buscar estágio default do pipeline
     let stageId: string
 
     const { data: stage } = await supabase
@@ -97,12 +139,12 @@ export async function POST(request: NextRequest) {
       stageId = firstStage.id
     }
 
-    // 5. Criar contato novo
+    // 6. Criar contato novo (com nome já sanitizado)
     const { data: newContact, error: contactError } = await supabase
       .from('contacts')
       .insert({
         org_id,
-        full_name: contact.full_name,
+        full_name: fullName,
         phone: contact.phone ?? null,
         whatsapp: contact.whatsapp,
         source: source ?? 'whatsapp',
@@ -119,7 +161,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 6. Criar lead para o novo contato
+    // 7. Criar lead para o novo contato
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -144,7 +186,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 7. Evento de automação
+    // 8. Evento de automação
     await supabase.from('automation_events').insert({
       org_id,
       event_type: 'lead_created_via_webhook',
@@ -168,5 +210,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'Webhook endpoint ativo', version: '3.0' })
+  return NextResponse.json({ status: 'Webhook endpoint ativo', version: '3.1' })
 }
