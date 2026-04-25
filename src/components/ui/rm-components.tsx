@@ -61,7 +61,7 @@ export function StatCard({
       </div>
 
       <p className="text-[28px] font-black leading-none mb-1.5"
-        style={{ fontFamily: 'Montserrat, sans-serif', color: valueColor }}>
+        style={{ fontFamily: 'Inter, sans-serif', color: valueColor, letterSpacing: '-1px', fontWeight: 700 }}>
         {value}
       </p>
 
@@ -92,7 +92,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
     <div className="flex items-start justify-between mb-6">
       <div>
         <h1 className="text-xl font-black"
-          style={{ fontFamily: 'Montserrat, sans-serif', color: 'var(--neutral-900)' }}>
+          style={{ fontFamily: 'Inter, sans-serif', color: 'var(--neutral-900)', letterSpacing: '-0.4px' }}>
           {title}
         </h1>
         {subtitle && (
