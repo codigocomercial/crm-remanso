@@ -50,64 +50,70 @@
 }
 
 :root {
-  /* ── Marca Remanso Urnas ── */
-  --brand-teal: #3DBFA0;
-  --brand-teal-dark: #2aa386;
-  --brand-teal-light: #edf9f6;
-  --brand-teal-mid: #c7eee7;
-  --brand-gold: #C9A227;
-  --brand-gold-dark: #a07c10;
-  --brand-gold-light: #fdf5e0;
+  /* ── Marca Remanso Urnas — Paleta refinada ── */
+  --brand-teal: #3E8F76;
+  --brand-teal-dark: #2F6F5D;
+  --brand-teal-light: #56AF90;
+  --brand-teal-soft: #CFE8E1;
+  --brand-teal-bg: #EBF5F1;
 
-  /* ── Neutros ── */
-  --neutral-900: #1a1a1a;
-  --neutral-700: #444444;
-  --neutral-500: #888888;
-  --neutral-300: #cccccc;
-  --neutral-100: #f4f6f8;
-  --neutral-50: #fafafa;
+  --brand-gold: #B8963A;
+  --brand-gold-dark: #9E7F2E;
+  --brand-gold-light: #C9A54C;
+  --brand-gold-soft: #E6D3A3;
+  --brand-gold-bg: #FAF3E0;
+
+  /* ── Neutros (estilo Linear/Stripe) ── */
+  --neutral-900: #1F2937;
+  --neutral-700: #374151;
+  --neutral-600: #6B7280;
+  --neutral-500: #9CA3AF;
+  --neutral-300: #D1D5DB;
+  --neutral-200: #E5E7EB;
+  --neutral-100: #F9FAFB;
+  --neutral-50: #FFFFFF;
 
   /* ── Semânticas ── */
-  --color-success: #3DBFA0;
-  --color-success-bg: #edf9f6;
-  --color-warning: #C9A227;
-  --color-warning-bg: #fdf5e0;
-  --color-danger: #e05555;
-  --color-danger-bg: #fdeaea;
+  --color-success: #3E8F76;
+  --color-success-bg: #EBF5F1;
+  --color-warning: #B8963A;
+  --color-warning-bg: #FAF3E0;
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEF2F2;
 
-  /* ── shadcn overrides com cores da marca ── */
-  --background: oklch(0.97 0 0);
-  --foreground: oklch(0.12 0 0);
+  /* ── shadcn overrides ── */
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.13 0.01 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.12 0 0);
+  --card-foreground: oklch(0.13 0.01 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.12 0 0);
-  --primary: oklch(0.70 0.11 168);
+  --popover-foreground: oklch(0.13 0.01 240);
+  --primary: oklch(0.60 0.09 163);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.03 168);
-  --secondary-foreground: oklch(0.35 0.08 168);
-  --muted: oklch(0.96 0 0);
+  --secondary: oklch(0.95 0.02 163);
+  --secondary-foreground: oklch(0.30 0.07 163);
+  --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.72 0.10 75);
+  --accent: oklch(0.68 0.08 75);
   --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.62 0.18 27);
-  --border: oklch(0.92 0 0);
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.70 0.11 168);
-  --chart-1: oklch(0.70 0.11 168);
-  --chart-2: oklch(0.72 0.10 75);
-  --chart-3: oklch(0.60 0.09 168);
-  --chart-4: oklch(0.50 0.08 75);
-  --chart-5: oklch(0.40 0 0);
+  --destructive: oklch(0.55 0.20 27);
+  --border: oklch(0.93 0 0);
+  --input: oklch(0.93 0 0);
+  --ring: oklch(0.60 0.09 163);
+  --chart-1: oklch(0.60 0.09 163);
+  --chart-2: oklch(0.68 0.08 75);
+  --chart-3: oklch(0.50 0.08 163);
+  --chart-4: oklch(0.45 0.07 75);
+  --chart-5: oklch(0.35 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.12 0 0);
-  --sidebar-primary: oklch(0.70 0.11 168);
+  --sidebar-foreground: oklch(0.13 0.01 240);
+  --sidebar-primary: oklch(0.60 0.09 163);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.95 0.03 168);
-  --sidebar-accent-foreground: oklch(0.35 0.08 168);
+  --sidebar-accent: oklch(0.95 0.02 163);
+  --sidebar-accent-foreground: oklch(0.30 0.07 163);
   --sidebar-border: oklch(0.93 0 0);
-  --sidebar-ring: oklch(0.70 0.11 168);
+  --sidebar-ring: oklch(0.60 0.09 163);
 }
 
 .dark {
@@ -154,6 +160,7 @@
     background-color: var(--neutral-100);
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    color: var(--neutral-900);
   }
 
   html {
@@ -167,11 +174,12 @@
   h5,
   h6 {
     font-family: 'Inter', sans-serif;
+    font-weight: 600;
     letter-spacing: -0.3px;
-
+    color: var(--neutral-900);
   }
 
-  /* Scrollbar customizada teal */
+  /* Scrollbar refinada */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -226,18 +234,24 @@
 
 /* ════════════════════════════════════
    COMPONENTES UTILITÁRIOS REMANSO
+   Estilo: Linear / Stripe / Vercel
 ════════════════════════════════════ */
 
-/* ── Card base ── */
+/* ── Card base — sombra suave, borda leve ── */
 .rm-card {
   background: white;
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.07);
+  border: 1px solid var(--neutral-200);
   padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.15s ease;
 }
 
-/* ── Botão primário teal ── */
+.rm-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Botão primário teal com gradiente ── */
 .btn-remanso {
   display: inline-flex;
   align-items: center;
@@ -245,24 +259,25 @@
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: white;
-  background-color: var(--brand-teal);
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-teal-light));
   border: none;
   cursor: pointer;
   transition: all 0.15s;
   font-family: 'Inter', sans-serif;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
   text-decoration: none;
+  box-shadow: 0 1px 3px rgba(62, 143, 118, 0.3);
 }
 
 .btn-remanso:hover {
-  background-color: var(--brand-teal-dark);
-  box-shadow: 0 4px 12px rgba(61, 191, 160, 0.35);
+  background: linear-gradient(135deg, var(--brand-teal-dark), var(--brand-teal));
+  box-shadow: 0 4px 12px rgba(62, 143, 118, 0.35);
   transform: translateY(-1px);
 }
 
-/* ── Botão WhatsApp ── */
+/* ── Botão WhatsApp com gradiente ── */
 .btn-wpp {
   display: inline-flex;
   align-items: center;
@@ -270,47 +285,50 @@
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: white;
-  background-color: #25D366;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
   border: none;
   cursor: pointer;
   transition: all 0.15s;
   text-decoration: none;
+  box-shadow: 0 1px 3px rgba(34, 197, 94, 0.25);
 }
 
 .btn-wpp:hover {
-  background-color: #1da851;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+  background: linear-gradient(135deg, #16A34A, #15803D);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.30);
+  transform: translateY(-1px);
 }
 
-/* ── Nav item sidebar ── */
+/* ── Nav item sidebar — Linear style ── */
 .nav-item {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 7px 10px;
-  border-radius: 9px;
+  padding: 6px 10px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--neutral-500);
+  font-weight: 500;
+  color: var(--neutral-600);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   text-decoration: none;
   margin-bottom: 1px;
 }
 
 .nav-item:hover {
-  background-color: var(--brand-teal-light);
+  background-color: var(--brand-teal-bg);
   color: var(--brand-teal-dark);
 }
 
 .nav-item.active {
-  background-color: var(--brand-teal-light);
+  background-color: var(--brand-teal-bg);
   color: var(--brand-teal-dark);
+  font-weight: 600;
 }
 
-/* ── Badges de status ── */
+/* ── Badges de status refinados ── */
 .badge-ok {
   background-color: var(--color-success-bg);
   color: var(--brand-teal-dark);
@@ -334,27 +352,28 @@
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.1px;
 }
 
 /* ── Progress bar ── */
 .progress-bar {
-  height: 5px;
-  background-color: var(--neutral-100);
+  height: 4px;
+  background-color: var(--neutral-200);
   border-radius: 99px;
   overflow: hidden;
 }
 
-/* ── Stat card coloridos ── */
+/* ── Stat cards com gradiente ── */
 .stat-teal {
-  background-color: var(--brand-teal) !important;
-  border-color: var(--brand-teal) !important;
-  box-shadow: 0 4px 16px rgba(61, 191, 160, 0.28) !important;
+  background: linear-gradient(135deg, #3E8F76, #56AF90) !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(62, 143, 118, 0.25) !important;
 }
 
 .stat-gold {
-  background-color: var(--brand-gold) !important;
-  border-color: var(--brand-gold) !important;
-  box-shadow: 0 4px 16px rgba(201, 162, 39, 0.28) !important;
+  background: linear-gradient(135deg, #B8963A, #C9A54C) !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(184, 150, 58, 0.25) !important;
 }
