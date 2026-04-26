@@ -82,17 +82,17 @@ export function Sidebar({
             <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: 'var(--brand-teal)' }}
+                    style={{ backgroundColor: '#3E8F76' }}
                 >
                     <LogoMaos className="w-6 h-6" />
                 </div>
                 <div>
                     <p className="text-[13px] font-black tracking-wide leading-tight"
-                        style={{ fontFamily: 'Montserrat, sans-serif', color: 'var(--neutral-900)' }}>
+                        style={{ fontFamily: 'Inter, sans-serif', color: 'var(--neutral-900)' }}>
                         REMANSO
                     </p>
                     <p className="text-[9px] font-bold tracking-[1.5px] uppercase"
-                        style={{ color: 'var(--brand-teal)' }}>
+                        style={{ color: '#56AF90' }}>
                         URNAS · CRM
                     </p>
                 </div>
@@ -140,7 +140,7 @@ export function Sidebar({
             <div className="px-3 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0"
-                        style={{ backgroundColor: 'var(--brand-teal)' }}>
+                        style={{ backgroundColor: '#3E8F76' }}>
                         {userName.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">

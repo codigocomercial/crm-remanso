@@ -20,7 +20,7 @@ interface RecentContact {
   next_followup_at: string | null
 }
 
-const BAR_COLORS = ["#DCEFEA", "#BFE3D8", "#9FD6C4", "#CBB57A", "#B8963A", "#9E7F2E"]
+const BAR_COLORS = ["#DCEFEA", "#BFE3D8", "#9FD6C4", "#7FC2AB", "#B8963A", "#9E7F2E"]
 
 const chartData = [
   { mes: 'Nov', pedidos: 18, novos: 3 },
@@ -128,28 +128,28 @@ export default function DashboardPage() {
       {/* ── Gráficos ── */}
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 rm-card">
-          <p className="text-[13px] font-bold mb-4" style={{ color: 'var(--neutral-900)' }}>
+          <p style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#6B7280", marginBottom: "16px" }}>
             Pedidos por mês
           </p>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="gradTeal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3E8F76" stopOpacity={0.15} />
+                  <stop offset="5%" stopColor="#3E8F76" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="#3E8F76" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
               <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#aaa' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#aaa' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 8, fontSize: 12 }} />
+              <Tooltip contentStyle={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
               <Area type="monotone" dataKey="pedidos" stroke="#3E8F76" fill="url(#gradTeal)" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rm-card">
-          <p className="text-[13px] font-bold mb-4" style={{ color: 'var(--neutral-900)' }}>
+          <p style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#6B7280", marginBottom: "16px" }}>
             Novos clientes
           </p>
           <ResponsiveContainer width="100%" height={180}>
@@ -157,7 +157,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
               <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#aaa' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#aaa' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 8, fontSize: 12 }} />
+              <Tooltip contentStyle={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
               <Bar dataKey="novos" radius={[4, 4, 0, 0]}>
                 {chartData.map((_entry, index) => (
                   <Cell key={index} fill={BAR_COLORS[index % BAR_COLORS.length]} />
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                   <Link key={c.id} href={`/clientes/${c.id}`}
                     className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors group">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black flex-shrink-0"
-                      style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}>
+                      style={{ background: '#CFE8E1', color: '#2F6F5D' }}>
                       {initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">

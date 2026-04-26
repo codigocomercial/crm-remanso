@@ -6,7 +6,7 @@ import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 
 /* ════════════════════════════
-   StatCard — Linear/Stripe style
+   StatCard — Premium Final
 ════════════════════════════ */
 interface StatCardProps {
   label: string
@@ -30,48 +30,67 @@ export function StatCard({
   const cardStyle = isTeal
     ? {
       background: 'linear-gradient(135deg, #3E8F76, #56AF90)',
-      borderColor: 'transparent',
-      boxShadow: '0 4px 20px rgba(62,143,118,0.25)',
+      border: 'none',
+      boxShadow: '0 8px 20px rgba(62,143,118,0.22)',
+      padding: '20px',
     }
     : isGold
       ? {
-        background: 'linear-gradient(135deg, #B8963A, #C9A54C)',
-        borderColor: 'transparent',
-        boxShadow: '0 4px 20px rgba(184,150,58,0.25)',
+        background: 'linear-gradient(135deg, #A8842F, #C9A54C)',
+        border: 'none',
+        boxShadow: '0 8px 20px rgba(184,150,58,0.25)',
+        padding: '20px',
       }
       : {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        background: '#FFFFFF',
+        border: '1px solid #F1F5F9',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+        padding: '20px',
       }
 
-  const labelColor = isColor ? 'rgba(255,255,255,0.75)' : 'var(--neutral-600)'
-  const valueColor = isColor ? '#ffffff' : 'var(--neutral-900)'
-  const iconBg = isColor ? 'rgba(255,255,255,0.15)' : 'var(--neutral-100)'
-  const iconColor = isColor ? 'rgba(255,255,255,0.85)' : 'var(--brand-teal)'
+  const labelColor = isColor ? 'rgba(255,255,255,0.72)' : '#6B7280'
+  const valueColor = isColor ? '#FFFFFF' : '#1F2937'
+  const iconBg = isColor ? 'rgba(255,255,255,0.15)' : '#F1F5F9'
+  const iconColor = isColor ? 'rgba(255,255,255,0.85)' : '#3E8F76'
   const trendColor = isColor
-    ? 'rgba(255,255,255,0.85)'
-    : trend === 'up' ? 'var(--brand-teal)'
-      : trend === 'down' ? 'var(--color-danger)'
-        : 'var(--neutral-500)'
+    ? 'rgba(255,255,255,0.82)'
+    : trend === 'up' ? '#3E8F76'
+      : trend === 'down' ? '#DC2626'
+        : '#9CA3AF'
 
   return (
     <div
-      className={cn('rm-card transition-all hover:-translate-y-0.5 cursor-default', className)}
+      className={cn('rounded-[14px] transition-all hover:-translate-y-0.5 cursor-default', className)}
       style={cardStyle}
     >
       <div className="flex items-start justify-between mb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[1px]" style={{ color: labelColor }}>
+        {/* Label uppercase refinado */}
+        <p style={{
+          color: labelColor,
+          fontSize: '10px',
+          fontWeight: 600,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase',
+        }}>
           {label}
         </p>
         {Icon && (
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: iconBg, opacity: 0.9 }}>
-            <Icon size={14} style={{ color: iconColor }} />
+            style={{ background: iconBg }}>
+            <Icon size={14} style={{ color: iconColor, opacity: isColor ? 0.85 : 1 }} />
           </div>
         )}
       </div>
 
-      <p className="text-[30px] font-bold leading-none mb-2"
-        style={{ color: valueColor, letterSpacing: '-1.5px' }}>
+      {/* Número principal — grande e bold */}
+      <p style={{
+        color: valueColor,
+        fontSize: '32px',
+        fontWeight: 700,
+        letterSpacing: '-1.5px',
+        lineHeight: 1,
+        marginBottom: '8px',
+      }}>
         {value}
       </p>
 
@@ -79,7 +98,7 @@ export function StatCard({
         <div className="flex items-center gap-1">
           {trend === 'up' && <TrendingUp size={11} style={{ color: trendColor }} />}
           {trend === 'down' && <TrendingDown size={11} style={{ color: trendColor }} />}
-          <p className="text-[11px] font-medium" style={{ color: trendColor }}>
+          <p style={{ color: trendColor, fontSize: '11px', fontWeight: 500 }}>
             {trendLabel || sub}
           </p>
         </div>
@@ -101,12 +120,16 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   return (
     <div className="flex items-start justify-between mb-6">
       <div>
-        <h1 className="text-[22px] font-semibold"
-          style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
+        <h1 style={{
+          fontSize: '22px',
+          fontWeight: 600,
+          color: '#1F2937',
+          letterSpacing: '-0.5px',
+        }}>
           {title}
         </h1>
         {subtitle && (
-          <p className="text-[12px] mt-0.5 font-normal" style={{ color: 'var(--neutral-600)' }}>
+          <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', fontWeight: 400 }}>
             {subtitle}
           </p>
         )}
@@ -128,11 +151,11 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, linkHref, linkLabel }: SectionHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <p className="text-[13px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{title}</p>
+      <p style={{ fontSize: '13px', fontWeight: 600, color: '#1F2937' }}>{title}</p>
       {linkHref && linkLabel && (
         <Link href={linkHref}
-          className="text-[11px] font-medium hover:opacity-70 transition-opacity"
-          style={{ color: 'var(--brand-teal)' }}>
+          className="hover:opacity-70 transition-opacity"
+          style={{ fontSize: '11px', fontWeight: 500, color: '#3E8F76' }}>
           {linkLabel} →
         </Link>
       )}
@@ -146,11 +169,11 @@ export function SectionHeader({ title, linkHref, linkLabel }: SectionHeaderProps
 type StatusType = 'ok' | 'warn' | 'late' | 'new' | 'inactive'
 
 const STATUS_STYLES: Record<StatusType, { bg: string; color: string }> = {
-  ok: { bg: 'var(--color-success-bg)', color: 'var(--brand-teal-dark)' },
-  warn: { bg: 'var(--color-warning-bg)', color: 'var(--brand-gold-dark)' },
-  late: { bg: 'var(--color-danger-bg)', color: 'var(--color-danger)' },
-  new: { bg: 'var(--brand-teal-bg)', color: 'var(--brand-teal-dark)' },
-  inactive: { bg: 'var(--neutral-100)', color: 'var(--neutral-600)' },
+  ok: { bg: '#EBF5F1', color: '#2F6F5D' },
+  warn: { bg: '#FAF3E0', color: '#9E7F2E' },
+  late: { bg: '#FEF2F2', color: '#DC2626' },
+  new: { bg: '#EBF5F1', color: '#2F6F5D' },
+  inactive: { bg: '#F9FAFB', color: '#6B7280' },
 }
 
 interface StatusBadgeProps {
@@ -161,8 +184,18 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, label }: StatusBadgeProps) {
   const { bg, color } = STATUS_STYLES[status]
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap"
-      style={{ backgroundColor: bg, color }}>
+    <span style={{
+      backgroundColor: bg,
+      color,
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '2px 8px',
+      borderRadius: '6px',
+      fontSize: '10px',
+      fontWeight: 600,
+      whiteSpace: 'nowrap',
+      letterSpacing: '0.05px',
+    }}>
       {label}
     </span>
   )
