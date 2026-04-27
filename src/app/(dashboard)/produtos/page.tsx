@@ -167,17 +167,11 @@ export default function ProdutosPage() {
 
                             {/* Info */}
                             <div className="p-3 border-t" style={{ borderColor: 'var(--neutral-100)' }}>
-                                {/* Nome principal */}
-                                <p className="text-[13px] font-semibold truncate mb-0.5"
-                                    style={{ color: 'var(--neutral-900)' }}>
-                                    {product.name}
-                                </p>
-
-                                {/* Modelo — tamanho intermediário */}
+                                {/* Modelo — destaque principal */}
                                 {product.modelo && (
-                                    <p className="text-[12px] font-bold mb-1.5"
-                                        style={{ color: 'var(--brand-teal)' }}>
-                                        Modelo {product.modelo}
+                                    <p className="text-[18px] font-bold mb-1.5"
+                                        style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
+                                        {product.modelo}
                                     </p>
                                 )}
 
