@@ -28,7 +28,7 @@ const NAV = [
         items: [
             { href: '/', label: 'Dashboard', icon: LayoutDashboard },
             { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
-            { href: '/clientes', label: 'Clientes', icon: Users },
+            { href: '/clientes', label: 'Contatos', icon: Users },
             { href: '/recompra', label: 'Recompra', icon: RefreshCw, badge: 'warn' },
         ],
     },

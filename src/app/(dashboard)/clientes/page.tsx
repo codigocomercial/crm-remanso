@@ -15,9 +15,20 @@ interface Contact {
   phone: string | null
   city: string | null
   org_id?: string
+  contact_role: string | null
+  receive_campaigns: boolean
   reorder_cycle_days: number | null
   next_followup_at: string | null
   average_order_value: number | null
+  companies?: { name: string } | null
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  compras: 'Compras',
+  financeiro: 'Financeiro',
+  diretor: 'Diretor',
+  operacional: 'Operacional',
+  outro: 'Outro',
 }
 
 export default function ClientesPage() {
@@ -31,7 +42,7 @@ export default function ClientesPage() {
       const supabase = createClient()
       let query = supabase
         .from('contacts')
-        .select('id, full_name, phone, city, reorder_cycle_days, next_followup_at, average_order_value')
+        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name)')
         .order('full_name', { ascending: true })
 
       if (searchTerm) {

@@ -170,7 +170,7 @@ function NewCampaignDialog({
             const supabase = createClient()
             const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
             let query = supabase.from('contacts').select('id', { count: 'exact', head: true })
-                .eq('org_id', ORG_ID).eq('status', 'active')
+                .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true)
 
             if (cityList.length > 0) query = query.in('city', cityList)
             if (distanceMax) query = (query as any).lte('distance_km', parseInt(distanceMax))
@@ -213,7 +213,7 @@ function NewCampaignDialog({
 
         // Buscar contatos filtrados
         let contactQuery = supabase.from('contacts').select('id')
-            .eq('org_id', ORG_ID).eq('status', 'active').not('whatsapp', 'is', null)
+            .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true).not('whatsapp', 'is', null)
 
         if (cityList.length > 0) contactQuery = contactQuery.in('city', cityList)
         if (distanceMax) contactQuery = (contactQuery as any).lte('distance_km', parseInt(distanceMax))

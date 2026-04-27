@@ -1,154 +1,152 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Building2, Search, Plus, MapPin, Users, Loader2, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { PageHeader, StatusBadge } from '@/components/ui/rm-components'
+import { Building2, Search, Plus, MapPin, Users, ArrowRight, Navigation } from 'lucide-react'
 import Link from 'next/link'
+
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 interface Company {
   id: string
   name: string
-  segment: string | null
   city: string | null
-  contactsCount: number
+  state: string | null
+  segment: string | null
+  distance_km: number | null
+  reorder_cycle_days: number | null
+  contacts_count: number
+  compras_count: number
+}
+
+function initials(name: string) {
+  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
 export default function EmpresasPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
-    async function loadCompanies() {
-      setLoading(true)
-      const supabase = createClient()
-      
-      let query = supabase
-        .from('companies')
-        .select(`
-          id, name, segment, city,
-          contacts ( id )
-        `)
-        .order('name', { ascending: true })
+    const t = setTimeout(load, 300)
+    return () => clearTimeout(t)
+  }, [search])
 
-      if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`)
-      }
+  async function load() {
+    setLoading(true)
+    const supabase = createClient()
 
-      const { data, error } = await query
+    let query = supabase
+      .from('companies')
+      .select(`id, name, city, state, segment, distance_km, reorder_cycle_days,
+        contacts(id, contact_role)`)
+      .eq('org_id', ORG_ID)
+      .order('name')
 
-      if (!error && data) {
-        const formatted = data.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          segment: d.segment,
-          city: d.city,
-          contactsCount: d.contacts?.length || 0
-        }))
-        setCompanies(formatted)
-      }
-      setLoading(false)
-    }
+    if (search) query = query.ilike('name', `%${search}%`)
 
-    const timeout = setTimeout(loadCompanies, 300)
-    return () => clearTimeout(timeout)
-  }, [searchTerm])
+    const { data } = await query
+    setCompanies((data ?? []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      city: d.city,
+      state: d.state,
+      segment: d.segment,
+      distance_km: d.distance_km,
+      reorder_cycle_days: d.reorder_cycle_days,
+      contacts_count: d.contacts?.length ?? 0,
+      compras_count: d.contacts?.filter((c: any) => c.contact_role === 'compras').length ?? 0,
+    })))
+    setLoading(false)
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" />
-            Empresas
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerenciamento de clientes PJ e parceiros</p>
-        </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova empresa
-        </Button>
-      </div>
+    <div className="animate-fade-in">
+      <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
+        <Link href="/empresas/nova" className="btn-remanso">
+          <Plus size={13} /> Nova empresa
+        </Link>
+      </PageHeader>
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-3">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar empresas..." 
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+      {/* Busca */}
+      <div className="rm-card mb-5">
+        <div className="relative max-w-sm">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
+          <input type="text" placeholder="Buscar empresa..." value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
+            style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
           />
         </div>
       </div>
 
-      {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="animate-pulse shadow-sm">
-              <CardHeader className="h-16 bg-muted/20 pb-0" />
-              <CardContent className="h-24 bg-muted/10 mt-2" />
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="rm-card animate-pulse h-44" style={{ background: 'var(--neutral-100)' }} />
           ))}
         </div>
       ) : companies.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-12 flex flex-col items-center justify-center text-center shadow-sm">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Building2 className="w-8 h-8 text-primary/60" />
-          </div>
-          <h2 className="text-xl font-semibold text-foreground">Ainda não há empresas</h2>
-          <p className="text-muted-foreground mt-2 max-w-sm mb-4">
-            {searchTerm ? 'Sua busca não encontrou nenhum registro.' : 'Cadastre sua primeira empresa para facilitar a organização dos seus clientes.'}
+        <div className="rm-card flex flex-col items-center justify-center py-16 text-center">
+          <Building2 size={40} className="mb-4" style={{ color: 'var(--neutral-300)' }} />
+          <p className="text-[15px] font-semibold mb-1" style={{ color: 'var(--neutral-700)' }}>
+            {search ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
           </p>
-          <Button variant="outline">
-            Limpar Filtros
-          </Button>
+          <p className="text-[13px] mb-5" style={{ color: 'var(--neutral-500)' }}>
+            Cadastre as funerárias e vincule os contatos de cada uma
+          </p>
+          <Link href="/empresas/nova" className="btn-remanso">
+            <Plus size={13} /> Cadastrar primeira empresa
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {companies.map(company => (
-            <Card key={company.id} className="hover:shadow-md transition-shadow group flex flex-col border-border/80">
-              <CardHeader className="pb-3 border-b border-border/50 flex flex-row items-start justify-between">
-                <div className="flex-1 min-w-0 pr-2">
-                  <h3 className="font-semibold text-lg text-foreground truncate" title={company.name}>
+            <Link key={company.id} href={`/empresas/${company.id}`}
+              className="rm-card block hover:-translate-y-0.5 transition-all group cursor-pointer">
+              <div className="flex items-start gap-3 mb-4">
+                {/* Avatar */}
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                  style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}>
+                  {initials(company.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
                     {company.name}
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                    <span className="inline-flex py-0.5 px-2 bg-muted rounded-md font-medium text-xs">
-                      {company.segment || 'Geral'}
-                    </span>
-                  </div>
+                  </p>
+                  <p className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>
+                    {[company.city, company.state].filter(Boolean).join(', ') || 'Sem localização'}
+                  </p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0 text-primary">
-                  <Building2 className="w-5 h-5" />
+                <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0 mt-1"
+                  style={{ color: 'var(--neutral-500)' }} />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t" style={{ borderColor: 'var(--neutral-200)' }}>
+                <div className="text-center">
+                  <p className="text-[18px] font-bold" style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
+                    {company.contacts_count}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>Contatos</p>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4 pb-5 flex-1 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground/70" />
-                    <span className="truncate">{company.city || 'Localidade não informada'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground/70" />
-                    <span>
-                      {company.contactsCount} {company.contactsCount === 1 ? 'contato vinculado' : 'contatos vinculados'}
-                    </span>
-                  </div>
+                <div className="text-center">
+                  <p className="text-[18px] font-bold" style={{ color: 'var(--brand-teal)', letterSpacing: '-0.5px' }}>
+                    {company.compras_count}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>Compradores</p>
                 </div>
-                <Button variant="ghost" className="w-full mt-5 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                  <Link href={`/empresas/${company.id}`}>
-                    Ver detalhes abordados <ArrowRight className="w-4 h-4 ml-2 opacity-60" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                <div className="text-center">
+                  <p className="text-[18px] font-bold" style={{ color: 'var(--brand-gold)', letterSpacing: '-0.5px' }}>
+                    {company.distance_km ?? '—'}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>km</p>
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
       )}
