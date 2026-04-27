@@ -55,7 +55,8 @@ export default function NovoContatoPage() {
   }
 
   // Quando seleciona empresa, preenche cidade/distância automaticamente
-  async function handleCompanySelect(companyId: string) {
+  async function handleCompanySelect(companyId: string | null) {
+    if (companyId === null) return
     setFormData(prev => ({ ...prev, company_id: companyId }))
     if (companyId) {
       const { data } = await supabase.from('companies')
@@ -74,7 +75,8 @@ export default function NovoContatoPage() {
     }
   }
 
-  function handleRoleChange(role: string) {
+  function handleRoleChange(role: string | null) {
+    if (!role) return
     setFormData(prev => ({
       ...prev,
       contact_role: role,
@@ -286,7 +288,7 @@ export default function NovoContatoPage() {
                 <div className="space-y-2 md:col-span-2">
                   <Label>Origem</Label>
                   <Select value={formData.source}
-                    onValueChange={val => setFormData(p => ({ ...p, source: val }))}>
+                    onValueChange={val => setFormData(p => ({ ...p, source: val ?? p.source }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
