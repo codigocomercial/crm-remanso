@@ -24,6 +24,7 @@ export default function NovoClientePage() {
     email: '',
     city: '',
     state: '',
+    distance_km: '' as string | number,
     source: 'prospeccao',
     reorder_cycle_days: 90,
     average_order_value: '',
@@ -39,7 +40,7 @@ export default function NovoClientePage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
+
     if (!formData.full_name.trim()) {
       setError('O nome da empresa/parceiro é obrigatório.')
       setLoading(false)
@@ -47,10 +48,10 @@ export default function NovoClientePage() {
     }
 
     const supabase = createClient()
-    
+
     // Converte average_order_value pra numérico ou null se vazio
-    const parsedAOV = formData.average_order_value 
-      ? parseFloat(formData.average_order_value.replace(',', '.')) 
+    const parsedAOV = formData.average_order_value
+      ? parseFloat(formData.average_order_value.replace(',', '.'))
       : null
 
     const payload = {
@@ -60,6 +61,7 @@ export default function NovoClientePage() {
       email: formData.email || null,
       city: formData.city || null,
       state: formData.state || null,
+      distance_km: formData.distance_km ? parseInt(String(formData.distance_km)) : null,
       source: formData.source,
       reorder_cycle_days: formData.reorder_cycle_days,
       average_order_value: parsedAOV,
@@ -112,18 +114,18 @@ export default function NovoClientePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="full_name">Nome da Empresa / Parceiro <span className="text-red-500">*</span></Label>
-                  <Input 
-                    id="full_name" name="full_name" 
+                  <Input
+                    id="full_name" name="full_name"
                     placeholder="Ex: Funerária Nova Vida"
                     value={formData.full_name} onChange={handleChange}
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone de Contato</Label>
-                  <Input 
-                    id="phone" name="phone" 
+                  <Input
+                    id="phone" name="phone"
                     placeholder="(00) 0000-0000"
                     value={formData.phone} onChange={handleChange}
                   />
@@ -131,8 +133,8 @@ export default function NovoClientePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp Direto</Label>
-                  <Input 
-                    id="whatsapp" name="whatsapp" 
+                  <Input
+                    id="whatsapp" name="whatsapp"
                     placeholder="(00) 90000-0000"
                     value={formData.whatsapp} onChange={handleChange}
                   />
@@ -140,7 +142,7 @@ export default function NovoClientePage() {
 
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="email">E-mail</Label>
-                  <Input 
+                  <Input
                     id="email" name="email" type="email"
                     placeholder="contato@empresa.com"
                     value={formData.email} onChange={handleChange}
@@ -155,24 +157,35 @@ export default function NovoClientePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="city">Cidade</Label>
-                  <Input 
-                    id="city" name="city" 
+                  <Input
+                    id="city" name="city"
                     placeholder="Ex: São Paulo"
                     value={formData.city} onChange={handleChange}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">Estado (UF)</Label>
-                  <Input 
-                    id="state" name="state" 
+                  <Input
+                    id="state" name="state"
                     placeholder="Ex: SP" maxLength={2}
                     value={formData.state} onChange={handleChange}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="distance_km">📍 Distância da Fábrica (km)</Label>
+                  <Input
+                    id="distance_km" name="distance_km" type="number"
+                    placeholder="Ex: 150"
+                    value={formData.distance_km ?? ''} onChange={handleChange}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Distância em km de Vitória da Conquista até a funerária. Usado para filtrar campanhas por raio.
+                  </p>
+                </div>
                 <div className="space-y-2 md:col-span-3">
                   <Label>Modo de Aquisição (Origem)</Label>
-                  <Select 
-                    value={formData.source} 
+                  <Select
+                    value={formData.source}
                     onValueChange={(val) => setFormData(p => ({ ...p, source: val || '' }))}
                   >
                     <SelectTrigger>
@@ -196,17 +209,17 @@ export default function NovoClientePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="reorder_cycle_days">Ciclo de Recompra (Dias)</Label>
-                  <Input 
+                  <Input
                     id="reorder_cycle_days" name="reorder_cycle_days" type="number"
-                    value={formData.reorder_cycle_days} 
+                    value={formData.reorder_cycle_days}
                     onChange={handleChange}
                   />
                   <p className="text-xs text-muted-foreground">Tempo médio entre uma compra de urnas e outra.</p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="average_order_value">Ticket Médio Estimado (R$)</Label>
-                  <Input 
+                  <Input
                     id="average_order_value" name="average_order_value" type="number" step="0.01"
                     placeholder="Ex: 5500.00"
                     value={formData.average_order_value} onChange={handleChange}
@@ -220,7 +233,7 @@ export default function NovoClientePage() {
             <div className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">Anotações Internas</h3>
               <div className="space-y-2">
-                <textarea 
+                <textarea
                   name="notes"
                   className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Informações adicionais do cliente..."

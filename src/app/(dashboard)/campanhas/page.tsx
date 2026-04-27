@@ -158,6 +158,7 @@ function NewCampaignDialog({
     const [name, setName] = useState('')
     const [message, setMessage] = useState('')
     const [cities, setCities] = useState('')
+    const [distanceMax, setDistanceMax] = useState<string>('')
     const [mediaFile, setMediaFile] = useState<File | null>(null)
     const [mediaPreview, setMediaPreview] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
@@ -172,12 +173,13 @@ function NewCampaignDialog({
                 .eq('org_id', ORG_ID).eq('status', 'active')
 
             if (cityList.length > 0) query = query.in('city', cityList)
+            if (distanceMax) query = (query as any).lte('distance_km', parseInt(distanceMax))
 
             const { count } = await query
             setContactCount(count ?? 0)
         }
         fetchCount()
-    }, [cities])
+    }, [cities, distanceMax])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -214,6 +216,7 @@ function NewCampaignDialog({
             .eq('org_id', ORG_ID).eq('status', 'active').not('whatsapp', 'is', null)
 
         if (cityList.length > 0) contactQuery = contactQuery.in('city', cityList)
+        if (distanceMax) contactQuery = (contactQuery as any).lte('distance_km', parseInt(distanceMax))
         const { data: contactsData } = await contactQuery
 
         // Criar campanha
@@ -224,6 +227,7 @@ function NewCampaignDialog({
             media_url,
             status: 'draft',
             filter_cities: cityList.length > 0 ? cityList : null,
+            filter_distance_max: distanceMax ? parseInt(distanceMax) : null,
             total_contacts: contactsData?.length ?? 0,
         }).select('id').single()
 
@@ -245,6 +249,7 @@ function NewCampaignDialog({
         setName('')
         setMessage('')
         setCities('')
+        setDistanceMax('')
         setMediaFile(null)
         setMediaPreview(null)
     }
@@ -308,18 +313,50 @@ function NewCampaignDialog({
                         </div>
                     </div>
 
-                    <div>
-                        <Label>Filtrar por cidades (opcional)</Label>
-                        <Input
-                            placeholder="Ex: Salvador, Feira de Santana, Vitória da Conquista"
-                            value={cities}
-                            onChange={e => setCities(e.target.value)}
-                            className="mt-1.5"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                    {/* Filtros de segmentação */}
+                    <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Segmentação (opcional)
+                        </p>
+
+                        {/* Filtro por distância */}
+                        <div>
+                            <Label className="flex items-center gap-1.5">
+                                <span>📍</span> Distância máxima da fábrica (km)
+                            </Label>
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <Input
+                                    type="number"
+                                    placeholder="Ex: 300"
+                                    value={distanceMax}
+                                    onChange={e => setDistanceMax(e.target.value)}
+                                    className="w-32"
+                                    min={0}
+                                    max={1000}
+                                />
+                                <span className="text-sm text-muted-foreground">km a partir de Vitória da Conquista</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Deixe em branco para incluir todos os raios. Clientes sem distância cadastrada serão ignorados se este filtro for usado.
+                            </p>
+                        </div>
+
+                        {/* Filtro por cidades */}
+                        <div>
+                            <Label>Filtrar por cidades</Label>
+                            <Input
+                                placeholder="Ex: Salvador, Feira de Santana, Jequié"
+                                value={cities}
+                                onChange={e => setCities(e.target.value)}
+                                className="mt-1.5"
+                            />
+                        </div>
+
+                        {/* Contador de contatos */}
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1 border-t border-border">
                             <Users className="w-3.5 h-3.5" />
                             {contactCount !== null ? (
-                                <span><strong className="text-foreground">{contactCount}</strong> contatos serão alcançados</span>
+                                <span><strong className="text-foreground">{contactCount}</strong> contatos serão alcançados com esses filtros</span>
                             ) : 'Calculando...'}
                         </p>
                     </div>
