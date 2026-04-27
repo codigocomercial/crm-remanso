@@ -21,7 +21,10 @@ export default function NovoProdutoPage() {
 
     const [form, setForm] = useState({
         name: '',
+        sku: '',
         modelo: '',
+        alca: '',
+        cor: '',
         description: '',
         price: '',
         category: '',
@@ -77,12 +80,15 @@ export default function NovoProdutoPage() {
         const { error } = await supabase.from('products').insert({
             org_id: userData!.org_id,
             name: form.name.trim(),
+            sku: form.sku.trim() || null,
             modelo: form.modelo.trim() || null,
             description: form.description.trim() || null,
             price: form.price ? parseFloat(form.price) : null,
             image_url: imageUrl,
             category: form.category || null,
             material: form.material || null,
+            alca: form.alca.trim() || null,
+            cor: form.cor.trim() || null,
             dimensions: form.dimensions.trim() || null,
             is_active: form.is_active,
             sort_order: parseInt(form.sort_order) || 0,
