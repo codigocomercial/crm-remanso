@@ -20,7 +20,7 @@ interface Contact {
   reorder_cycle_days: number | null
   next_followup_at: string | null
   average_order_value: number | null
-  companies?: { name: string } | null
+  companies?: { name: string }[] | null
 }
 
 const ROLE_LABELS: Record<string, string> = {
