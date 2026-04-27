@@ -185,7 +185,7 @@ export default function NovoProdutoPage() {
                                 className={selClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                                 <option value="">Selecionar modelo...</option>
                                 {modelos.map(m => (
-                                    <option key={m.code} value={m.code}>{m.code} — {m.name}</option>
+                                    <option key={m.code} value={m.code}>{m.code}</option>
                                 ))}
                             </select>
                         </div>
