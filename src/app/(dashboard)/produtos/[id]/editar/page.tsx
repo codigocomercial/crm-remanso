@@ -10,12 +10,17 @@ import Link from 'next/link'
 const CATEGORIAS = ['Econômica', 'Intermediária', 'Luxo', 'Super Luxo', 'Infantil', 'Especial']
 const MATERIAIS = ['MDF', 'Madeira', 'Compensado', 'Pinus', 'Eucalipto']
 
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
+
 export default function EditarProdutoPage() {
     const router = useRouter()
     const { id } = useParams<{ id: string }>()
     const supabase = createClient()
 
     const [loading, setLoading] = useState(true)
+    const [modelos, setModelos] = useState<{ code: string; name: string; category: string | null }[]>([])
+    const [alcas, setAlcas] = useState<{ name: string }[]>([])
+    const [cores, setCores] = useState<{ name: string }[]>([])
     const [saving, setSaving] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -27,7 +32,18 @@ export default function EditarProdutoPage() {
         dimensions: '', is_active: true, sort_order: '0',
     })
 
-    useEffect(() => { loadProduct() }, [id])
+    useEffect(() => {
+        loadProduct()
+        Promise.all([
+            supabase.from('product_models').select('code, name, category').eq('org_id', ORG_ID).eq('is_active', true).order('sort_order'),
+            supabase.from('product_alcas').select('name').eq('org_id', ORG_ID).eq('is_active', true).order('sort_order'),
+            supabase.from('product_cores').select('name').eq('org_id', ORG_ID).eq('is_active', true).order('sort_order'),
+        ]).then(([{ data: m }, { data: a }, { data: c }]) => {
+            setModelos(m ?? [])
+            setAlcas(a ?? [])
+            setCores(c ?? [])
+        })
+    }, [id])
 
     async function loadProduct() {
         setLoading(true)
@@ -51,6 +67,11 @@ export default function EditarProdutoPage() {
             setImagePreview(data.image_url)
         }
         setLoading(false)
+    }
+
+    function handleModeloChange(code: string) {
+        const modelo = modelos.find(m => m.code === code)
+        setForm(prev => ({ ...prev, modelo: code, category: modelo?.category ?? prev.category }))
     }
 
     function set(field: string, value: string | boolean) {
@@ -185,9 +206,13 @@ export default function EditarProdutoPage() {
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 Modelo
                             </label>
-                            <input type="text" placeholder="Ex: R300, R500" value={form.modelo}
-                                onChange={e => set('modelo', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                            <select value={form.modelo} onChange={e => handleModeloChange(e.target.value)}
+                                className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
+                                <option value="">Selecionar modelo...</option>
+                                {modelos.map(m => (
+                                    <option key={m.code} value={m.code}>{m.code} — {m.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
@@ -204,9 +229,11 @@ export default function EditarProdutoPage() {
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 🔧 Alça
                             </label>
-                            <input type="text" placeholder="Ex: Varão Roma Metalizada" value={form.alca}
-                                onChange={e => set('alca', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                            <select value={form.alca} onChange={e => set('alca', e.target.value)}
+                                className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
+                                <option value="">Selecionar alça...</option>
+                                {alcas.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                            </select>
                         </div>
 
                         {/* Cor */}
@@ -214,9 +241,11 @@ export default function EditarProdutoPage() {
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 🎨 Cor / Sobreamento
                             </label>
-                            <input type="text" placeholder="Ex: Ocre/Mogno, Mogno/Imbuia" value={form.cor}
-                                onChange={e => set('cor', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                            <select value={form.cor} onChange={e => set('cor', e.target.value)}
+                                className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
+                                <option value="">Selecionar cor...</option>
+                                {cores.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                            </select>
                         </div>
 
                         <div>
