@@ -134,7 +134,7 @@ export default function NovoContatoPage() {
     <div className="space-y-6 max-w-3xl mx-auto pb-10">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="ghost" size="icon">
           <Link href="/clientes"><ArrowLeft className="w-5 h-5" /></Link>
         </Button>
         <div>
@@ -336,7 +336,7 @@ export default function NovoContatoPage() {
             </div>
 
             <div className="flex items-center gap-3 justify-end pt-4 border-t border-border">
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="outline">
                 <Link href="/clientes">Cancelar</Link>
               </Button>
               <Button type="submit" disabled={loading} className="px-8 font-medium">
