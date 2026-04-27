@@ -31,7 +31,7 @@ const ROLE_LABELS: Record<string, string> = {
   outro: 'Outro',
 }
 
-export default function ClientesPage() {
+export default function ContatosPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -86,13 +86,13 @@ export default function ClientesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Clientes</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus clientes e acompanhe as recompras</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Gerencie os contatos e acompanhe as recompras</p>
         </div>
         <Button>
           <Link href="/clientes/novo" className="flex items-center">
             <Plus className="w-4 h-4 mr-2" />
-            Novo cliente
+            Novo contato
           </Link>
         </Button>
       </div>
@@ -102,7 +102,7 @@ export default function ClientesPage() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar clientes por nome..."
+            placeholder="Buscar contatos por nome..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
