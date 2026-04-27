@@ -190,6 +190,24 @@ export default function NovoProdutoPage() {
                             />
                         </div>
 
+                        {/* SKU */}
+                        <div>
+                            <label className="block text-[12px] font-semibold mb-1.5"
+                                style={{ color: 'var(--neutral-700)' }}>
+                                Código SKU
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Ex: URN-R100-OCR"
+                                value={form.sku}
+                                onChange={e => set('sku', e.target.value)}
+                                className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                                style={{ borderColor: 'rgba(0,0,0,0.1)' }}
+                                onFocus={e => e.currentTarget.style.borderColor = 'var(--brand-teal)'}
+                                onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)'}
+                            />
+                        </div>
+
                         {/* Modelo */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5"
