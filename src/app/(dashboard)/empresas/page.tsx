@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { PageHeader, StatusBadge } from '@/components/ui/rm-components'
-import { Building2, Search, Plus, MapPin, Users, ArrowRight, Navigation } from 'lucide-react'
+import { PageHeader } from '@/components/ui/rm-components'
+import { Building2, Search, Plus, ArrowRight, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
@@ -28,6 +28,8 @@ export default function EmpresasPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
 
   useEffect(() => {
     const t = setTimeout(load, 300)
@@ -37,16 +39,12 @@ export default function EmpresasPage() {
   async function load() {
     setLoading(true)
     const supabase = createClient()
-
     let query = supabase
       .from('companies')
-      .select(`id, name, city, state, segment, distance_km, reorder_cycle_days,
-        contacts(id, contact_role)`)
+      .select(`id, name, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role)`)
       .eq('org_id', ORG_ID)
       .order('name')
-
     if (search) query = query.ilike('name', `%${search}%`)
-
     const { data } = await query
     setCompanies((data ?? []).map((d: any) => ({
       id: d.id,
@@ -62,15 +60,46 @@ export default function EmpresasPage() {
     setLoading(false)
   }
 
+  async function handleSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/bling/sync/empresas', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSyncResult(`${data.empresas} empresas, ${data.contatos} contatos e ${data.vendedores} vendedores sincronizados!`)
+        load()
+      } else {
+        setSyncResult(`Erro: ${data.error}`)
+      }
+    } catch {
+      setSyncResult('Erro ao sincronizar')
+    }
+    setSyncing(false)
+  }
+
   return (
     <div className="animate-fade-in">
       <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="btn-remanso-outline mr-2 flex items-center gap-1.5"
+        >
+          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+        </button>
         <Link href="/empresas/nova" className="btn-remanso">
           <Plus size={13} /> Nova empresa
         </Link>
       </PageHeader>
 
-      {/* Busca */}
+      {syncResult && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${syncResult.startsWith('Erro') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+          {syncResult}
+        </div>
+      )}
+
       <div className="rm-card mb-5">
         <div className="relative max-w-sm">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
@@ -97,7 +126,7 @@ export default function EmpresasPage() {
             {search ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
           </p>
           <p className="text-[13px] mb-5" style={{ color: 'var(--neutral-500)' }}>
-            Cadastre as funerárias e vincule os contatos de cada uma
+            {search ? 'Tente buscar com outros termos.' : 'Clique em Sincronizar Bling para importar as funerárias.'}
           </p>
           <Link href="/empresas/nova" className="btn-remanso">
             <Plus size={13} /> Cadastrar primeira empresa
@@ -109,7 +138,6 @@ export default function EmpresasPage() {
             <Link key={company.id} href={`/empresas/${company.id}`}
               className="rm-card block hover:-translate-y-0.5 transition-all group cursor-pointer">
               <div className="flex items-start gap-3 mb-4">
-                {/* Avatar */}
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
                   style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}>
                   {initials(company.name)}
@@ -125,7 +153,6 @@ export default function EmpresasPage() {
                 <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0 mt-1"
                   style={{ color: 'var(--neutral-500)' }} />
               </div>
-
               <div className="grid grid-cols-3 gap-2 pt-3 border-t" style={{ borderColor: 'var(--neutral-200)' }}>
                 <div className="text-center">
                   <p className="text-[18px] font-bold" style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
