@@ -45,27 +45,24 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state')
   const error = searchParams.get('error')
 
-  const dashboardUrl = new URL('/integracoes', request.nextUrl.origin)
+  const BASE = 'https://crm.urnasremanso.com.br/integracoes'
 
   // 1. Verificar erro retornado pelo Bling
   if (error) {
     console.error('[bling/callback] Bling retornou erro:', error)
-    dashboardUrl.searchParams.set('bling_error', error)
-    return NextResponse.redirect(dashboardUrl.toString())
+    return NextResponse.redirect(`${BASE}?bling_error=${encodeURIComponent(error)}`)
   }
 
   // 2. Verificar presença do code
   if (!code) {
     console.error('[bling/callback] authorization code ausente')
-    dashboardUrl.searchParams.set('bling_error', 'missing_code')
-    return NextResponse.redirect(dashboardUrl.toString())
+    return NextResponse.redirect(`${BASE}?bling_error=missing_code`)
   }
 
   // 3. (Opcional) Validar state para prevenir CSRF
   if (state !== 'crm-remanso') {
     console.error('[bling/callback] state inválido:', state)
-    dashboardUrl.searchParams.set('bling_error', 'invalid_state')
-    return NextResponse.redirect(dashboardUrl.toString())
+    return NextResponse.redirect(`${BASE}?bling_error=invalid_state`)
   }
 
   // 4. Trocar code por tokens
@@ -74,8 +71,7 @@ export async function GET(request: NextRequest) {
     tokens = await exchangeCode(code)
   } catch (err) {
     console.error('[bling/callback] erro ao trocar code:', err)
-    dashboardUrl.searchParams.set('bling_error', 'token_exchange_failed')
-    return NextResponse.redirect(dashboardUrl.toString())
+    return NextResponse.redirect(`${BASE}?bling_error=token_exchange_failed`)
   }
 
   // 5. Persistir tokens no Supabase
@@ -99,11 +95,9 @@ export async function GET(request: NextRequest) {
 
   if (dbError) {
     console.error('[bling/callback] erro ao salvar tokens:', dbError)
-    dashboardUrl.searchParams.set('bling_error', 'db_save_failed')
-    return NextResponse.redirect(dashboardUrl.toString())
+    return NextResponse.redirect(`${BASE}?bling_error=db_save_failed`)
   }
 
   // 6. Redirecionar com sucesso
-  dashboardUrl.searchParams.set('bling_connected', '1')
-  return NextResponse.redirect(dashboardUrl.toString())
+  return NextResponse.redirect('https://crm.urnasremanso.com.br/integracoes?bling_connected=1')
 }
