@@ -1,9 +1,10 @@
+Set - Content - Encoding UTF8 - Path "src\app\(dashboard)\clientes\page.tsx" - Value @'
 'use client'
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Loader2, Plus, ArrowRight, User } from 'lucide-react'
+import { Search, Loader2, Plus, ArrowRight, User, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,58 +24,56 @@ interface Contact {
   companies?: { name: string }[] | null
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  compras: 'Compras',
-  financeiro: 'Financeiro',
-  diretor: 'Diretor',
-  operacional: 'Operacional',
-  outro: 'Outro',
-}
-
 export default function ContatosPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
+
+  async function loadContacts() {
+    setLoading(true)
+    const supabase = createClient()
+    let query = supabase
+      .from('contacts')
+      .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name)')
+      .order('full_name', { ascending: true })
+    if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
+    const { data, error } = await query
+    if (!error && data) setContacts(data)
+    setLoading(false)
+  }
 
   useEffect(() => {
-    async function loadContacts() {
-      setLoading(true)
-      const supabase = createClient()
-      let query = supabase
-        .from('contacts')
-        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name)')
-        .order('full_name', { ascending: true })
-
-      if (searchTerm) {
-        query = query.ilike('full_name', `%${searchTerm}%`)
-      }
-
-      const { data, error } = await query
-
-      if (!error && data) {
-        setContacts(data)
-      }
-      setLoading(false)
-    }
-
-    // Debounce na busca
     const timeout = setTimeout(loadContacts, 300)
     return () => clearTimeout(timeout)
   }, [searchTerm])
 
+  async function handleSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/bling/sync/contatos', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSyncResult(`${data.contatos} clientes e ${data.vendedores} vendedores sincronizados!`)
+        loadContacts()
+      } else {
+        setSyncResult(`Erro: ${data.error}`)
+      }
+    } catch {
+      setSyncResult('Erro ao sincronizar')
+    }
+    setSyncing(false)
+  }
+
   function getReorderStatus(nextFollowupAt: string | null) {
     if (!nextFollowupAt) return { label: 'Não agendado', variant: 'secondary' as const }
-
-    // Zera os horários para comparar apenas os dias
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-
     const followupDate = new Date(nextFollowupAt)
     followupDate.setHours(0, 0, 0, 0)
-
     const isLate = followupDate < today
-    // if today === followup, it's ok, user still has the day to handle
-
     return {
       label: isLate ? 'Atrasado' : 'OK',
       variant: isLate ? 'destructive' as const : 'default' as const
@@ -83,21 +82,31 @@ export default function ContatosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie os contatos e acompanhe as recompras</p>
         </div>
-        <Button>
-          <Link href="/clientes/novo" className="flex items-center">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo contato
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSync} disabled={syncing} className="gap-2">
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+          </Button>
+          <Button>
+            <Link href="/clientes/novo" className="flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo contato
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Toolbar / Search */}
+      {syncResult && (
+        <div className={`px-4 py-3 rounded-lg text-sm font-medium ${syncResult.startsWith('Erro') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+          {syncResult}
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -110,7 +119,6 @@ export default function ContatosPage() {
         </div>
       </div>
 
-      {/* Table / List */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
@@ -137,7 +145,7 @@ export default function ContatosPage() {
                     <User className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
                     <p className="text-lg font-medium text-foreground">Nenhum cliente encontrado</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {searchTerm ? 'Tente buscar com outros termos.' : 'Comece cadastrando seu primeiro cliente.'}
+                      {searchTerm ? 'Tente buscar com outros termos.' : 'Clique em Sincronizar Bling para importar seus clientes.'}
                     </p>
                   </td>
                 </tr>
@@ -161,9 +169,7 @@ export default function ContatosPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col items-start gap-1.5">
-                          <Badge variant={status.variant}>
-                            {status.label}
-                          </Badge>
+                          <Badge variant={status.variant}>{status.label}</Badge>
                           {contact.next_followup_at && (
                             <span className="text-[11px] text-muted-foreground">
                               Previsto: {formatDate(contact.next_followup_at)}
@@ -190,3 +196,4 @@ export default function ContatosPage() {
     </div>
   )
 }
+'@
