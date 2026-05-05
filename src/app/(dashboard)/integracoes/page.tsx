@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Zap, Webhook, Link2, Copy, Check, Clock,
   AlertCircle, RefreshCw, Loader2, ChevronRight,
-  CheckCircle2, XCircle, Info, Server, Bot,
+  CheckCircle2, XCircle, Info, Server, Bot, ShoppingBag,
+  PlugZap, Unplug,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -300,6 +302,176 @@ function SectionEvolutionAPI() {
   )
 }
 
+// ─── Section: Bling ──────────────────────────────────────────────────────────
+function SectionBling() {
+  const searchParams = useSearchParams()
+  const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  // Lê feedback do callback
+  useEffect(() => {
+    const connected = searchParams.get('bling_connected')
+    const error = searchParams.get('bling_error')
+    if (connected === '1') showToast('success', 'Bling conectado com sucesso!')
+    if (error) showToast('error', `Erro ao conectar Bling: ${error}`)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 5000)
+  }
+
+  const load = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('integrations')
+      .select('expires_at')
+      .eq('provider', 'bling')
+      .maybeSingle()
+
+    if (data) {
+      setStatus('connected')
+      setExpiresAt(data.expires_at ?? null)
+    } else {
+      setStatus('disconnected')
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleDisconnect() {
+    setDisconnecting(true)
+    const supabase = createClient()
+    await supabase.from('integrations').delete().eq('provider', 'bling')
+    setStatus('disconnected')
+    setExpiresAt(null)
+    setDisconnecting(false)
+    showToast('success', 'Bling desconectado.')
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      const res = await fetch('/api/bling/refresh', { method: 'POST' })
+      const json = await res.json()
+      if (json.success) {
+        setExpiresAt(json.expires_at)
+        showToast('success', 'Token renovado com sucesso!')
+      } else {
+        showToast('error', json.error ?? 'Falha ao renovar token')
+      }
+    } catch {
+      showToast('error', 'Erro inesperado ao renovar token')
+    }
+    setRefreshing(false)
+  }
+
+  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+          <ShoppingBag className="w-4 h-4 text-blue-600" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Bling ERP</h2>
+          <p className="text-xs text-muted-foreground">Integre pedidos, produtos e clientes do Bling ao CRM</p>
+        </div>
+      </div>
+
+      {toast && (
+        <div className={cn(
+          'flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg border',
+          toast.type === 'success'
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-red-50 text-red-700 border-red-200'
+        )}>
+          {toast.type === 'success'
+            ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            : <XCircle className="w-4 h-4 flex-shrink-0" />
+          }
+          {toast.message}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        {status === 'loading' ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
+          </div>
+        ) : status === 'connected' ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span className="font-medium text-foreground">Conectado ao Bling</span>
+                {isExpired && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5">
+                    Token expirado
+                  </Badge>
+                )}
+              </div>
+              {expiresAt && (
+                <span className="text-xs text-muted-foreground">
+                  Expira: {new Date(expiresAt).toLocaleString('pt-BR')}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="gap-2"
+              >
+                {refreshing
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Renovando...</>
+                  : <><RefreshCw className="w-3.5 h-3.5" />Renovar token</>
+                }
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              >
+                {disconnecting
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Desconectando...</>
+                  : <><Unplug className="w-3.5 h-3.5" />Desconectar</>
+                }
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <XCircle className="w-5 h-5" />
+              <span className="text-sm">Não conectado</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Autorize o CRM a acessar sua conta Bling para sincronizar pedidos e clientes automaticamente.
+            </p>
+            <a
+              href="/api/bling/auth"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <PlugZap className="w-4 h-4" />
+              Conectar ao Bling
+            </a>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // ─── Section: Logs ────────────────────────────────────────────────────────────
 function SectionLogs() {
   const [events, setEvents] = useState<AutomationEvent[]>([])
@@ -462,6 +634,8 @@ export default function IntegracoesPage() {
       <SectionWebhooks />
       <Separator />
       <SectionEvolutionAPI />
+      <Separator />
+      <SectionBling />
       <Separator />
       <SectionLogs />
     </div>
