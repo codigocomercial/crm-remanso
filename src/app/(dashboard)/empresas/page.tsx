@@ -11,6 +11,7 @@ const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 interface Company {
   id: string
   name: string
+  fantasia: string | null
   city: string | null
   state: string | null
   segment: string | null
@@ -41,7 +42,7 @@ export default function EmpresasPage() {
     const supabase = createClient()
     let query = supabase
       .from('companies')
-      .select(`id, name, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role)`)
+      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role)`)
       .eq('org_id', ORG_ID)
       .order('name')
     if (search) query = query.ilike('name', `%${search}%`)
@@ -49,6 +50,7 @@ export default function EmpresasPage() {
     setCompanies((data ?? []).map((d: any) => ({
       id: d.id,
       name: d.name,
+      fantasia: d.fantasia ?? null,
       city: d.city,
       state: d.state,
       segment: d.segment,
@@ -140,11 +142,11 @@ export default function EmpresasPage() {
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
                   style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}>
-                  {initials(company.name)}
+                  {initials(company.fantasia || company.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                    {company.name}
+                    {company.fantasia || company.name}
                   </p>
                   <p className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>
                     {[company.city, company.state].filter(Boolean).join(', ') || 'Sem localização'}

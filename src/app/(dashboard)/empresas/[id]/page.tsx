@@ -19,7 +19,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string; bg: string }> 
 }
 
 interface Company {
-  id: string; name: string; city: string | null; state: string | null
+  id: string; name: string; fantasia: string | null; city: string | null; state: string | null
   distance_km: number | null; reorder_cycle_days: number | null
   segment: string | null; notes: string | null
 }
@@ -116,7 +116,7 @@ export default function EmpresaDetailPage() {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader title={company.name}
+      <PageHeader title={company.fantasia || company.name}
         subtitle={[company.city, company.state].filter(Boolean).join(', ') || 'Sem localização'}>
         <Link href="/empresas"
           className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold hover:bg-neutral-100 transition-colors"
