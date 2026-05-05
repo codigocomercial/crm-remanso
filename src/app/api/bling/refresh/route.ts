@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 const CLIENT_ID = process.env.BLING_CLIENT_ID!
 const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET!
 
 export async function POST() {
-  const supabase = createAdminClient()
+  const supabase = await createClient()
 
   // 1. Buscar refresh_token salvo
   const { data: integration, error: fetchError } = await supabase
-    .from('integrations')
+    .from('bling_tokens')
     .select('refresh_token')
-    .eq('provider', 'bling')
+    .eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!)
     .single()
 
   if (fetchError || !integration?.refresh_token) {
@@ -52,14 +52,14 @@ export async function POST() {
 
   // 3. Atualizar tokens no Supabase
   const { error: updateError } = await supabase
-    .from('integrations')
+    .from('bling_tokens')
     .update({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     })
-    .eq('provider', 'bling')
+    .eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!)
 
   if (updateError) {
     console.error('[bling/refresh] erro ao salvar tokens renovados:', updateError)
