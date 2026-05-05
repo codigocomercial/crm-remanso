@@ -80,17 +80,16 @@ export async function GET(request: NextRequest) {
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
   const { error: dbError } = await supabase
-    .from('integrations')
+    .from('bling_tokens')
     .upsert(
       {
-        provider: 'bling',
+        org_id: process.env.NEXT_PUBLIC_ORG_ID!,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt,
-        token_type: tokens.token_type,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'provider' },
+      { onConflict: 'org_id' },
     )
 
   if (dbError) {
