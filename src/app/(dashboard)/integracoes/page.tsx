@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { Suspense, useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -303,22 +303,21 @@ function SectionEvolutionAPI() {
 }
 
 // ─── Section: Bling ──────────────────────────────────────────────────────────
-function SectionBling() {
-  const searchParams = useSearchParams()
+function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'error'; message: string } }) {
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  // Lê feedback do callback
+  // Exibe feedback vindo do callback via prop
   useEffect(() => {
-    const connected = searchParams.get('bling_connected')
-    const error = searchParams.get('bling_error')
-    if (connected === '1') showToast('success', 'Bling conectado com sucesso!')
-    if (error) showToast('error', `Erro ao conectar Bling: ${error}`)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (initialToast) {
+      setToast(initialToast)
+      const t = setTimeout(() => setToast(null), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [initialToast])
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -470,6 +469,21 @@ function SectionBling() {
       </div>
     </section>
   )
+}
+
+// Lê os search params do callback e repassa como prop — deve ficar dentro de <Suspense>
+function IntegracoesBlingStatus() {
+  const searchParams = useSearchParams()
+  const connected = searchParams.get('bling_connected')
+  const error = searchParams.get('bling_error')
+
+  const initialToast = connected === '1'
+    ? { type: 'success' as const, message: 'Bling conectado com sucesso!' }
+    : error
+      ? { type: 'error' as const, message: `Erro ao conectar Bling: ${error}` }
+      : undefined
+
+  return <SectionBling initialToast={initialToast} />
 }
 
 // ─── Section: Logs ────────────────────────────────────────────────────────────
@@ -635,7 +649,9 @@ export default function IntegracoesPage() {
       <Separator />
       <SectionEvolutionAPI />
       <Separator />
-      <SectionBling />
+      <Suspense fallback={null}>
+        <IntegracoesBlingStatus />
+      </Suspense>
       <Separator />
       <SectionLogs />
     </div>
