@@ -1,4 +1,3 @@
-Set - Content - Encoding UTF8 - Path "src\app\(dashboard)\clientes\page.tsx" - Value @'
 'use client'
 
 import React, { useEffect, useState } from 'react'
