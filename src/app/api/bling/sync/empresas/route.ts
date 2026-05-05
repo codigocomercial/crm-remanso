@@ -50,7 +50,7 @@ export async function POST() {
         let page = 1
         while (true) {
             const data = await blingFetch(
-                `/contatos?pagina=${page}&limite=100&tipo=C&situacao=A`,
+                `/contatos?pagina=${page}&limite=100`,
                 token
             )
             const contatos = data?.data ?? []
