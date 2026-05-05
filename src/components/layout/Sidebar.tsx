@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
     LayoutDashboard, KanbanSquare, Users, Building2,
     MessageSquare, CheckSquare, BarChart2, Settings,
-    Zap, Megaphone, RefreshCw, Package, FileText,
+    Zap, Megaphone, RefreshCw, Package, FileText, UserCheck,
 } from 'lucide-react'
 
 /* ── Logo SVG inline — mãos em oração Remanso ── */
@@ -40,6 +40,7 @@ const NAV = [
             { href: '/atendimentos', label: 'Atendimentos', icon: MessageSquare },
             { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
             { href: '/empresas', label: 'Empresas', icon: Building2 },
+            { href: '/vendedores', label: 'Vendedores', icon: UserCheck },
             { href: '/produtos', label: 'Produtos', icon: Package },
         ],
     },
