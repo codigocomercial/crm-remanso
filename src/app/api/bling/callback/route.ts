@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 const CLIENT_ID = process.env.BLING_CLIENT_ID!
 const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET!
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 5. Persistir tokens no Supabase
-  const supabase = createAdminClient()
+  const supabase = await createClient()
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
