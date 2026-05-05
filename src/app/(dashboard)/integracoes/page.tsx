@@ -304,8 +304,8 @@ function SectionEvolutionAPI() {
 
 // ─── Section: Bling ──────────────────────────────────────────────────────────
 function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'error'; message: string } }) {
-  const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
-  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [blingConectado, setBlingConectado] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -324,30 +324,23 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
     setTimeout(() => setToast(null), 5000)
   }
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     const supabase = createClient()
-    const { data } = await supabase
-      .from('integrations')
+    supabase
+      .from('bling_tokens')
       .select('expires_at')
-      .eq('provider', 'bling')
-      .maybeSingle()
-
-    if (data) {
-      setStatus('connected')
-      setExpiresAt(data.expires_at ?? null)
-    } else {
-      setStatus('disconnected')
-    }
+      .single()
+      .then(({ data }) => {
+        if (data) setBlingConectado(true)
+        setLoading(false)
+      })
   }, [])
-
-  useEffect(() => { load() }, [load])
 
   async function handleDisconnect() {
     setDisconnecting(true)
     const supabase = createClient()
-    await supabase.from('integrations').delete().eq('provider', 'bling')
-    setStatus('disconnected')
-    setExpiresAt(null)
+    await supabase.from('bling_tokens').delete().eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!)
+    setBlingConectado(false)
     setDisconnecting(false)
     showToast('success', 'Bling desconectado.')
   }
@@ -358,7 +351,6 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
       const res = await fetch('/api/bling/refresh', { method: 'POST' })
       const json = await res.json()
       if (json.success) {
-        setExpiresAt(json.expires_at)
         showToast('success', 'Token renovado com sucesso!')
       } else {
         showToast('error', json.error ?? 'Falha ao renovar token')
@@ -368,8 +360,6 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
     }
     setRefreshing(false)
   }
-
-  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false
 
   return (
     <section className="space-y-4">
@@ -399,27 +389,15 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
       )}
 
       <div className="rounded-xl border border-border bg-card p-5">
-        {status === 'loading' ? (
+        {loading ? (
           <div className="flex justify-center py-6">
             <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
           </div>
-        ) : status === 'connected' ? (
+        ) : blingConectado ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span className="font-medium text-foreground">Conectado ao Bling</span>
-                {isExpired && (
-                  <Badge variant="destructive" className="text-[10px] px-1.5">
-                    Token expirado
-                  </Badge>
-                )}
-              </div>
-              {expiresAt && (
-                <span className="text-xs text-muted-foreground">
-                  Expira: {new Date(expiresAt).toLocaleString('pt-BR')}
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <span className="font-medium text-foreground">Conectado ao Bling</span>
             </div>
             <div className="flex items-center gap-2">
               <Button
