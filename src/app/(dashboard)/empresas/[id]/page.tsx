@@ -1,51 +1,62 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { PageHeader, StatusBadge } from '@/components/ui/rm-components'
-import {
-  ArrowLeft, Plus, Edit2, Trash2, MapPin,
-  RefreshCw, Phone, MessageSquare, ShoppingBag
-} from 'lucide-react'
+import { PageHeader } from '@/components/ui/rm-components'
+import { ArrowLeft, Plus, Trash2, MapPin, RefreshCw, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils'
 
 const ROLE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  compras:      { label: 'Compras',      color: '#2F6F5D', bg: '#EBF5F1' },
-  financeiro:   { label: 'Financeiro',   color: '#9E7F2E', bg: '#FAF3E0' },
-  diretor:      { label: 'Diretor',      color: '#5B5BD6', bg: '#EFEFFF' },
-  operacional:  { label: 'Operacional',  color: '#6B7280', bg: '#F9FAFB' },
-  outro:        { label: 'Outro',        color: '#6B7280', bg: '#F9FAFB' },
+  compras:     { label: 'Compras',     color: '#2F6F5D', bg: '#EBF5F1' },
+  financeiro:  { label: 'Financeiro',  color: '#9E7F2E', bg: '#FAF3E0' },
+  diretor:     { label: 'Diretor',     color: '#5B5BD6', bg: '#EFEFFF' },
+  operacional: { label: 'Operacional', color: '#6B7280', bg: '#F9FAFB' },
+  outro:       { label: 'Outro',       color: '#6B7280', bg: '#F9FAFB' },
 }
 
 interface Company {
-  id: string; name: string; fantasia: string | null; city: string | null; state: string | null
-  distance_km: number | null; reorder_cycle_days: number | null
-  segment: string | null; notes: string | null
+  id: string
+  name: string
+  fantasia: string | null
+  city: string | null
+  state: string | null
+  distance_km: number | null
+  reorder_cycle_days: number | null
+  last_order_at: string | null
+  average_order_value: number | null
+  segment: string | null
+  notes: string | null
 }
 
 interface Contact {
-  id: string; full_name: string; phone: string | null; whatsapp: string | null
-  contact_role: string; receive_campaigns: boolean; job_title: string | null
+  id: string
+  full_name: string
+  phone: string | null
+  whatsapp: string | null
+  contact_role: string
+  receive_campaigns: boolean
+  job_title: string | null
 }
 
+type EditField = 'km' | 'ciclo' | 'ultima_compra' | 'ticket' | null
+
 export default function EmpresaDetailPage() {
-  const { id }   = useParams<{ id: string }>()
-  const router   = useRouter()
+  const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
-  const [company,  setCompany]  = useState<Company | null>(null)
+  const [company, setCompany] = useState<Company | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading,  setLoading]  = useState(true)
+  const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [saving,   setSaving]   = useState(false)
-  const [editingKm, setEditingKm] = useState(false)
-  const [kmValue, setKmValue] = useState('')
-  const [savingKm, setSavingKm] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState<EditField>(null)
+  const [editVal, setEditVal] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const [newContact, setNewContact] = useState({
-    full_name: '', phone: '', whatsapp: '',
-    contact_role: 'compras', job_title: '',
+    full_name: '', phone: '', whatsapp: '', contact_role: 'compras', job_title: '',
   })
 
   useEffect(() => { load() }, [id])
@@ -54,12 +65,34 @@ export default function EmpresaDetailPage() {
     setLoading(true)
     const [{ data: comp }, { data: conts }] = await Promise.all([
       supabase.from('companies').select('*').eq('id', id).single(),
-      supabase.from('contacts').select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
+      supabase.from('contacts')
+        .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
     ])
     setCompany(comp)
     setContacts(conts ?? [])
     setLoading(false)
+  }
+
+  function startEdit(field: EditField, current: string) {
+    setEditing(field)
+    setEditVal(current)
+  }
+
+  async function saveEdit() {
+    if (!editing || !company) return
+    setSavingEdit(true)
+
+    const updates: Partial<Company> = {}
+    if (editing === 'km') updates.distance_km = parseInt(editVal) || null
+    if (editing === 'ciclo') updates.reorder_cycle_days = parseInt(editVal) || null
+    if (editing === 'ultima_compra') updates.last_order_at = editVal || null
+    if (editing === 'ticket') updates.average_order_value = parseFloat(editVal.replace(',', '.')) || null
+
+    await supabase.from('companies').update(updates).eq('id', id)
+    setCompany(prev => prev ? { ...prev, ...updates } : prev)
+    setEditing(null)
+    setSavingEdit(false)
   }
 
   async function toggleCampaign(contact: Contact) {
@@ -82,7 +115,6 @@ export default function EmpresaDetailPage() {
     setSaving(true)
     const { data: user } = await supabase.auth.getUser()
     const { data: userData } = await supabase.from('users').select('org_id').eq('id', user.user!.id).single()
-
     const { data } = await supabase.from('contacts').insert({
       org_id: userData!.org_id,
       company_id: id,
@@ -94,7 +126,6 @@ export default function EmpresaDetailPage() {
       receive_campaigns: newContact.contact_role === 'compras',
       status: 'active',
     }).select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title').single()
-
     if (data) {
       setContacts(prev => [...prev, data])
       setNewContact({ full_name: '', phone: '', whatsapp: '', contact_role: 'compras', job_title: '' })
@@ -103,15 +134,66 @@ export default function EmpresaDetailPage() {
     setSaving(false)
   }
 
-  async function saveKm() {
-    if (!kmValue) return
-    setSavingKm(true)
-    const km = parseInt(kmValue)
-    await supabase.from('companies').update({ distance_km: km }).eq('id', id)
-    setCompany(prev => prev ? { ...prev, distance_km: km } : prev)
-    setEditingKm(false)
-    setSavingKm(false)
+  const inputClass = "w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+  const inputStyle = { borderColor: 'rgba(0,0,0,0.1)' }
+  const onFocus = (e: any) => e.currentTarget.style.borderColor = 'var(--brand-teal)'
+  const onBlur = (e: any) => e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)'
+
+  function EditableRow({
+    icon, label, value, field, inputType = 'text', placeholder = ''
+  }: {
+    icon: React.ReactNode
+    label: string
+    value: string | null
+    field: EditField
+    inputType?: string
+    placeholder?: string
+  }) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 flex-shrink-0">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>
+            {label}
+          </p>
+          {editing === field ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                type={inputType}
+                value={editVal}
+                onChange={e => setEditVal(e.target.value)}
+                className="px-2 py-1 text-[13px] rounded border outline-none"
+                style={{ borderColor: 'var(--brand-teal)', width: '140px' }}
+                placeholder={placeholder}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(null) }}
+              />
+              <button onClick={saveEdit} disabled={savingEdit}
+                className="text-[11px] font-semibold px-2 py-1 rounded"
+                style={{ background: 'var(--brand-teal)', color: 'white' }}>
+                {savingEdit ? '...' : 'OK'}
+              </button>
+              <button onClick={() => setEditing(null)}
+                className="text-[11px] px-1.5 py-1 rounded hover:bg-gray-100"
+                style={{ color: 'var(--neutral-400)' }}>✕</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 group">
+              <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
+                {value || <span style={{ color: 'var(--neutral-300)' }}>Não informado</span>}
+              </p>
+              <button
+                onClick={() => startEdit(field, value?.toString() ?? '')}
+                className="opacity-0 group-hover:opacity-100 text-[10px] transition-opacity"
+                style={{ color: 'var(--brand-teal)' }}>✏️</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
+
+  if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
         style={{ borderColor: 'var(--brand-teal)', borderTopColor: 'transparent' }} />
@@ -119,11 +201,6 @@ export default function EmpresaDetailPage() {
   )
 
   if (!company) return <p>Empresa não encontrada</p>
-
-  const inputClass = "w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-  const inputStyle = { borderColor: 'rgba(0,0,0,0.1)' }
-  const onFocus = (e: any) => e.currentTarget.style.borderColor = 'var(--brand-teal)'
-  const onBlur  = (e: any) => e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)'
 
   return (
     <div className="animate-fade-in">
@@ -140,69 +217,57 @@ export default function EmpresaDetailPage() {
 
         {/* Info da empresa */}
         <div className="space-y-4">
-          <div className="rm-card space-y-3">
+          <div className="rm-card space-y-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--neutral-500)' }}>
               Informações
             </p>
+
+            {/* Localização */}
             <div className="flex items-center gap-2">
               <MapPin size={14} style={{ color: 'var(--neutral-400)' }} />
               <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
                 {[company.city, company.state].filter(Boolean).join(', ') || '—'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[13px]">📍</span>
-              {editingKm ? (
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    value={kmValue}
-                    onChange={e => setKmValue(e.target.value)}
-                    className="w-20 px-2 py-1 text-[13px] rounded border outline-none"
-                    style={{ borderColor: 'var(--brand-teal)' }}
-                    placeholder="km"
-                    autoFocus
-                  />
-                  <span className="text-[12px]" style={{ color: 'var(--neutral-500)' }}>km</span>
-                  <button
-                    onClick={saveKm}
-                    disabled={savingKm}
-                    className="text-[11px] font-semibold px-2 py-1 rounded"
-                    style={{ background: 'var(--brand-teal)', color: 'white' }}
-                  >
-                    {savingKm ? '...' : 'Salvar'}
-                  </button>
-                  <button
-                    onClick={() => { setEditingKm(false); setKmValue(company.distance_km?.toString() ?? '') }}
-                    className="text-[11px] px-2 py-1 rounded hover:bg-gray-100"
-                    style={{ color: 'var(--neutral-500)' }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
-                    {company.distance_km ? `${company.distance_km} km da fábrica` : 'Distância não informada'}
-                  </p>
-                  <button
-                    onClick={() => { setEditingKm(true); setKmValue(company.distance_km?.toString() ?? '') }}
-                    className="text-[11px] hover:opacity-70"
-                    style={{ color: 'var(--brand-teal)' }}
-                  >
-                    ✏️ editar
-                  </button>
-                </div>
-              )}
-            </div>
-            {company.reorder_cycle_days && (
-              <div className="flex items-center gap-2">
-                <RefreshCw size={14} style={{ color: 'var(--neutral-400)' }} />
-                <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
-                  Ciclo: {company.reorder_cycle_days} dias
-                </p>
-              </div>
-            )}
+
+            {/* Distância */}
+            <EditableRow
+              icon={<span className="text-[14px]">📍</span>}
+              label="Distância da fábrica"
+              value={company.distance_km ? `${company.distance_km} km` : null}
+              field="km"
+              inputType="number"
+              placeholder="km"
+            />
+
+            {/* Ciclo de recompra */}
+            <EditableRow
+              icon={<RefreshCw size={14} style={{ color: 'var(--neutral-400)' }} />}
+              label="Ciclo de recompra"
+              value={company.reorder_cycle_days ? `${company.reorder_cycle_days} dias` : null}
+              field="ciclo"
+              inputType="number"
+              placeholder="dias"
+            />
+
+            {/* Última compra */}
+            <EditableRow
+              icon={<span className="text-[14px]">🗓️</span>}
+              label="Última compra"
+              value={company.last_order_at ? new Date(company.last_order_at).toLocaleDateString('pt-BR') : null}
+              field="ultima_compra"
+              inputType="date"
+            />
+
+            {/* Ticket médio */}
+            <EditableRow
+              icon={<span className="text-[14px]">💰</span>}
+              label="Ticket médio"
+              value={company.average_order_value ? formatCurrency(company.average_order_value) : null}
+              field="ticket"
+              inputType="number"
+              placeholder="R$"
+            />
           </div>
 
           {company.notes && (
@@ -237,15 +302,12 @@ export default function EmpresaDetailPage() {
         <div className="lg:col-span-2">
           <div className="rm-card">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[13px] font-semibold" style={{ color: 'var(--neutral-900)' }}>
-                Contatos
-              </p>
+              <p className="text-[13px] font-semibold" style={{ color: 'var(--neutral-900)' }}>Contatos</p>
               <button onClick={() => setShowForm(!showForm)} className="btn-remanso py-1.5 text-[12px]">
                 <Plus size={12} /> Novo contato
               </button>
             </div>
 
-            {/* Form novo contato */}
             {showForm && (
               <div className="mb-4 p-4 rounded-xl space-y-3" style={{ background: 'var(--neutral-100)', border: '1px solid var(--neutral-200)' }}>
                 <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-700)' }}>Adicionar contato</p>
@@ -262,9 +324,6 @@ export default function EmpresaDetailPage() {
                     onChange={e => setNewContact(p => ({ ...p, job_title: e.target.value }))}
                     className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
                   <div className="col-span-2">
-                    <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--neutral-600)' }}>
-                      Papel na empresa
-                    </label>
                     <select value={newContact.contact_role}
                       onChange={e => setNewContact(p => ({ ...p, contact_role: e.target.value }))}
                       className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
@@ -294,28 +353,21 @@ export default function EmpresaDetailPage() {
               </div>
             )}
 
-            {/* Lista de contatos */}
             {contacts.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-[13px]" style={{ color: 'var(--neutral-400)' }}>
-                  Nenhum contato cadastrado ainda
-                </p>
+                <p className="text-[13px]" style={{ color: 'var(--neutral-400)' }}>Nenhum contato cadastrado ainda</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {contacts.map(contact => {
                   const role = ROLE_LABELS[contact.contact_role] ?? ROLE_LABELS.outro
                   return (
-                    <div key={contact.id}
-                      className="flex items-center gap-3 p-3 rounded-xl"
+                    <div key={contact.id} className="flex items-center gap-3 p-3 rounded-xl"
                       style={{ background: 'var(--neutral-100)', border: '1px solid var(--neutral-200)' }}>
-                      {/* Avatar */}
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                         style={{ background: role.bg, color: role.color }}>
                         {contact.full_name.split(' ').slice(0,2).map(n => n[0]).join('').toUpperCase()}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
@@ -341,14 +393,11 @@ export default function EmpresaDetailPage() {
                           )}
                         </div>
                       </div>
-
-                      {/* Toggle campanhas */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="text-center">
                           <button onClick={() => toggleCampaign(contact)}
                             className="relative w-9 h-5 rounded-full transition-colors"
-                            style={{ background: contact.receive_campaigns ? 'var(--brand-teal)' : 'var(--neutral-300)' }}
-                            title={contact.receive_campaigns ? 'Recebe campanhas' : 'Não recebe campanhas'}>
+                            style={{ background: contact.receive_campaigns ? 'var(--brand-teal)' : 'var(--neutral-300)' }}>
                             <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${contact.receive_campaigns ? 'left-4' : 'left-0.5'}`} />
                           </button>
                           <p className="text-[9px] mt-0.5" style={{ color: 'var(--neutral-400)' }}>
