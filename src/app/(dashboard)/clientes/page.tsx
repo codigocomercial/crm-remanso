@@ -37,7 +37,7 @@ export default function ContatosPage() {
         .order('full_name', { ascending: true })
       if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
       const { data, error } = await query
-      if (!error && data) setContacts(data)
+      if (!error && data) setContacts(data as any)
       setLoading(false)
     }, 300)
     return () => clearTimeout(timeout)
