@@ -293,17 +293,36 @@ export async function POST() {
         const { data: company } = await supabase
           .from('companies').select('id').eq('bling_id', c.id).single()
 
-        for (const p of c.pessoasContato ?? []) {
+        const pessoasContato = c.pessoasContato ?? []
+
+        for (const p of pessoasContato) {
           if (!p.nome) continue
           await supabase.from('contacts').upsert({
             org_id: ORG_ID,
             full_name: p.nome,
             phone: p.telefone ?? null,
-            whatsapp: p.celular ?? null,
+            whatsapp: p.celular ?? c.celular ?? null, // usa celular da empresa se contato não tiver
             email: p.email ?? null,
             company_id: company?.id ?? null,
-            contact_role: p.cargo ?? null,
-            receive_campaigns: false,
+            job_title: c.informacoes ?? null, // cargo vem do campo "Informações do contato"
+            contact_role: 'compras',
+            receive_campaigns: true, // contato do Bling já entra habilitado para campanhas
+            source: 'bling',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'org_id,full_name,company_id' })
+          totalContatos++
+        }
+
+        // Se não tem pessoa de contato mas tem celular, garante contato padrão
+        if (pessoasContato.length === 0 && (c.celular || c.telefone)) {
+          await supabase.from('contacts').upsert({
+            org_id: ORG_ID,
+            full_name: c.fantasia || c.nome,
+            phone: c.telefone ?? null,
+            whatsapp: c.celular ?? c.telefone ?? null,
+            company_id: company?.id ?? null,
+            contact_role: 'compras',
+            receive_campaigns: true,
             source: 'bling',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'org_id,full_name,company_id' })
