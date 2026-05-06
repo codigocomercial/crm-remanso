@@ -53,25 +53,15 @@ export default function VendedoresPage() {
   async function save() {
     if (!form.name.trim()) return
     setSaving(true)
-    if (editing) {
-      await supabase.from('sellers').update({
-        name: form.name.trim(),
-        email: form.email || null,
-        phone: form.phone || null,
-        is_active: form.is_active,
-        updated_at: new Date().toISOString(),
-      }).eq('id', editing.id)
-    } else {
-      await supabase.from('sellers').insert({
-        org_id: ORG_ID,
-        name: form.name.trim(),
-        email: form.email || null,
-        phone: form.phone || null,
-        is_active: form.is_active,
-      })
+    const res = await fetch('/api/sellers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editing?.id, ...form }),
+    })
+    if (res.ok) {
+      await fetchSellers()
+      setShowModal(false)
     }
-    await fetchSellers()
-    setShowModal(false)
     setSaving(false)
   }
 
