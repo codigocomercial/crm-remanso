@@ -70,6 +70,14 @@ export default function ProdutosPage() {
     return (
         <div className="animate-fade-in">
             <PageHeader title="Produtos" subtitle={`${products.length} urnas cadastradas`}>
+                <button onClick={async () => {
+                    const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
+                    const data = await res.json()
+                    if (data.success) { alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.') }
+                    else { alert('Erro: ' + data.error) }
+                }} className="btn-remanso" style={{ background: 'var(--neutral-700)' }}>
+                    🔄 Sincronizar Bling
+                </button>
                 <Link href="/produtos/novo" className="btn-remanso">
                     <Plus size={13} /> Novo produto
                 </Link>
