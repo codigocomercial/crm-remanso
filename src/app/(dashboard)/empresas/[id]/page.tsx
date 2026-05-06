@@ -35,6 +35,7 @@ interface Contact {
   full_name: string
   phone: string | null
   whatsapp: string | null
+  cnpj: string | null
   contact_role: string
   receive_campaigns: boolean
   job_title: string | null
@@ -227,6 +228,46 @@ export default function EmpresaDetailPage() {
                 {[company.city, company.state].filter(Boolean).join(', ') || '—'}
               </p>
             </div>
+
+            {/* CNPJ */}
+            {company.cnpj && (
+              <div className="flex items-start gap-2">
+                <span className="text-[14px] mt-0.5">🪪</span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>CNPJ</p>
+                  <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
+                    {company.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Telefone */}
+            {company.phone && (
+              <div className="flex items-start gap-2">
+                <span className="text-[14px] mt-0.5">📞</span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>Telefone</p>
+                  <a href={`tel:${company.phone}`} className="text-[13px] hover:opacity-70" style={{ color: 'var(--neutral-700)' }}>
+                    {company.phone}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp */}
+            {company.whatsapp && (
+              <div className="flex items-start gap-2">
+                <span className="text-[14px] mt-0.5">💬</span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>WhatsApp</p>
+                  <a href={`https://wa.me/55${company.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer"
+                    className="text-[13px] hover:opacity-70" style={{ color: '#25D366' }}>
+                    {company.whatsapp}
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Distância */}
             <EditableRow
