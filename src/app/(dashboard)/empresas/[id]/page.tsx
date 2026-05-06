@@ -39,6 +39,9 @@ export default function EmpresaDetailPage() {
   const [loading,  setLoading]  = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving,   setSaving]   = useState(false)
+  const [editingKm, setEditingKm] = useState(false)
+  const [kmValue, setKmValue] = useState('')
+  const [savingKm, setSavingKm] = useState(false)
 
   const [newContact, setNewContact] = useState({
     full_name: '', phone: '', whatsapp: '',
@@ -100,7 +103,15 @@ export default function EmpresaDetailPage() {
     setSaving(false)
   }
 
-  if (loading) return (
+  async function saveKm() {
+    if (!kmValue) return
+    setSavingKm(true)
+    const km = parseInt(kmValue)
+    await supabase.from('companies').update({ distance_km: km }).eq('id', id)
+    setCompany(prev => prev ? { ...prev, distance_km: km } : prev)
+    setEditingKm(false)
+    setSavingKm(false)
+  }
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
         style={{ borderColor: 'var(--brand-teal)', borderTopColor: 'transparent' }} />
@@ -139,14 +150,51 @@ export default function EmpresaDetailPage() {
                 {[company.city, company.state].filter(Boolean).join(', ') || '—'}
               </p>
             </div>
-            {company.distance_km && (
-              <div className="flex items-center gap-2">
-                <span className="text-[13px]">📍</span>
-                <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
-                  {company.distance_km} km da fábrica
-                </p>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-[13px]">📍</span>
+              {editingKm ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    value={kmValue}
+                    onChange={e => setKmValue(e.target.value)}
+                    className="w-20 px-2 py-1 text-[13px] rounded border outline-none"
+                    style={{ borderColor: 'var(--brand-teal)' }}
+                    placeholder="km"
+                    autoFocus
+                  />
+                  <span className="text-[12px]" style={{ color: 'var(--neutral-500)' }}>km</span>
+                  <button
+                    onClick={saveKm}
+                    disabled={savingKm}
+                    className="text-[11px] font-semibold px-2 py-1 rounded"
+                    style={{ background: 'var(--brand-teal)', color: 'white' }}
+                  >
+                    {savingKm ? '...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => { setEditingKm(false); setKmValue(company.distance_km?.toString() ?? '') }}
+                    className="text-[11px] px-2 py-1 rounded hover:bg-gray-100"
+                    style={{ color: 'var(--neutral-500)' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
+                    {company.distance_km ? `${company.distance_km} km da fábrica` : 'Distância não informada'}
+                  </p>
+                  <button
+                    onClick={() => { setEditingKm(true); setKmValue(company.distance_km?.toString() ?? '') }}
+                    className="text-[11px] hover:opacity-70"
+                    style={{ color: 'var(--brand-teal)' }}
+                  >
+                    ✏️ editar
+                  </button>
+                </div>
+              )}
+            </div>
             {company.reorder_cycle_days && (
               <div className="flex items-center gap-2">
                 <RefreshCw size={14} style={{ color: 'var(--neutral-400)' }} />
