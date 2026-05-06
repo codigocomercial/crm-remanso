@@ -40,7 +40,7 @@ interface Contact {
   job_title: string | null
 }
 
-type EditField = 'km' | 'ciclo' | 'ultima_compra' | 'ticket' | null
+type EditField = 'km' | 'ciclo' | null
 
 export default function EmpresaDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -250,24 +250,31 @@ export default function EmpresaDetailPage() {
               placeholder="dias"
             />
 
-            {/* Última compra */}
-            <EditableRow
-              icon={<span className="text-[14px]">🗓️</span>}
-              label="Última compra"
-              value={company.last_order_at ? new Date(company.last_order_at).toLocaleDateString('pt-BR') : null}
-              field="ultima_compra"
-              inputType="date"
-            />
+            {/* Última compra — calculado dos pedidos */}
+            <div className="flex items-start gap-2">
+              <span className="text-[14px] mt-0.5">🗓️</span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>
+                  Última compra
+                </p>
+                <p className="text-[13px]" style={{ color: company.last_order_at ? 'var(--neutral-700)' : 'var(--neutral-300)' }}>
+                  {company.last_order_at ? new Date(company.last_order_at).toLocaleDateString('pt-BR') : 'Aguardando pedidos'}
+                </p>
+              </div>
+            </div>
 
-            {/* Ticket médio */}
-            <EditableRow
-              icon={<span className="text-[14px]">💰</span>}
-              label="Ticket médio"
-              value={company.average_order_value ? formatCurrency(company.average_order_value) : null}
-              field="ticket"
-              inputType="number"
-              placeholder="R$"
-            />
+            {/* Ticket médio — calculado dos pedidos */}
+            <div className="flex items-start gap-2">
+              <span className="text-[14px] mt-0.5">💰</span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>
+                  Ticket médio
+                </p>
+                <p className="text-[13px]" style={{ color: company.average_order_value ? 'var(--neutral-700)' : 'var(--neutral-300)' }}>
+                  {company.average_order_value ? formatCurrency(company.average_order_value) : 'Aguardando pedidos'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {company.notes && (
