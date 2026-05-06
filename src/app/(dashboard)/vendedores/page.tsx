@@ -27,7 +27,7 @@ export default function VendedoresPage() {
 
   const fetchSellers = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('sellers').select('*').eq('org_id', ORG_ID).order('name')
+    const { data } = await supabase.from('sellers').select('*').order('name')
     setSellers(data ?? [])
     setLoading(false)
   }, [supabase])
