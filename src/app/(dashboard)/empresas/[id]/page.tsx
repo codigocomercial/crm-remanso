@@ -78,7 +78,7 @@ export default function EmpresaDetailPage() {
       supabase.from('contacts')
         .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
-      supabase.from('sellers').select('id,name').eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!).eq('is_active', true).order('name'),
+      supabase.from('sellers').select('id,name').eq('is_active', true).order('name'),
     ])
     setCompany(comp)
     setContacts(conts ?? [])
