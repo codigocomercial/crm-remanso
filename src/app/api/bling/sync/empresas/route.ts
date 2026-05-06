@@ -233,6 +233,7 @@ async function blingFetch(path: string, token: string) {
 
 export async function POST() {
   try {
+    const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
