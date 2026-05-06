@@ -57,6 +57,8 @@ export default function EmpresaDetailPage() {
   const [editing, setEditing] = useState<EditField>(null)
   const [editVal, setEditVal] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [savingContact, setSavingContact] = useState(false)
 
   const [newContact, setNewContact] = useState({
     full_name: '', phone: '', whatsapp: '', contact_role: 'compras', job_title: '',
@@ -94,6 +96,21 @@ export default function EmpresaDetailPage() {
     setCompany(prev => prev ? { ...prev, ...updates } : prev)
     setEditing(null)
     setSavingEdit(false)
+  }
+
+  async function saveContact() {
+    if (!editingContact) return
+    setSavingContact(true)
+    await supabase.from('contacts').update({
+      full_name: editingContact.full_name,
+      whatsapp: editingContact.whatsapp,
+      phone: editingContact.phone,
+      job_title: editingContact.job_title,
+      contact_role: editingContact.contact_role,
+    }).eq('id', editingContact.id)
+    setContacts(prev => prev.map(c => c.id === editingContact.id ? editingContact : c))
+    setEditingContact(null)
+    setSavingContact(false)
   }
 
   async function toggleCampaign(contact: Contact) {
@@ -401,6 +418,47 @@ export default function EmpresaDetailPage() {
               </div>
             )}
 
+            {/* Modal edição de contato */}
+            {editingContact && (
+              <div className="mb-4 p-4 rounded-xl space-y-3" style={{ background: 'var(--neutral-100)', border: '1px solid var(--brand-teal)' }}>
+                <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-700)' }}>Editar contato</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <input type="text" placeholder="Nome completo *" value={editingContact.full_name}
+                      onChange={e => setEditingContact(p => p ? { ...p, full_name: e.target.value } : p)}
+                      className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                  <input type="tel" placeholder="WhatsApp" value={editingContact.whatsapp ?? ''}
+                    onChange={e => setEditingContact(p => p ? { ...p, whatsapp: e.target.value } : p)}
+                    className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                  <input type="text" placeholder="Cargo (opcional)" value={editingContact.job_title ?? ''}
+                    onChange={e => setEditingContact(p => p ? { ...p, job_title: e.target.value } : p)}
+                    className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                  <div className="col-span-2">
+                    <select value={editingContact.contact_role}
+                      onChange={e => setEditingContact(p => p ? { ...p, contact_role: e.target.value } : p)}
+                      className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
+                      <option value="compras">🛒 Compras</option>
+                      <option value="financeiro">💰 Financeiro</option>
+                      <option value="diretor">👔 Diretor/Sócio</option>
+                      <option value="operacional">⚙️ Operacional</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveContact} disabled={savingContact} className="btn-remanso flex-1 justify-center">
+                    {savingContact ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button onClick={() => setEditingContact(null)}
+                    className="px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-white transition-colors"
+                    style={{ color: 'var(--neutral-500)' }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
             {contacts.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-[13px]" style={{ color: 'var(--neutral-400)' }}>Nenhum contato cadastrado ainda</p>
@@ -452,6 +510,10 @@ export default function EmpresaDetailPage() {
                             {contact.receive_campaigns ? 'Campanha' : 'Sem camp.'}
                           </p>
                         </div>
+                        <button onClick={() => setEditingContact(contact)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-blue-50 transition-colors">
+                          <span className="text-[12px]">✏️</span>
+                        </button>
                         <button onClick={() => deleteContact(contact.id)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors">
                           <Trash2 size={12} style={{ color: 'var(--color-danger)' }} />
