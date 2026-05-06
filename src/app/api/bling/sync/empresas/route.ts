@@ -218,6 +218,7 @@ async function getBlingToken() {
 }
 
 async function blingFetch(path: string, token: string) {
+  await new Promise(r => setTimeout(r, 400)) // respeita limite de 3 req/s do Bling
   const res = await fetch(`https://www.bling.com.br/Api/v3${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -231,6 +232,21 @@ export async function POST() {
     const supabase = await createClient()
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
+
+    // Executa em background para não dar timeout
+    runSync(token).catch(err => console.error('[sync/empresas] erro background:', err.message))
+
+    return NextResponse.json({ success: true, message: 'Sincronização iniciada em background. Aguarde 2-3 minutos.' })
+
+  } catch (error: any) {
+    console.error('[sync/empresas] erro:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+async function runSync(token: string) {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
 
     let totalVendedores = 0
     let totalEmpresas = 0
@@ -340,10 +356,5 @@ export async function POST() {
         }
       }
 
-    return NextResponse.json({ success: true, vendedores: totalVendedores, empresas: totalEmpresas, contatos: totalContatos })
-
-  } catch (error: any) {
-    console.error('[sync/empresas] erro:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+    console.log(`[sync] concluído — ${totalVendedores} vendedores, ${totalEmpresas} empresas, ${totalContatos} contatos`)
 }
