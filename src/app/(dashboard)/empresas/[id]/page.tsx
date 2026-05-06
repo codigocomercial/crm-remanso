@@ -22,6 +22,9 @@ interface Company {
   fantasia: string | null
   city: string | null
   state: string | null
+  cnpj: string | null
+  phone: string | null
+  whatsapp: string | null
   distance_km: number | null
   reorder_cycle_days: number | null
   last_order_at: string | null
@@ -35,7 +38,6 @@ interface Contact {
   full_name: string
   phone: string | null
   whatsapp: string | null
-  cnpj: string | null
   contact_role: string
   receive_campaigns: boolean
   job_title: string | null
