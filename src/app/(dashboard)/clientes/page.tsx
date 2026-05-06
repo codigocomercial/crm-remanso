@@ -19,7 +19,7 @@ interface Contact {
   reorder_cycle_days: number | null
   next_followup_at: string | null
   average_order_value: number | null
-  companies?: { name: string; fantasia: string | null } | null
+  companies?: { name: string; fantasia: string | null }[] | null
 }
 
 export default function ContatosPage() {
@@ -121,8 +121,8 @@ export default function ContatosPage() {
                       <td className="px-6 py-4">
                         <p className="font-semibold text-foreground">{contact.full_name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {contact.companies
-                            ? (contact.companies.fantasia || contact.companies.name)
+                          {contact.companies?.[0]
+                            ? (contact.companies[0].fantasia || contact.companies[0].name)
                             : contact.city || 'Sem empresa'}
                         </p>
                       </td>
