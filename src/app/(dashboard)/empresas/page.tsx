@@ -19,6 +19,7 @@ interface Company {
   reorder_cycle_days: number | null
   contacts_count: number
   compras_count: number
+  seller_name: string | null
 }
 
 function initials(name: string) {
@@ -42,7 +43,7 @@ export default function EmpresasPage() {
     const supabase = createClient()
     let query = supabase
       .from('companies')
-      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role)`)
+      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role), sellers(name)`)
       .eq('org_id', ORG_ID)
       .order('name')
     if (search) query = query.ilike('name', `%${search}%`)
@@ -58,6 +59,7 @@ export default function EmpresasPage() {
       reorder_cycle_days: d.reorder_cycle_days,
       contacts_count: d.contacts?.length ?? 0,
       compras_count: d.contacts?.filter((c: any) => c.contact_role === 'compras').length ?? 0,
+      seller_name: d.sellers?.name ?? null,
     })))
     setLoading(false)
   }
@@ -151,6 +153,11 @@ export default function EmpresasPage() {
                   <p className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>
                     {[company.city, company.state].filter(Boolean).join(', ') || 'Sem localização'}
                   </p>
+                  {company.seller_name && (
+                    <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--brand-teal)' }}>
+                      👤 {company.seller_name}
+                    </p>
+                  )}
                 </div>
                 <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0 mt-1"
                   style={{ color: 'var(--neutral-500)' }} />
