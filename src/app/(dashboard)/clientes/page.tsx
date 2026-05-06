@@ -19,7 +19,7 @@ interface Contact {
   reorder_cycle_days: number | null
   next_followup_at: string | null
   average_order_value: number | null
-  companies?: { name: string }[] | null
+  companies?: { name: string; fantasia: string | null } | null
 }
 
 export default function ContatosPage() {
@@ -33,7 +33,7 @@ export default function ContatosPage() {
       const supabase = createClient()
       let query = supabase
         .from('contacts')
-        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name)')
+        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name, fantasia)')
         .order('full_name', { ascending: true })
       if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
       const { data, error } = await query
@@ -120,7 +120,11 @@ export default function ContatosPage() {
                     <tr key={contact.id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
                         <p className="font-semibold text-foreground">{contact.full_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{contact.city || 'Sem cidade'}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {contact.companies
+                            ? (contact.companies.fantasia || contact.companies.name)
+                            : contact.city || 'Sem empresa'}
+                        </p>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <p className="text-foreground">{contact.phone || '—'}</p>
