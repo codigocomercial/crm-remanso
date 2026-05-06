@@ -250,33 +250,13 @@ export default function EditarProdutoPage() {
 
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Categoria
+                                Linha de Produto
                             </label>
                             <select value={form.category} onChange={e => set('category', e.target.value)}
                                 className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                                 <option value="">Selecionar...</option>
                                 {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Material
-                            </label>
-                            <select value={form.material} onChange={e => set('material', e.target.value)}
-                                className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                                <option value="">Selecionar...</option>
-                                {MATERIAIS.map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Dimensões
-                            </label>
-                            <input type="text" placeholder="Ex: 190x60x40cm" value={form.dimensions}
-                                onChange={e => set('dimensions', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
                         </div>
 
                         <div>
