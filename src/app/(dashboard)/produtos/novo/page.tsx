@@ -224,15 +224,6 @@ export default function NovoProdutoPage() {
                             </select>
                         </div>
 
-                        {/* Dimensões */}
-                        <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Dimensões
-                            </label>
-                            <input type="text" placeholder="Ex: 190x60x40cm" value={form.dimensions}
-                                onChange={e => set('dimensions', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
-                        </div>
 
                         {/* Ordem */}
                         <div>

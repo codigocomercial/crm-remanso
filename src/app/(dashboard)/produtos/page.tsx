@@ -17,12 +17,13 @@ interface Product {
     price: number | null
     image_url: string | null
     category: string | null
-    material: string | null
     alca: string | null
     sku: string | null
     cor: string | null
-    dimensions: string | null
     is_active: boolean
+    cost_price: number | null
+    stock_quantity: number | null
+    bling_id: number | null
     sort_order: number
 }
 
@@ -197,7 +198,7 @@ export default function ProdutosPage() {
                                             🎨 {product.cor}
                                         </span>
                                     )}
-                                    {!product.alca && !product.cor && product.category && (
+                                    {product.category && (
                                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                                             style={{ background: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
                                             {product.category}
@@ -205,11 +206,32 @@ export default function ProdutosPage() {
                                     )}
                                 </div>
 
-                                {/* Preço */}
-                                {product.price && (
-                                    <p className="text-[14px] font-bold"
-                                        style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
-                                        R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                {/* SKU */}
+                                {product.sku && (
+                                    <p className="text-[11px]" style={{ color: 'var(--neutral-400)' }}>
+                                        SKU: {product.sku}
+                                    </p>
+                                )}
+
+                                {/* Preço venda e custo */}
+                                <div className="flex items-center gap-3 mt-1">
+                                    {product.price && (
+                                        <p className="text-[14px] font-bold"
+                                            style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
+                                            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    )}
+                                    {product.cost_price && (
+                                        <p className="text-[11px]" style={{ color: 'var(--neutral-400)' }}>
+                                            Custo: R$ {product.cost_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Estoque */}
+                                {product.stock_quantity !== null && product.bling_id && (
+                                    <p className="text-[11px]" style={{ color: product.stock_quantity > 0 ? 'var(--brand-teal)' : 'var(--color-danger)' }}>
+                                        Estoque: {product.stock_quantity} un
                                     </p>
                                 )}
                             </div>

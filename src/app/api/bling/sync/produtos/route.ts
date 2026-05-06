@@ -24,7 +24,6 @@ export async function POST() {
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
 
-    // Executa em background
     runSync(token).catch(err => console.error('[sync/produtos] erro:', err.message))
 
     return NextResponse.json({ success: true, message: 'Sincronização de produtos iniciada' })
@@ -46,16 +45,13 @@ async function runSync(token: string) {
     if (produtos.length === 0) break
 
     for (const p of produtos) {
-      // Extrai modelo, cor e alça do nome do produto
-      // Ex: "Urna Mogno/Imbuia Varão Roma" → modelo=Urna, cor=Mogno/Imbuia, alca=Varão Roma
-      const name = p.nome ?? ''
-      
       await supabase.from('products').upsert({
         org_id: ORG_ID,
         bling_id: p.id,
-        name,
-        description: p.descricaoCurta ?? null,
+        name: p.nome ?? '',
         sku: p.codigo ?? null,
+        product_line: p.linhaProduto?.descricao ?? null,
+        category: p.linhaProduto?.descricao ?? null, // usar category como linha de produto
         price: p.preco ?? null,
         cost_price: p.precoCusto ?? null,
         stock_quantity: p.estoque?.saldoVirtualTotal ?? 0,
