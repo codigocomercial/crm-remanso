@@ -86,8 +86,6 @@ export default function EmpresaDetailPage() {
     const updates: Partial<Company> = {}
     if (editing === 'km') updates.distance_km = parseInt(editVal) || null
     if (editing === 'ciclo') updates.reorder_cycle_days = parseInt(editVal) || null
-    if (editing === 'ultima_compra') updates.last_order_at = editVal || null
-    if (editing === 'ticket') updates.average_order_value = parseFloat(editVal.replace(',', '.')) || null
 
     await supabase.from('companies').update(updates).eq('id', id)
     setCompany(prev => prev ? { ...prev, ...updates } : prev)
