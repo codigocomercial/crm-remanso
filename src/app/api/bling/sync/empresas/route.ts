@@ -192,10 +192,6 @@ const COORDS: Record<string, [number, number]> = {
   'Brejões': [-13.0567, -39.7969],
   'Itororó': [-15.1178, -40.0706],
   'Simões Filho': [-12.7881, -38.4033],
-  'Boninal': [-12.7019, -41.8133],
-  'Ibiassucê': [-14.4800, -42.2664],
-  'Lamarão': [-11.8203, -38.8814],
-  'Dom Basílio': [-13.7586, -41.7706],
 }
 
 function calcularDistancia(city: string): number | null {
