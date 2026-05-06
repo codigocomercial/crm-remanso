@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
