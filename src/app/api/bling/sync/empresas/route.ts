@@ -209,10 +209,15 @@ function calcularDistancia(city: string): number | null {
 }
 
 async function getBlingToken() {
-  const supabase = await createClient()
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  )
   const { data } = await supabase
     .from('bling_tokens')
     .select('access_token')
+    .eq('org_id', ORG_ID)
     .single()
   return data?.access_token
 }
@@ -245,8 +250,11 @@ export async function POST() {
 }
 
 async function runSync(token: string) {
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  )
 
     let totalVendedores = 0
     let totalEmpresas = 0

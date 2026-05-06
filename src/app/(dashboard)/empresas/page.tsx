@@ -71,7 +71,7 @@ export default function EmpresasPage() {
       const res = await fetch('/api/bling/sync/empresas', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setSyncResult(`${data.empresas} empresas, ${data.contatos} contatos e ${data.vendedores} vendedores sincronizados!`)
+        setSyncResult(data.message || `${data.empresas ?? 0} empresas, ${data.contatos ?? 0} contatos e ${data.vendedores ?? 0} vendedores sincronizados!`)
         load()
       } else {
         setSyncResult(`Erro: ${data.error}`)
