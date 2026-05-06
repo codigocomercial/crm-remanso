@@ -29,6 +29,8 @@ interface Company {
   reorder_cycle_days: number | null
   last_order_at: string | null
   average_order_value: number | null
+  seller_id: string | null
+  sellers: { name: string } | null
   segment: string | null
   notes: string | null
 }
@@ -57,6 +59,9 @@ export default function EmpresaDetailPage() {
   const [editing, setEditing] = useState<EditField>(null)
   const [editVal, setEditVal] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
+  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([])
+  const [editingVendedor, setEditingVendedor] = useState(false)
+  const [selectedSeller, setSelectedSeller] = useState<string>('')
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [savingContact, setSavingContact] = useState(false)
 
@@ -68,20 +73,32 @@ export default function EmpresaDetailPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: comp }, { data: conts }] = await Promise.all([
-      supabase.from('companies').select('*').eq('id', id).single(),
+    const [{ data: comp }, { data: conts }, { data: sellersData }] = await Promise.all([
+      supabase.from('companies').select('*, sellers(name)').eq('id', id).single(),
       supabase.from('contacts')
         .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
+      supabase.from('sellers').select('id,name').eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!).eq('is_active', true).order('name'),
     ])
     setCompany(comp)
     setContacts(conts ?? [])
+    setSellers(sellersData ?? [])
     setLoading(false)
   }
 
   function startEdit(field: EditField, current: string) {
     setEditing(field)
     setEditVal(current)
+  }
+
+  async function saveVendedor() {
+    setSavingEdit(true)
+    const seller_id = selectedSeller || null
+    await supabase.from('companies').update({ seller_id }).eq('id', id)
+    const sellerName = sellers.find(s => s.id === selectedSeller)?.name ?? null
+    setCompany(prev => prev ? { ...prev, seller_id, sellers: sellerName ? { name: sellerName } : null } : prev)
+    setEditingVendedor(false)
+    setSavingEdit(false)
   }
 
   async function saveEdit() {
@@ -307,6 +324,48 @@ export default function EmpresaDetailPage() {
               inputType="number"
               placeholder="dias"
             />
+
+            {/* Vendedor */}
+            <div className="flex items-start gap-2">
+              <span className="text-[14px] mt-0.5">👤</span>
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>
+                  Vendedor
+                </p>
+                {editingVendedor ? (
+                  <div className="flex items-center gap-1.5">
+                    <select value={selectedSeller}
+                      onChange={e => setSelectedSeller(e.target.value)}
+                      className="px-2 py-1 text-[13px] rounded border outline-none bg-white"
+                      style={{ borderColor: 'var(--brand-teal)', minWidth: '160px' }}
+                      autoFocus>
+                      <option value="">— Sem vendedor —</option>
+                      {sellers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <button onClick={saveVendedor} disabled={savingEdit}
+                      className="text-[11px] font-semibold px-2 py-1 rounded"
+                      style={{ background: 'var(--brand-teal)', color: 'white' }}>
+                      {savingEdit ? '...' : 'OK'}
+                    </button>
+                    <button onClick={() => setEditingVendedor(false)}
+                      className="text-[11px] px-1.5 py-1 rounded hover:bg-gray-100"
+                      style={{ color: 'var(--neutral-400)' }}>✕</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 group">
+                    <p className="text-[13px]" style={{ color: 'var(--neutral-700)' }}>
+                      {company.sellers?.name || <span style={{ color: 'var(--neutral-300)' }}>Não vinculado</span>}
+                    </p>
+                    <button
+                      onClick={() => { setEditingVendedor(true); setSelectedSeller(company.seller_id ?? '') }}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] transition-opacity"
+                      style={{ color: 'var(--brand-teal)' }}>✏️</button>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Última compra — calculado dos pedidos */}
             <div className="flex items-start gap-2">
