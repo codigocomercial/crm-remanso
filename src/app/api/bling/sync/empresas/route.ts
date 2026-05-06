@@ -236,103 +236,109 @@ export async function POST() {
     let totalEmpresas = 0
     let totalContatos = 0
 
-    // 1. Sincronizar vendedores
-    const vendedoresRes = await blingFetch('/vendedores?limite=100', token)
-    for (const v of vendedoresRes?.data ?? []) {
+    // Passagem única: coleta todos os contatos do Bling
+    let page = 1
+    const allContatos: any[] = []
+
+    while (true) {
+      const data = await blingFetch(`/contatos?pagina=${page}&limite=100`, token)
+      const contatos = data?.data ?? []
+      if (contatos.length === 0) break
+      allContatos.push(...contatos)
+      if (contatos.length < 100) break
+      page++
+    }
+
+    // 1. Salvar vendedores únicos
+    const vendedoresMap = new Map<number, string>()
+    for (const c of allContatos) {
+      if (c.vendedor?.id && c.vendedor?.nome) {
+        vendedoresMap.set(c.vendedor.id, c.vendedor.nome)
+      }
+    }
+
+    for (const [blingId, nome] of vendedoresMap) {
       await supabase.from('sellers').upsert({
         org_id: ORG_ID,
-        bling_id: v.id,
-        name: v.nome,
-        email: v.email ?? null,
-        is_active: v.situacao === 'A',
+        bling_id: blingId,
+        name: nome,
+        is_active: true,
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'bling_id' })
       totalVendedores++
     }
 
-    // 2. Sincronizar empresas
-    let page = 1
-    while (true) {
-      const data = await blingFetch(`/contatos?pagina=${page}&limite=100`, token)
-      const contatos = data?.data ?? []
-      if (contatos.length === 0) break
+    // Buscar sellers salvos para vincular pelo bling_id
+    const { data: sellersDb } = await supabase
+      .from('sellers').select('id, bling_id').eq('org_id', ORG_ID)
+    const sellersByBlingId = new Map((sellersDb ?? []).map(s => [s.bling_id, s.id]))
 
-      for (const c of contatos) {
-        let seller_id = null
-        if (c.vendedor?.id) {
-          const { data: seller } = await supabase
-            .from('sellers').select('id').eq('bling_id', c.vendedor.id).single()
-          seller_id = seller?.id ?? null
-        }
+    // 2. Sincronizar empresas e contatos
+    for (const c of allContatos) {
+      const seller_id = c.vendedor?.id ? sellersByBlingId.get(c.vendedor.id) ?? null : null
+      const city = c.endereco?.municipio ?? null
+      const state = c.endereco?.uf ?? null
+      const distance_km = city ? calcularDistancia(city) : null
 
-        const city = c.endereco?.municipio ?? null
-        const state = c.endereco?.uf ?? null
-        const distance_km = city ? calcularDistancia(city) : null
+      await supabase.from('companies').upsert({
+        org_id: ORG_ID,
+        bling_id: c.id,
+        name: c.nome,
+        fantasia: c.fantasia ?? null,
+        cnpj: c.numeroDocumento ?? null,
+        phone: c.telefone ?? null,
+        whatsapp: c.celular ?? null,
+        email: c.email ?? null,
+        city,
+        state,
+        seller_id,
+        distance_km,
+        is_active: true,
+        bling_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'bling_id' })
 
-        await supabase.from('companies').upsert({
+      totalEmpresas++
+
+      const { data: company } = await supabase
+        .from('companies').select('id').eq('bling_id', c.id).single()
+
+      const pessoasContato = c.pessoasContato ?? []
+
+      for (const p of pessoasContato) {
+        if (!p.nome) continue
+        await supabase.from('contacts').upsert({
           org_id: ORG_ID,
-          bling_id: c.id,
-          name: c.nome,
-          cnpj: c.numeroDocumento ?? null,
-          phone: c.telefone ?? null,
-          whatsapp: c.celular ?? null,
-          email: c.email ?? null,
-          city,
-          state,
-          seller_id,
-          distance_km,
-          is_active: true,
-          bling_synced_at: new Date().toISOString(),
+          full_name: p.nome,
+          phone: p.telefone ?? null,
+          whatsapp: p.celular ?? c.celular ?? null,
+          email: p.email ?? null,
+          company_id: company?.id ?? null,
+          job_title: c.informacoes ?? null,
+          contact_role: 'compras',
+          receive_campaigns: true,
+          source: 'bling',
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'bling_id' })
+        }, { onConflict: 'org_id,full_name,company_id' })
+        totalContatos++
+      }
 
-        totalEmpresas++
-
-        // Contatos vinculados
-        const { data: company } = await supabase
-          .from('companies').select('id').eq('bling_id', c.id).single()
-
-        const pessoasContato = c.pessoasContato ?? []
-
-        for (const p of pessoasContato) {
-          if (!p.nome) continue
-          await supabase.from('contacts').upsert({
-            org_id: ORG_ID,
-            full_name: p.nome,
-            phone: p.telefone ?? null,
-            whatsapp: p.celular ?? c.celular ?? null, // usa celular da empresa se contato não tiver
-            email: p.email ?? null,
-            company_id: company?.id ?? null,
-            job_title: c.informacoes ?? null, // cargo vem do campo "Informações do contato"
-            contact_role: 'compras',
-            receive_campaigns: true, // contato do Bling já entra habilitado para campanhas
-            source: 'bling',
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'org_id,full_name,company_id' })
-          totalContatos++
-        }
-
-        // Se não tem pessoa de contato mas tem celular, garante contato padrão
-        if (pessoasContato.length === 0 && (c.celular || c.telefone)) {
-          await supabase.from('contacts').upsert({
-            org_id: ORG_ID,
-            full_name: c.fantasia || c.nome,
-            phone: c.telefone ?? null,
-            whatsapp: c.celular ?? c.telefone ?? null,
-            company_id: company?.id ?? null,
-            contact_role: 'compras',
-            receive_campaigns: true,
+      if (pessoasContato.length === 0 && (c.celular || c.telefone)) {
+        await supabase.from('contacts').upsert({
+          org_id: ORG_ID,
+          full_name: c.fantasia || c.nome,
+          phone: c.telefone ?? null,
+          whatsapp: c.celular ?? c.telefone ?? null,
+          company_id: company?.id ?? null,
+          contact_role: 'compras',
+          receive_campaigns: true,
             source: 'bling',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'org_id,full_name,company_id' })
           totalContatos++
         }
       }
-
-      if (contatos.length < 100) break
-      page++
-    }
 
     return NextResponse.json({ success: true, vendedores: totalVendedores, empresas: totalEmpresas, contatos: totalContatos })
 
