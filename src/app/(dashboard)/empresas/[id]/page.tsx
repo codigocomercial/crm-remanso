@@ -281,7 +281,7 @@ export default function EmpresaDetailPage() {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>WhatsApp</p>
                   <a href={`https://wa.me/55${company.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer"
-                    className="text-[13px] hover:opacity-70" style={{ color: '#25D366' }}>
+                    className="text-[13px] hover:opacity-70" style={{ color: '#128C7E' }}>
                     {company.whatsapp}
                   </a>
                 </div>
@@ -488,7 +488,7 @@ export default function EmpresaDetailPage() {
                           {contact.whatsapp && (
                             <a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noreferrer"
                               className="text-[11px] flex items-center gap-1 hover:opacity-70"
-                              style={{ color: '#25D366' }}>
+                              style={{ color: '#128C7E' }}>
                               <MessageSquare size={10} /> {contact.whatsapp}
                             </a>
                           )}
