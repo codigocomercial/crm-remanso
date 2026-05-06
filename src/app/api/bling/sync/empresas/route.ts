@@ -290,30 +290,33 @@ async function runSync(token: string) {
       .from('sellers').select('id, bling_id').eq('org_id', ORG_ID)
     const sellersByBlingId = new Map((sellersDb ?? []).map(s => [s.bling_id, s.id]))
 
-    // 2. Sincronizar empresas e contatos
+    // Processar apenas contatos com cidade (são as funerárias)
+    // Contatos sem cidade são fornecedores/outros — ignorar
     for (const c of allContatos) {
-      const seller_id = c.vendedor?.id ? sellersByBlingId.get(c.vendedor.id) ?? null : null
       const city = c.endereco?.municipio ?? null
       const state = c.endereco?.uf ?? null
+      if (!city) continue // ignora fornecedores e outros sem cidade
+
+      const seller_id = c.vendedor?.id ? sellersByBlingId.get(c.vendedor.id) ?? null : null
       const distance_km = city ? calcularDistancia(city) : null
 
       await supabase.from('companies').upsert({
         org_id: ORG_ID,
         bling_id: c.id,
         name: c.nome,
-        fantasia: c.fantasia ?? null,
-        cnpj: c.numeroDocumento ?? null,
-        phone: c.telefone ?? null,
-        whatsapp: c.celular ?? null,
-        email: c.email ?? null,
-        city,
-        state,
-        seller_id,
-        distance_km,
+        fantasia: c.fantasia || undefined, // não sobrescreve se Bling não retornar
+        cnpj: c.numeroDocumento || undefined,
+        phone: c.telefone || undefined,
+        whatsapp: c.celular || undefined,
+        email: c.email || undefined,
+        city: c.endereco?.municipio || undefined,
+        state: c.endereco?.uf || undefined,
+        seller_id: seller_id ?? undefined,
+        distance_km: distance_km ?? undefined,
         is_active: true,
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'bling_id' })
+      }, { onConflict: 'bling_id', ignoreDuplicates: false })
 
       totalEmpresas++
 
