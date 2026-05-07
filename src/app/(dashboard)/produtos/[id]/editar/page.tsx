@@ -80,8 +80,7 @@ export default function EditarProdutoPage() {
     }
 
     function handleModeloChange(code: string) {
-        const modelo = modelos.find(m => m.code === code)
-        setForm(prev => ({ ...prev, modelo: code, category: modelo?.category ?? prev.category }))
+        setForm(prev => ({ ...prev, modelo: code }))
     }
 
     function set(field: string, value: string | boolean) {
