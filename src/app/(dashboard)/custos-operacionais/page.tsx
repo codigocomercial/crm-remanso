@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/rm-components'
-import { Plus, Pencil, Trash2, Calculator } from 'lucide-react'
+import { Plus, Pencil, Trash2, Calculator, X } from 'lucide-react'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
@@ -115,12 +115,13 @@ export default function CustosOperacionaisPage() {
   }
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-  const fmtInput = (v: number) => v === 0 ? '' : String(v).replace('.', ',')
 
   function handleNum(key: string, val: string) {
     const n = parseFloat(val.replace(',', '.')) || 0
     setForm(f => ({ ...f, [key]: n }))
   }
+
+  const totalForm = CAMPOS.reduce((s, c) => s + (Number((form as any)[c.key]) || 0), 0)
 
   return (
     <div className="animate-fade-in">
@@ -158,11 +159,6 @@ export default function CustosOperacionaisPage() {
                 <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--neutral-600)' }}>Urnas Prod.</th>
                 <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--neutral-600)' }}>Total Custos</th>
                 <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--neutral-600)' }}>Custo/Urna</th>
-                {CAMPOS.map(c => (
-                  <th key={c.key} className="text-right px-4 py-3 font-semibold hidden lg:table-cell" style={{ color: 'var(--neutral-600)' }}>
-                    {c.label}
-                  </th>
-                ))}
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -182,11 +178,6 @@ export default function CustosOperacionaisPage() {
                   <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--neutral-900)' }}>
                     R$ {fmt(custoPorUrna(r))}
                   </td>
-                  {CAMPOS.map(c => (
-                    <td key={c.key} className="px-4 py-3 text-right hidden lg:table-cell" style={{ color: 'var(--neutral-600)' }}>
-                      R$ {fmt(Number((r as any)[c.key]))}
-                    </td>
-                  ))}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => openEdit(r)} className="p-1.5 rounded hover:bg-neutral-100 transition-colors">
@@ -204,129 +195,118 @@ export default function CustosOperacionaisPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal — mesma estrutura usada em outros modais do sistema */}
       {showModal && (
-        <div className="fixed inset-0 z-50" style={{ background: "rgba(0,0,0,0.4)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="flex justify-center" style={{ padding: "2rem 1rem", minHeight: "100%" }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-fit">
-            <div className="p-6 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-              <h2 className="text-[17px] font-bold" style={{ color: 'var(--neutral-900)' }}>
-                {editing ? 'Editar Custos' : 'Novo Mês de Custos'}
-              </h2>
-            </div>
+        <div
+          className="fixed inset-0 z-50"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
+        >
+          <div className="absolute inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-start justify-center p-6">
+              <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 pt-6 pb-4"
+                  style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                  <h2 className="text-[17px] font-bold" style={{ color: 'var(--neutral-900)' }}>
+                    {editing ? 'Editar Custos' : 'Novo Mês de Custos'}
+                  </h2>
+                  <button onClick={() => setShowModal(false)} className="hover:opacity-70">
+                    <X size={18} style={{ color: 'var(--neutral-400)' }} />
+                  </button>
+                </div>
 
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Mês/Ano/Urnas */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                    Mês
-                  </label>
-                  <select
-                    value={form.month}
-                    onChange={e => setForm(f => ({ ...f, month: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                    style={{ borderColor: 'rgba(0,0,0,0.12)' }}
-                  >
-                    {MESES.map((m, i) => (
-                      <option key={i} value={i + 1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                    Ano
-                  </label>
-                  <input
-                    type="number"
-                    value={form.year}
-                    onChange={e => setForm(f => ({ ...f, year: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                    style={{ borderColor: 'rgba(0,0,0,0.12)' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                    Urnas Produzidas
-                  </label>
-                  <input
-                    type="number"
-                    value={form.units_produced || ''}
-                    onChange={e => setForm(f => ({ ...f, units_produced: Number(e.target.value) }))}
-                    placeholder="Ex: 450"
-                    className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                    style={{ borderColor: 'rgba(0,0,0,0.12)' }}
-                  />
-                </div>
-              </div>
-
-              {/* Custos */}
-              <div className="grid grid-cols-2 gap-4">
-                {CAMPOS.map(c => (
-                  <div key={c.key}>
-                    <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                      {c.label}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px]" style={{ color: 'var(--neutral-400)' }}>R$</span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={fmtInput((form as any)[c.key])}
-                        onChange={e => handleNum(c.key, e.target.value)}
-                        placeholder="0,00"
-                        className="w-full pl-9 pr-3 py-2 text-[13px] rounded-lg border outline-none text-right"
-                        style={{ borderColor: 'rgba(0,0,0,0.12)' }}
-                      />
+                {/* Conteúdo */}
+                <div className="px-6 py-5 space-y-5">
+                  {/* Mês / Ano / Urnas */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>Mês</label>
+                      <select value={form.month}
+                        onChange={e => setForm(f => ({ ...f, month: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                        style={{ borderColor: 'rgba(0,0,0,0.12)' }}>
+                        {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>Ano</label>
+                      <input type="number" value={form.year}
+                        onChange={e => setForm(f => ({ ...f, year: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                        style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>Urnas Produzidas</label>
+                      <input type="number" value={form.units_produced || ''}
+                        onChange={e => setForm(f => ({ ...f, units_produced: Number(e.target.value) }))}
+                        placeholder="Ex: 450"
+                        className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                        style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Preview custo/urna */}
-              {form.units_produced > 0 && (
-                <div className="rounded-xl p-4 flex items-center justify-between"
-                  style={{ background: 'var(--neutral-50)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <div>
-                    <p className="text-[11px] font-semibold mb-0.5" style={{ color: 'var(--neutral-500)' }}>TOTAL MENSAL</p>
-                    <p className="text-[15px] font-bold" style={{ color: 'var(--neutral-800)' }}>
-                      R$ {fmt(CAMPOS.reduce((s, c) => s + (Number((form as any)[c.key]) || 0), 0))}
-                    </p>
+                  {/* Campos de custo */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {CAMPOS.map(c => (
+                      <div key={c.key}>
+                        <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
+                          {c.label}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px]" style={{ color: 'var(--neutral-400)' }}>R$</span>
+                          <input type="text" inputMode="decimal"
+                            value={(form as any)[c.key] || ''}
+                            onChange={e => handleNum(c.key, e.target.value)}
+                            placeholder="0,00"
+                            className="w-full pl-9 pr-3 py-2 text-[13px] rounded-lg border outline-none text-right"
+                            style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <p className="text-[11px] font-semibold mb-0.5" style={{ color: 'var(--neutral-500)' }}>CUSTO POR URNA</p>
-                    <p className="text-[18px] font-bold" style={{ color: 'var(--brand-teal)' }}>
-                      R$ {fmt(CAMPOS.reduce((s, c) => s + (Number((form as any)[c.key]) || 0), 0) / form.units_produced)}
-                    </p>
+
+                  {/* Preview */}
+                  {form.units_produced > 0 && (
+                    <div className="rounded-xl p-4 flex items-center justify-between"
+                      style={{ background: 'var(--neutral-50)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <div>
+                        <p className="text-[11px] font-semibold mb-0.5" style={{ color: 'var(--neutral-500)' }}>TOTAL MENSAL</p>
+                        <p className="text-[15px] font-bold" style={{ color: 'var(--neutral-800)' }}>R$ {fmt(totalForm)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold mb-0.5" style={{ color: 'var(--neutral-500)' }}>CUSTO POR URNA</p>
+                        <p className="text-[18px] font-bold" style={{ color: 'var(--brand-teal)' }}>
+                          R$ {fmt(totalForm / form.units_produced)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observação */}
+                  <div>
+                    <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>Observação</label>
+                    <textarea value={form.notes ?? ''}
+                      onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none resize-none"
+                      style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
                   </div>
                 </div>
-              )}
 
-              {/* Observação */}
-              <div>
-                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                  Observação
-                </label>
-                <textarea
-                  value={form.notes ?? ''}
-                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none resize-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.12)' }}
-                />
+                {/* Footer */}
+                <div className="flex justify-end gap-3 px-6 pb-6 pt-4"
+                  style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  <button onClick={() => setShowModal(false)} className="btn-remanso-outline">Cancelar</button>
+                  <button onClick={save} disabled={saving} className="btn-remanso">
+                    {saving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div className="p-6 border-t flex justify-end gap-3" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-              <button onClick={() => setShowModal(false)} className="btn-remanso-outline">
-                Cancelar
-              </button>
-              <button onClick={save} disabled={saving} className="btn-remanso">
-                {saving ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
-          </div>
           </div>
         </div>
       )}
