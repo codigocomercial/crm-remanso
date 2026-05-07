@@ -10,20 +10,31 @@ async function getBlingToken() {
 }
 
 async function blingFetch(path: string, token: string) {
-  await new Promise(r => setTimeout(r, 350))
+  await new Promise(r => setTimeout(r, 400))
   const res = await fetch(`https://www.bling.com.br/Api/v3${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const json = await res.json()
-  if (!res.ok) throw new Error(`Bling ${res.status}: ${JSON.stringify(json)}`)
+  if (!res.ok) throw new Error(`Bling API ${res.status}: ${JSON.stringify(json)}`)
   return json
+}
+
+function mapStatus(situacaoId: number): string {
+  const map: Record<number, string> = {
+    6:  'em_aberto',
+    9:  'atendido',
+    12: 'cancelado',
+    15: 'em_andamento',
+    18: 'em_digitacao',
+  }
+  return map[situacaoId] ?? 'em_aberto'
 }
 
 export async function POST() {
   try {
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
-    runSync(token).catch(err => console.error('[sync/pedidos]', err.message))
+    runSync(token).catch(err => console.error('[sync/pedidos] erro:', err.message))
     return NextResponse.json({ success: true, message: 'Sincronização de pedidos iniciada' })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -34,103 +45,133 @@ async function runSync(token: string) {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
+  const { data: opCosts } = await supabase
+    .from('operational_costs')
+    .select('*')
+    .eq('org_id', ORG_ID)
+
+  const opCostMap: Record<string, number> = {}
+  for (const oc of opCosts ?? []) {
+    const total = oc.labor + oc.admin + oc.truck + oc.maintenance + oc.misc +
+                  oc.tax + oc.icms + oc.freight_purchase + oc.interest + oc.discount_boletos
+    const perUnit = oc.units_produced > 0 ? total / oc.units_produced : 0
+    opCostMap[`${oc.year}-${oc.month}`] = perUnit
+  }
+
   let page = 1
   let total = 0
+  const dataInicio = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
   while (true) {
-    // Buscar pedidos de venda — últimos 90 dias
-    const dataInicio = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const data = await blingFetch(
-      `/pedidos/vendas?pagina=${page}&limite=100&dataInicial=${dataInicio}`,
-      token
-    )
-    const pedidos = data?.data ?? []
+    let listData: any
+    try {
+      listData = await blingFetch(`/pedidos/vendas?pagina=${page}&limite=100&dataInicial=${dataInicio}`, token)
+    } catch (e: any) { console.error('[sync/pedidos]', e.message); break }
+
+    const pedidos = listData?.data ?? []
     if (pedidos.length === 0) break
 
     for (const p of pedidos) {
-      // Buscar detalhe do pedido para ter os itens
-      let detail: any = null
+      let detail: any
       try {
         const d = await blingFetch(`/pedidos/vendas/${p.id}`, token)
         detail = d?.data ?? p
-      } catch {
-        detail = p
-      }
+      } catch { detail = p }
 
       const itens = detail?.itens ?? []
       const contato = detail?.contato ?? {}
       const vendedor = detail?.vendedor ?? {}
-      const totalValue = Number(detail?.totalProdutos ?? detail?.total ?? 0)
+      const situacaoId = Number(detail?.situacao?.id ?? detail?.situacao ?? 6)
+      const status = mapStatus(situacaoId)
+      const totalVenda = Number(detail?.totalProdutos ?? detail?.total ?? 0)
+      const frete = Number(detail?.transporte?.frete ?? 0)
+      const unitsCount = itens.reduce((s: number, i: any) => s + Number(i?.quantidade ?? 1), 0)
 
-      // Mapear situação
-      const situacaoId = detail?.situacao?.id ?? detail?.situacao
-      const situacaoMap: Record<number, string> = {
-        6: 'em_aberto', 9: 'atendido', 12: 'cancelado',
-        15: 'em_andamento', 18: 'em_digitacao'
-      }
-      const status = situacaoMap[situacaoId] ?? 'em_aberto'
+      const orderedAt = detail?.data ? new Date(detail.data) : new Date()
+      const mesKey = `${orderedAt.getFullYear()}-${orderedAt.getMonth() + 1}`
+      const opCostPerUnit = opCostMap[mesKey] ?? 0
 
-      // Upsert do pedido
-      const { data: orderData, error } = await supabase
-        .from('orders')
-        .upsert({
-          org_id: ORG_ID,
-          bling_id: detail.id,
-          bling_number: String(detail.numero ?? ''),
-          bling_situation: String(situacaoId ?? ''),
-          status,
-          total_value: totalValue,
-          client_name: contato?.nome ?? '',
-          client_cnpj: contato?.numeroDocumento ?? '',
-          client_city: contato?.endereco?.municipio ?? '',
-          client_state: contato?.endereco?.uf ?? '',
-          client_address: [
-            contato?.endereco?.endereco,
-            contato?.endereco?.numero,
-            contato?.endereco?.bairro,
-          ].filter(Boolean).join(', '),
-          seller_name: vendedor?.nome ?? '',
-          ordered_at: detail.data ? new Date(detail.data).toISOString() : null,
-          expected_date: detail.dataPrevista ?? null,
-          observations: detail.observacoes ?? null,
-          discount: Number(detail?.desconto?.valor ?? 0),
-          freight: Number(detail?.transporte?.frete ?? 0),
-          bling_synced_at: new Date().toISOString(),
-        }, { onConflict: 'bling_id' })
-        .select('id')
-        .single()
-
-      if (error || !orderData) {
-        console.error('[sync/pedidos] erro upsert:', error?.message)
-        continue
+      let totalCostMp = 0
+      for (const item of itens) {
+        const sku = item?.codigo ?? item?.produto?.codigo ?? ''
+        const qty = Number(item?.quantidade ?? 1)
+        if (sku) {
+          const { data: prod } = await supabase.from('products').select('cost_price')
+            .eq('org_id', ORG_ID).eq('sku', sku).single()
+          totalCostMp += (Number(prod?.cost_price) || 0) * qty
+        }
       }
 
-      const orderId = orderData.id
+      const totalCost = totalCostMp + (opCostPerUnit * unitsCount)
+      const margin = totalVenda - totalCost - frete
+      const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
 
-      // Deletar itens antigos e reinserir
-      await supabase.from('order_items').delete().eq('order_id', orderId)
+      const cnpj = contato?.numeroDocumento ?? ''
+      let companyId: string | null = null
+      if (cnpj) {
+        const { data: comp } = await supabase.from('companies').select('id')
+          .eq('org_id', ORG_ID).eq('cnpj', cnpj).single()
+        companyId = comp?.id ?? null
+      }
+
+      const { data: orderData, error } = await supabase.from('orders').upsert({
+        org_id: ORG_ID,
+        bling_id: detail.id,
+        bling_number: String(detail.numero ?? ''),
+        bling_situation: String(situacaoId),
+        status,
+        total_value: totalVenda,
+        freight: frete,
+        total_cost: totalCost,
+        margin,
+        margin_pct: marginPct,
+        units_count: unitsCount,
+        client_name: contato?.nome ?? '',
+        client_cnpj: cnpj,
+        client_city: contato?.endereco?.municipio ?? '',
+        client_state: contato?.endereco?.uf ?? '',
+        seller_name: vendedor?.nome ?? '',
+        ordered_at: detail.data ? new Date(detail.data).toISOString() : null,
+        observations: detail.observacoes ?? null,
+        company_id: companyId,
+        bling_synced_at: new Date().toISOString(),
+      }, { onConflict: 'bling_id' }).select('id').single()
+
+      if (error || !orderData) { console.error('[sync/pedidos]', error?.message); continue }
+
+      await supabase.from('order_items').delete().eq('order_id', orderData.id)
 
       for (const item of itens) {
         const sku = item?.codigo ?? item?.produto?.codigo ?? ''
-        // Tentar vincular ao produto cadastrado
-        const { data: prod } = await supabase
-          .from('products')
-          .select('id')
-          .eq('org_id', ORG_ID)
-          .eq('sku', sku)
-          .single()
+        const qty = Number(item?.quantidade ?? 1)
+        const unitPrice = Number(item?.valor ?? item?.valorUnitario ?? 0)
+        const { data: prod } = await supabase.from('products').select('id')
+          .eq('org_id', ORG_ID).eq('sku', sku).single()
 
         await supabase.from('order_items').insert({
           org_id: ORG_ID,
-          order_id: orderId,
-          bling_item_id: item.id ?? null,
+          order_id: orderData.id,
           product_id: prod?.id ?? null,
           sku,
-          description: item?.descricao ?? item?.produto?.descricao ?? '',
-          quantity: Number(item?.quantidade ?? 1),
-          unit_price: Number(item?.valor ?? item?.valorUnitario ?? 0),
-          total_price: Number(item?.quantidade ?? 1) * Number(item?.valor ?? item?.valorUnitario ?? 0),
+          description: item?.descricao ?? '',
+          quantity: qty,
+          unit_price: unitPrice,
+          total_price: qty * unitPrice,
         })
+      }
+
+      if (companyId) {
+        const { data: allOrders } = await supabase.from('orders').select('total_value, ordered_at')
+          .eq('org_id', ORG_ID).eq('company_id', companyId).not('total_value', 'is', null)
+        if (allOrders && allOrders.length > 0) {
+          const avg = allOrders.reduce((s, o) => s + Number(o.total_value ?? 0), 0) / allOrders.length
+          const last = allOrders.sort((a, b) =>
+            new Date(b.ordered_at ?? 0).getTime() - new Date(a.ordered_at ?? 0).getTime())[0]
+          await supabase.from('companies').update({
+            last_order_at: last.ordered_at,
+            average_order_value: avg,
+          }).eq('id', companyId)
+        }
       }
 
       total++

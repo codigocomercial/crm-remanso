@@ -1,213 +1,335 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
-import { Plus, Search, FileText, TrendingUp, Clock, CheckCircle, Loader2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
-import { ProposalModal } from './ProposalModal'
+import { PageHeader } from '@/components/ui/rm-components'
+import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  gerada:    { label: 'Gerada',    color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  enviada:   { label: 'Enviada',   color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  aprovada:  { label: 'Aprovada',  color: 'bg-green-100 text-green-700 border-green-200' },
-  perdida:   { label: 'Perdida',   color: 'bg-red-100 text-red-700 border-red-200' },
-  cancelada: { label: 'Cancelada', color: 'bg-gray-100 text-gray-500 border-gray-200' },
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
+
+const STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  em_aberto:    { label: 'Em Aberto',    color: '#1D6FA4', bg: '#EBF4FB' },
+  em_andamento: { label: 'Em Andamento', color: '#B45309', bg: '#FEF3C7' },
+  em_digitacao: { label: 'Rascunho',     color: '#6B7280', bg: '#F1F5F9' },
+  atendido:     { label: 'Entregue',     color: '#2F6F5D', bg: '#EBF5F1' },
+  cancelado:    { label: 'Cancelado',    color: '#DC2626', bg: '#FEE2E2' },
+  perdido:      { label: 'Perdido',      color: '#9333EA', bg: '#F5F3FF' },
 }
 
-export type Proposal = {
+interface Order {
   id: string
   bling_number: string | null
-  contact_id: string | null
   client_name: string | null
-  client_company: string | null
+  client_cnpj: string | null
+  client_city: string | null
+  client_state: string | null
+  seller_name: string | null
   status: string
-  total: number | null
-  issued_at: string | null
-  created_at: string
-  contacts?: { full_name: string } | null
+  total_value: number | null
+  freight: number | null
+  margin: number | null
+  margin_pct: number | null
+  ordered_at: string | null
+  company_id: string | null
+}
+
+interface OrderItem {
+  id: string
+  sku: string | null
+  description: string
+  quantity: number
+  unit_price: number
+  total_price: number
 }
 
 export default function PropostasPage() {
   const supabase = createClient()
-  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [companies, setCompanies] = useState<Record<string, { fantasia: string | null; name: string }>>({})
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('todos')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<Proposal | null>(null)
-  const [orgId, setOrgId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState('todos')
+  const [sellerFilter, setSellerFilter] = useState('todos')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [itemsMap, setItemsMap] = useState<Record<string, OrderItem[]>>({})
+  const [sellers, setSellers] = useState<string[]>([])
 
-  const fetchOrgId = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    const { data } = await supabase.from('users').select('org_id').eq('id', user.id).single()
-    return data?.org_id ?? null
-  }, [supabase])
+  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const t = setTimeout(() => load(), 350)
+    return () => clearTimeout(t)
+  }, [search, statusFilter, sellerFilter, dateFrom, dateTo])
 
-  const fetchProposals = useCallback(async (oid: string) => {
+  async function load() {
     setLoading(true)
     let query = supabase
-      .from('proposals')
-      .select('*, contacts(full_name)')
-      .eq('org_id', oid)
-      .order('created_at', { ascending: false })
-    if (filterStatus !== 'todos') query = query.eq('status', filterStatus)
+      .from('orders')
+      .select('*')
+      .eq('org_id', ORG_ID)
+      .order('ordered_at', { ascending: false })
+      .limit(300)
+
+    if (search.trim()) query = query.or(`client_name.ilike.%${search}%,bling_number.ilike.%${search}%`)
+    if (statusFilter !== 'todos') query = query.eq('status', statusFilter)
+    if (sellerFilter !== 'todos') query = query.eq('seller_name', sellerFilter)
+    if (dateFrom) query = query.gte('ordered_at', dateFrom)
+    if (dateTo) query = query.lte('ordered_at', dateTo + 'T23:59:59')
+
     const { data } = await query
-    setProposals((data as Proposal[]) ?? [])
+    const list = data ?? []
+    setOrders(list)
+
+    const uniqueSellers = [...new Set(list.map(o => o.seller_name).filter(Boolean))] as string[]
+    setSellers(uniqueSellers)
+
+    const companyIds = [...new Set(list.map(o => o.company_id).filter(Boolean))] as string[]
+    if (companyIds.length > 0) {
+      const { data: comps } = await supabase.from('companies').select('id, fantasia, name').in('id', companyIds)
+      const map: Record<string, { fantasia: string | null; name: string }> = {}
+      for (const c of comps ?? []) map[c.id] = c
+      setCompanies(map)
+    }
     setLoading(false)
-  }, [supabase, filterStatus])
-
-  useEffect(() => {
-    fetchOrgId().then(oid => {
-      if (oid) { setOrgId(oid); fetchProposals(oid) }
-    })
-  }, [fetchOrgId, fetchProposals])
-
-  const filtered = proposals.filter(p => {
-    const term = search.toLowerCase()
-    return (
-      (p.bling_number ?? '').toLowerCase().includes(term) ||
-      (p.client_name ?? '').toLowerCase().includes(term) ||
-      (p.client_company ?? '').toLowerCase().includes(term) ||
-      (p.contacts?.full_name ?? '').toLowerCase().includes(term)
-    )
-  })
-
-  const emAberto   = proposals.filter(p => ['gerada', 'enviada'].includes(p.status)).length
-  const aprovadas  = proposals.filter(p => p.status === 'aprovada').length
-  const valorAprov = proposals.filter(p => p.status === 'aprovada').reduce((s, p) => s + (p.total ?? 0), 0)
-
-  const handleSaved = () => {
-    if (orgId) fetchProposals(orgId)
-    setModalOpen(false)
-    setEditing(null)
   }
 
+  async function toggleExpand(orderId: string) {
+    if (expandedId === orderId) { setExpandedId(null); return }
+    setExpandedId(orderId)
+    if (itemsMap[orderId]) return
+    const { data } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('description')
+    setItemsMap(prev => ({ ...prev, [orderId]: data ?? [] }))
+  }
+
+  async function syncPedidos() {
+    setSyncing(true)
+    const res = await fetch('/api/bling/sync/pedidos', { method: 'POST' })
+    const data = await res.json()
+    setSyncing(false)
+    if (data.success) alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.')
+    else alert('Erro: ' + data.error)
+  }
+
+  const fmt = (v: number | null) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+  const clientName = (o: Order) => {
+    if (o.company_id && companies[o.company_id]) {
+      const c = companies[o.company_id]
+      return c.fantasia || c.name
+    }
+    return o.client_name ?? '—'
+  }
+
+  const totalVenda = orders.reduce((s, o) => s + (o.total_value ?? 0), 0)
+  const totalMargem = orders.reduce((s, o) => s + (o.margin ?? 0), 0)
+  const margemMedia = totalVenda > 0 ? (totalMargem / totalVenda) * 100 : 0
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pedidos de Venda</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie as pedido de vendas enviadas aos clientes</p>
-        </div>
-        <Button
-          onClick={() => { setEditing(null); setModalOpen(true) }}
-          className="gap-2 text-white"
-          style={{ backgroundColor: 'var(--brand-teal)' }}
-        >
-          <Plus className="w-4 h-4" />
-          Nova Pedido de Venda
-        </Button>
-      </div>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Pedidos de Venda"
+        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)} · Margem ${margemMedia.toFixed(1)}%`}
+      >
+        <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
+          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+        </button>
+      </PageHeader>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={<FileText className="w-5 h-5" />}    label="Total"          value={proposals.length}           bg="bg-blue-50"    fg="text-blue-600" />
-        <MetricCard icon={<Clock className="w-5 h-5" />}       label="Em Aberto"      value={emAberto}                   bg="bg-amber-50"   fg="text-amber-600" />
-        <MetricCard icon={<CheckCircle className="w-5 h-5" />} label="Aprovadas"      value={aprovadas}                  bg="bg-green-50"   fg="text-green-600" />
-        <MetricCard icon={<TrendingUp className="w-5 h-5" />}  label="Valor Aprovado" value={formatCurrency(valorAprov)} bg="bg-emerald-50" fg="text-emerald-600" />
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-card p-3 rounded-lg border border-border shadow-sm">
-        <div className="relative w-full sm:flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por número, cliente ou empresa..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 bg-background"
-          />
-        </div>
-        <div className="w-full sm:w-[200px]">
-          <Select value={filterStatus} onValueChange={v => setFilterStatus(v ?? 'todos')}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os status</SelectItem>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        <div className="hidden sm:grid grid-cols-[1fr_2fr_2fr_1.5fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-muted/40">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nº Pedido de Venda</span>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cliente</span>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Empresa</span>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valor</span>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</span>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Data</span>
-        </div>
-
-        {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center h-[350px]">
-            <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
-            <p className="text-sm text-muted-foreground">Carregando pedido de vendas...</p>
+      {/* Filtros */}
+      <div className="rm-card mb-5 space-y-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
+            <input type="text" placeholder="Buscar cliente, nº pedido..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
+            />
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 flex flex-col items-center justify-center h-[350px]">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <FileText className="w-8 h-8 text-muted-foreground/50" />
-            </div>
-            <p className="text-lg font-medium text-foreground">Nenhuma pedido de venda encontrada</p>
-            <p className="text-sm text-muted-foreground mt-1">Crie sua primeira pedido de venda clicando em &quot;Nova Pedido de Venda&quot;</p>
+          <div className="flex items-center gap-2">
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="px-3 py-2 text-[12px] rounded-lg border outline-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
+            <span className="text-[12px]" style={{ color: 'var(--neutral-400)' }}>até</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="px-3 py-2 text-[12px] rounded-lg border outline-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
           </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {filtered.map(p => {
-              const cfg = STATUS_CONFIG[p.status] ?? { label: p.status, color: 'bg-gray-100 text-gray-500 border-gray-200' }
-              const nome = p.contacts?.full_name ?? p.client_name ?? '—'
-              const data = p.issued_at ?? p.created_at
-              return (
-                <div
-                  key={p.id}
-                  className="grid grid-cols-[1fr_2fr_2fr_1.5fr_1fr_1fr] gap-4 px-5 py-4 hover:bg-muted/30 transition-colors cursor-pointer items-center"
-                  onClick={() => { setEditing(p); setModalOpen(true) }}
-                >
-                  <span className="font-mono text-sm font-semibold text-foreground truncate">{p.bling_number ?? '—'}</span>
-                  <span className="text-sm text-foreground truncate">{nome}</span>
-                  <span className="text-sm text-muted-foreground truncate">{p.client_company ?? '—'}</span>
-                  <span className="text-sm font-medium text-foreground">{p.total != null ? formatCurrency(p.total) : '—'}</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border w-fit ${cfg.color}`}>{cfg.label}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(data).toLocaleDateString('pt-BR')}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
+          {sellers.length > 0 && (
+            <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)}
+              className="px-3 py-2 text-[12px] rounded-lg border outline-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}>
+              <option value="todos">Todos vendedores</option>
+              {sellers.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {['todos', 'em_aberto', 'em_andamento', 'atendido', 'perdido', 'cancelado'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className="text-[12px] px-3 py-1.5 rounded-full font-medium transition-all"
+              style={{
+                background: statusFilter === s ? (s === 'todos' ? 'var(--brand-teal)' : STATUS[s]?.bg) : 'var(--neutral-100)',
+                color: statusFilter === s ? (s === 'todos' ? 'white' : STATUS[s]?.color) : 'var(--neutral-500)',
+                border: `1px solid ${statusFilter === s ? 'transparent' : 'rgba(0,0,0,0.06)'}`,
+              }}>
+              {s === 'todos' ? 'Todos' : STATUS[s]?.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {modalOpen && orgId && (
-        <ProposalModal
-          open={modalOpen}
-          onClose={() => { setModalOpen(false); setEditing(null) }}
-          onSaved={handleSaved}
-          proposal={editing}
-          orgId={orgId}
-        />
+      {/* Tabela */}
+      {loading ? (
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => <div key={i} className="rm-card animate-pulse h-14" style={{ background: 'var(--neutral-100)' }} />)}
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="rm-card flex flex-col items-center py-16 text-center">
+          <ShoppingBag size={40} className="mb-4" style={{ color: 'var(--neutral-300)' }} />
+          <p className="text-[15px] font-semibold mb-1" style={{ color: 'var(--neutral-700)' }}>
+            {search ? 'Nenhum pedido encontrado' : 'Nenhum pedido sincronizado'}
+          </p>
+          <p className="text-[13px] mb-5" style={{ color: 'var(--neutral-500)' }}>
+            {search ? 'Tente outro termo' : 'Clique em Sincronizar Bling para importar'}
+          </p>
+          {!search && (
+            <button onClick={syncPedidos} className="btn-remanso flex items-center gap-2">
+              <RefreshCw size={13} /> Sincronizar agora
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="rm-card p-0 overflow-hidden">
+          {/* Cabeçalho */}
+          <div className="hidden md:grid px-4 py-2.5 text-[11px] font-semibold uppercase"
+            style={{
+              gridTemplateColumns: '80px 90px 1fr 150px 100px 120px 110px 110px',
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+              background: 'var(--neutral-50)',
+              color: 'var(--neutral-500)',
+              letterSpacing: '0.05em',
+            }}>
+            <span>Nº</span>
+            <span>Data</span>
+            <span>Cliente</span>
+            <span>Vendedor</span>
+            <span className="text-right">Frete</span>
+            <span className="text-right">Total</span>
+            <span className="text-right">Margem</span>
+            <span className="text-center">Status</span>
+          </div>
+
+          {orders.map((order, i) => {
+            const st = STATUS[order.status] ?? STATUS['em_aberto']
+            const isExpanded = expandedId === order.id
+            const items = itemsMap[order.id] ?? []
+            const marginPct = order.margin_pct ?? 0
+
+            return (
+              <div key={order.id} style={{ borderBottom: i < orders.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
+                <button onClick={() => toggleExpand(order.id)}
+                  className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
+                  <div className="grid items-center gap-2"
+                    style={{ gridTemplateColumns: '80px 90px 1fr 150px 100px 120px 110px 110px' }}>
+
+                    <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
+                      #{order.bling_number ?? '—'}
+                    </span>
+
+                    <span className="text-[12px]" style={{ color: 'var(--neutral-500)' }}>
+                      {fmtDate(order.ordered_at)}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--neutral-800)' }}>
+                        {clientName(order)}
+                      </p>
+                      {order.client_city && (
+                        <p className="flex items-center gap-0.5 text-[11px]" style={{ color: 'var(--neutral-400)' }}>
+                          <MapPin size={9} /> {order.client_city}/{order.client_state}
+                        </p>
+                      )}
+                    </div>
+
+                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
+                      {order.seller_name ?? '—'}
+                    </span>
+
+                    <span className="text-[12px] text-right" style={{ color: 'var(--neutral-600)' }}>
+                      R$ {fmt(order.freight)}
+                    </span>
+
+                    <span className="text-[13px] font-semibold text-right" style={{ color: 'var(--neutral-800)' }}>
+                      R$ {fmt(order.total_value)}
+                    </span>
+
+                    <div className="text-right">
+                      <p className="text-[13px] font-bold" style={{ color: marginPct >= 0 ? '#2F6F5D' : '#DC2626' }}>
+                        {marginPct.toFixed(1)}%
+                      </p>
+                      <p className="text-[10px]" style={{ color: 'var(--neutral-400)' }}>
+                        R$ {fmt(order.margin)}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                        style={{ background: st.bg, color: st.color }}>
+                        {st.label}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Itens expandidos */}
+                {isExpanded && (
+                  <div className="px-4 pb-4" style={{ background: 'var(--neutral-50)', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                    <p className="text-[11px] font-semibold uppercase pt-3 pb-2" style={{ color: 'var(--neutral-500)', letterSpacing: '0.05em' }}>
+                      Itens do Pedido
+                    </p>
+                    {items.length === 0 ? (
+                      <p className="text-[12px]" style={{ color: 'var(--neutral-400)' }}>Carregando...</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {items.map(item => (
+                          <div key={item.id} className="flex items-center justify-between text-[12px] py-1.5 px-3 rounded-lg bg-white"
+                            style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded shrink-0"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
+                                {item.sku}
+                              </span>
+                              <span className="truncate" style={{ color: 'var(--neutral-700)' }}>{item.description}</span>
+                            </div>
+                            <div className="flex items-center gap-4 shrink-0 ml-4">
+                              <span style={{ color: 'var(--neutral-500)' }}>{item.quantity}x</span>
+                              <span style={{ color: 'var(--neutral-500)' }}>R$ {fmt(item.unit_price)}</span>
+                              <span className="font-semibold w-24 text-right" style={{ color: 'var(--neutral-800)' }}>
+                                R$ {fmt(item.total_price)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex justify-end pt-1">
+                          <span className="text-[12px] font-bold" style={{ color: 'var(--neutral-800)' }}>
+                            Total: R$ {fmt(order.total_value)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
-    </div>
-  )
-}
-
-function MetricCard({ icon, label, value, bg, fg }: {
-  icon: React.ReactNode; label: string; value: number | string; bg: string; fg: string
-}) {
-  return (
-    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3 shadow-sm">
-      <div className={`p-2 rounded-lg ${bg} ${fg}`}>{icon}</div>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-lg font-semibold text-foreground">{value}</p>
-      </div>
     </div>
   )
 }
