@@ -32,7 +32,7 @@ export type Proposal = {
   contacts?: { full_name: string } | null
 }
 
-export default function Pedidos de VendaPage() {
+export default function PropostasPage() {
   const supabase = createClient()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
