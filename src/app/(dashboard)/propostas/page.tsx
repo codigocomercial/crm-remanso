@@ -32,7 +32,7 @@ export type Proposal = {
   contacts?: { full_name: string } | null
 }
 
-export default function PropostasPage() {
+export default function Pedidos de VendaPage() {
   const supabase = createClient()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,8 +92,8 @@ export default function PropostasPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Propostas</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie as propostas enviadas aos clientes</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pedidos de Venda</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Gerencie as pedido de vendas enviadas aos clientes</p>
         </div>
         <Button
           onClick={() => { setEditing(null); setModalOpen(true) }}
@@ -101,7 +101,7 @@ export default function PropostasPage() {
           style={{ backgroundColor: 'var(--brand-teal)' }}
         >
           <Plus className="w-4 h-4" />
-          Nova Proposta
+          Nova Pedido de Venda
         </Button>
       </div>
 
@@ -139,7 +139,7 @@ export default function PropostasPage() {
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
         <div className="hidden sm:grid grid-cols-[1fr_2fr_2fr_1.5fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-muted/40">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nº Proposta</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nº Pedido de Venda</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cliente</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Empresa</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valor</span>
@@ -150,15 +150,15 @@ export default function PropostasPage() {
         {loading ? (
           <div className="p-12 flex flex-col items-center justify-center h-[350px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
-            <p className="text-sm text-muted-foreground">Carregando propostas...</p>
+            <p className="text-sm text-muted-foreground">Carregando pedido de vendas...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 flex flex-col items-center justify-center h-[350px]">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
               <FileText className="w-8 h-8 text-muted-foreground/50" />
             </div>
-            <p className="text-lg font-medium text-foreground">Nenhuma proposta encontrada</p>
-            <p className="text-sm text-muted-foreground mt-1">Crie sua primeira proposta clicando em &quot;Nova Proposta&quot;</p>
+            <p className="text-lg font-medium text-foreground">Nenhuma pedido de venda encontrada</p>
+            <p className="text-sm text-muted-foreground mt-1">Crie sua primeira pedido de venda clicando em &quot;Nova Pedido de Venda&quot;</p>
           </div>
         ) : (
           <div className="divide-y divide-border">

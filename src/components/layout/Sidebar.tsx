@@ -36,7 +36,7 @@ const NAV = [
         section: 'Operação',
         items: [
             { href: '/campanhas', label: 'Campanhas', icon: Megaphone },
-            { href: '/propostas', label: 'Propostas', icon: FileText },
+            { href: '/propostas', label: 'Pedidos de Venda', icon: FileText },
             { href: '/atendimentos', label: 'Atendimentos', icon: MessageSquare },
             { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
             { href: '/empresas', label: 'Empresas', icon: Building2 },
