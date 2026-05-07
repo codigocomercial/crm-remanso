@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/rm-components'
-import { Plus, Search, Package, Edit2, Trash2, ImageOff, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Search, Package, Edit2, Trash2, ImageOff, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
@@ -33,6 +33,7 @@ export default function ProdutosPage() {
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [deleting, setDeleting] = useState<string | null>(null)
+    const [syncing, setSyncing] = useState(false)
     const supabase = createClient()
 
     useEffect(() => { load() }, [])
@@ -72,12 +73,15 @@ export default function ProdutosPage() {
         <div className="animate-fade-in">
             <PageHeader title="Produtos" subtitle={`${products.length} urnas cadastradas`}>
                 <button onClick={async () => {
+                    setSyncing(true)
                     const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
                     const data = await res.json()
-                    if (data.success) { alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.') }
-                    else { alert('Erro: ' + data.error) }
-                }} className="btn-remanso">
-                    🔄 Sincronizar Bling
+                    setSyncing(false)
+                    if (data.success) alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.')
+                    else alert('Erro: ' + data.error)
+                }} disabled={syncing} className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+                    <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                    {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
                 </button>
                 <Link href="/produtos/novo" className="btn-remanso">
                     <Plus size={13} /> Novo produto
