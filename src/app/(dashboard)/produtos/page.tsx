@@ -36,17 +36,30 @@ export default function ProdutosPage() {
     const [syncing, setSyncing] = useState(false)
     const supabase = createClient()
 
-    useEffect(() => { load() }, [])
+    useEffect(() => { load('') }, [])
 
-    async function load() {
+    useEffect(() => {
+        const t = setTimeout(() => load(search), 350)
+        return () => clearTimeout(t)
+    }, [search])
+
+    async function load(q: string) {
         setLoading(true)
-        const { data } = await supabase
+        let query = supabase
             .from('products')
             .select('*')
             .eq('org_id', ORG_ID)
             .order('sort_order', { ascending: true })
             .order('name', { ascending: true })
-            .limit(2000)
+            .limit(500)
+
+        if (q.trim()) {
+            query = query.or(
+                `name.ilike.%${q}%,modelo.ilike.%${q}%,sku.ilike.%${q}%,category.ilike.%${q}%`
+            )
+        }
+
+        const { data } = await query
         setProducts(data ?? [])
         setLoading(false)
     }
@@ -64,15 +77,11 @@ export default function ProdutosPage() {
         setDeleting(null)
     }
 
-    const filtered = products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.modelo ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.category ?? '').toLowerCase().includes(search.toLowerCase())
-    )
+    const filtered = products
 
     return (
         <div className="animate-fade-in">
-            <PageHeader title="Produtos" subtitle={`${products.length} urnas cadastradas`}>
+            <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
                 <button onClick={async () => {
                     setSyncing(true)
                     const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
