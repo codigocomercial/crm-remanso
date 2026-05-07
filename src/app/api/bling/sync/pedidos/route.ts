@@ -45,6 +45,7 @@ async function runSync(token: string) {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
+  // Buscar custos operacionais
   const { data: opCosts } = await supabase
     .from('operational_costs')
     .select('*')
@@ -58,6 +59,16 @@ async function runSync(token: string) {
     opCostMap[`${oc.year}-${oc.month}`] = perUnit
   }
 
+  // Buscar vendedores para mapear ID → nome
+  const { data: sellers } = await supabase
+    .from('sellers')
+    .select('bling_id, name')
+    .eq('org_id', ORG_ID)
+  const sellerMap: Record<string, string> = {}
+  for (const s of sellers ?? []) {
+    if (s.bling_id) sellerMap[String(s.bling_id)] = s.name
+  }
+
   let page = 1
   let total = 0
   const dataInicio = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -65,8 +76,14 @@ async function runSync(token: string) {
   while (true) {
     let listData: any
     try {
-      listData = await blingFetch(`/pedidos/vendas?pagina=${page}&limite=100&dataInicial=${dataInicio}`, token)
-    } catch (e: any) { console.error('[sync/pedidos]', e.message); break }
+      listData = await blingFetch(
+        `/pedidos/vendas?pagina=${page}&limite=100&dataInicial=${dataInicio}`,
+        token
+      )
+    } catch (e: any) {
+      console.error('[sync/pedidos] listagem:', e.message)
+      break
+    }
 
     const pedidos = listData?.data ?? []
     if (pedidos.length === 0) break
@@ -80,24 +97,34 @@ async function runSync(token: string) {
 
       const itens = detail?.itens ?? []
       const contato = detail?.contato ?? {}
-      const vendedor = detail?.vendedor ?? {}
-      const situacaoId = Number(detail?.situacao?.id ?? detail?.situacao ?? 6)
+      const situacaoId = Number(detail?.situacao?.id ?? 6)
       const status = mapStatus(situacaoId)
+
       const totalVenda = Number(detail?.totalProdutos ?? detail?.total ?? 0)
       const frete = Number(detail?.transporte?.frete ?? 0)
       const unitsCount = itens.reduce((s: number, i: any) => s + Number(i?.quantidade ?? 1), 0)
 
+      // Vendedor: tentar pelo ID no mapa, senão pelo nome direto
+      const vendedorId = String(detail?.vendedor?.id ?? '')
+      const sellerName = sellerMap[vendedorId] ?? detail?.vendedor?.nome ?? ''
+
+      // Data do pedido
       const orderedAt = detail?.data ? new Date(detail.data) : new Date()
       const mesKey = `${orderedAt.getFullYear()}-${orderedAt.getMonth() + 1}`
       const opCostPerUnit = opCostMap[mesKey] ?? 0
 
+      // Calcular custo MP pelos SKUs dos itens
       let totalCostMp = 0
       for (const item of itens) {
-        const sku = item?.codigo ?? item?.produto?.codigo ?? ''
+        const sku = item?.codigo ?? ''
         const qty = Number(item?.quantidade ?? 1)
         if (sku) {
-          const { data: prod } = await supabase.from('products').select('cost_price')
-            .eq('org_id', ORG_ID).eq('sku', sku).single()
+          const { data: prod } = await supabase
+            .from('products')
+            .select('cost_price')
+            .eq('org_id', ORG_ID)
+            .eq('sku', sku)
+            .single()
           totalCostMp += (Number(prod?.cost_price) || 0) * qty
         }
       }
@@ -106,46 +133,59 @@ async function runSync(token: string) {
       const margin = totalVenda - totalCost - frete
       const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
 
+      // Buscar empresa pelo CNPJ
       const cnpj = contato?.numeroDocumento ?? ''
       let companyId: string | null = null
       if (cnpj) {
-        const { data: comp } = await supabase.from('companies').select('id')
-          .eq('org_id', ORG_ID).eq('cnpj', cnpj).single()
+        const cnpjLimpo = cnpj.replace(/\D/g, '')
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('org_id', ORG_ID)
+          .or(`cnpj.eq.${cnpj},cnpj.eq.${cnpjLimpo}`)
+          .single()
         companyId = comp?.id ?? null
       }
 
-      const { data: orderData, error } = await supabase.from('orders').upsert({
-        org_id: ORG_ID,
-        bling_id: detail.id,
-        bling_number: String(detail.numero ?? ''),
-        bling_situation: String(situacaoId),
-        status,
-        total_value: totalVenda,
-        freight: frete,
-        total_cost: totalCost,
-        margin,
-        margin_pct: marginPct,
-        units_count: unitsCount,
-        client_name: contato?.nome ?? '',
-        client_cnpj: cnpj,
-        client_city: contato?.endereco?.municipio ?? '',
-        client_state: contato?.endereco?.uf ?? '',
-        seller_name: vendedor?.nome ?? '',
-        ordered_at: detail.data ? new Date(detail.data).toISOString() : null,
-        observations: detail.observacoes ?? null,
-        company_id: companyId,
-        bling_synced_at: new Date().toISOString(),
-      }, { onConflict: 'bling_id' }).select('id').single()
+      // Upsert pedido
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .upsert({
+          org_id: ORG_ID,
+          bling_id: detail.id,
+          bling_number: String(detail.numero ?? ''),
+          bling_situation: String(situacaoId),
+          status,
+          total_value: totalVenda,
+          freight: frete,
+          total_cost: totalCost,
+          margin,
+          margin_pct: marginPct,
+          units_count: unitsCount,
+          client_name: contato?.nome ?? '',
+          client_cnpj: cnpj,
+          seller_name: sellerName,
+          ordered_at: detail.data ? new Date(detail.data).toISOString() : null,
+          observations: detail.observacoes ?? null,
+          company_id: companyId,
+          bling_synced_at: new Date().toISOString(),
+        }, { onConflict: 'bling_id' })
+        .select('id')
+        .single()
 
-      if (error || !orderData) { console.error('[sync/pedidos]', error?.message); continue }
+      if (error || !orderData) {
+        console.error('[sync/pedidos] upsert erro:', error?.message)
+        continue
+      }
 
+      // Itens
       await supabase.from('order_items').delete().eq('order_id', orderData.id)
-
       for (const item of itens) {
-        const sku = item?.codigo ?? item?.produto?.codigo ?? ''
+        const sku = item?.codigo ?? ''
         const qty = Number(item?.quantidade ?? 1)
-        const unitPrice = Number(item?.valor ?? item?.valorUnitario ?? 0)
-        const { data: prod } = await supabase.from('products').select('id')
+        const unitPrice = Number(item?.valor ?? 0)
+        const { data: prod } = await supabase
+          .from('products').select('id')
           .eq('org_id', ORG_ID).eq('sku', sku).single()
 
         await supabase.from('order_items').insert({
@@ -160,9 +200,12 @@ async function runSync(token: string) {
         })
       }
 
+      // Atualizar empresa
       if (companyId) {
-        const { data: allOrders } = await supabase.from('orders').select('total_value, ordered_at')
-          .eq('org_id', ORG_ID).eq('company_id', companyId).not('total_value', 'is', null)
+        const { data: allOrders } = await supabase
+          .from('orders').select('total_value, ordered_at')
+          .eq('org_id', ORG_ID).eq('company_id', companyId)
+          .not('total_value', 'is', null)
         if (allOrders && allOrders.length > 0) {
           const avg = allOrders.reduce((s, o) => s + Number(o.total_value ?? 0), 0) / allOrders.length
           const last = allOrders.sort((a, b) =>
