@@ -206,10 +206,10 @@ export default function CustosOperacionaisPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto"
-          style={{ background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+        <div className="fixed inset-0 z-50" style={{ background: "rgba(0,0,0,0.4)", overflowY: "auto" }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ margin: "auto" }}>
+          <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2rem 1rem" }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col">
             <div className="p-6 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
               <h2 className="text-[17px] font-bold" style={{ color: 'var(--neutral-900)' }}>
                 {editing ? 'Editar Custos' : 'Novo Mês de Custos'}
@@ -326,6 +326,7 @@ export default function CustosOperacionaisPage() {
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}
