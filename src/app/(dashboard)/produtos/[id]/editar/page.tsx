@@ -26,10 +26,16 @@ export default function EditarProdutoPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [imageUrl, setImageUrl] = useState<string | null>(null)
 
+    // Dados do Bling — somente leitura
+    const [blingData, setBlingData] = useState<{
+        name: string; sku: string | null; category: string | null
+        price: number | null; cost_price: number | null
+        stock_quantity: number | null; is_active: boolean; bling_id: number | null
+    } | null>(null)
+
     const [form, setForm] = useState({
-        name: '', sku: '', modelo: '', description: '', price: '',
-        category: '', material: '', alca: '', cor: '',
-        dimensions: '', is_active: true, sort_order: '0',
+        modelo: '', description: '', alca: '', cor: '',
+        is_active: true, sort_order: '0',
     })
 
     useEffect(() => {
@@ -49,17 +55,21 @@ export default function EditarProdutoPage() {
         setLoading(true)
         const { data } = await supabase.from('products').select('*').eq('id', id).single()
         if (data) {
-            setForm({
+            setBlingData({
                 name: data.name ?? '',
-                sku: data.sku ?? '',
+                sku: data.sku ?? null,
+                category: data.category ?? null,
+                price: data.price ?? null,
+                cost_price: data.cost_price ?? null,
+                stock_quantity: data.stock_quantity ?? null,
+                is_active: data.is_active ?? true,
+                bling_id: data.bling_id ?? null,
+            })
+            setForm({
                 modelo: data.modelo ?? '',
                 description: data.description ?? '',
-                price: data.price ? String(data.price) : '',
-                category: data.category ?? '',
-                material: data.material ?? '',
                 alca: data.alca ?? '',
                 cor: data.cor ?? '',
-                dimensions: data.dimensions ?? '',
                 is_active: data.is_active ?? true,
                 sort_order: data.sort_order ? String(data.sort_order) : '0',
             })
@@ -97,20 +107,13 @@ export default function EditarProdutoPage() {
     }
 
     async function handleSave() {
-        if (!form.name.trim()) { alert('Nome obrigatório'); return }
         setSaving(true)
         const { error } = await supabase.from('products').update({
-            name: form.name.trim(),
-            sku: form.sku.trim() || null,
             modelo: form.modelo.trim() || null,
             description: form.description.trim() || null,
-            price: form.price ? parseFloat(form.price) : null,
             image_url: imageUrl,
-            category: form.category || null,
-            material: form.material || null,
             alca: form.alca.trim() || null,
             cor: form.cor.trim() || null,
-            dimensions: form.dimensions.trim() || null,
             is_active: form.is_active,
             sort_order: parseInt(form.sort_order) || 0,
             updated_at: new Date().toISOString(),
@@ -134,7 +137,7 @@ export default function EditarProdutoPage() {
 
     return (
         <div className="animate-fade-in max-w-2xl">
-            <PageHeader title="Editar Produto" subtitle={form.name}>
+            <PageHeader title="Editar Produto" subtitle={blingData?.name || ''}>
                 <Link href="/produtos"
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold hover:bg-neutral-100 transition-colors"
                     style={{ color: 'var(--neutral-500)' }}>
@@ -181,47 +184,95 @@ export default function EditarProdutoPage() {
                 {/* Informações */}
                 <div className="rm-card space-y-4">
                     <p className="text-[11px] font-semibold uppercase tracking-wide"
-                        style={{ color: 'var(--neutral-500)' }}>Informações</p>
+                        style={{ color: 'var(--neutral-500)' }}>Informações do Bling (somente leitura)</p>
 
                     <div className="grid grid-cols-2 gap-4">
+                        {/* Nome — somente leitura */}
                         <div className="col-span-2">
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Nome do produto *
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
+                                Nome do produto
                             </label>
-                            <input type="text" placeholder="Ex: Urna Linha Luxo" value={form.name}
-                                onChange={e => set('name', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                            <div className="px-3 py-2 text-[13px] rounded-lg"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
+                                {blingData?.name || '—'}
+                            </div>
                         </div>
 
+                        {/* SKU — somente leitura */}
                         <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Código SKU
                             </label>
-                            <input type="text" placeholder="Ex: URN-R100-OCR" value={form.sku}
-                                onChange={e => set('sku', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                            <div className="px-3 py-2 text-[13px] rounded-lg"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
+                                {blingData?.sku || '—'}
+                            </div>
                         </div>
 
+                        {/* Linha de Produto — somente leitura */}
+                        <div>
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
+                                Linha de Produto
+                            </label>
+                            <div className="px-3 py-2 text-[13px] rounded-lg"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
+                                {blingData?.category || '—'}
+                            </div>
+                        </div>
+
+                        {/* Preço — somente leitura */}
+                        <div>
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
+                                Preço de venda
+                            </label>
+                            <div className="px-3 py-2 text-[13px] rounded-lg font-semibold"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
+                                {blingData?.price ? `R$ ${blingData.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                            </div>
+                        </div>
+
+                        {/* Custo — somente leitura */}
+                        <div>
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
+                                Preço de custo
+                            </label>
+                            <div className="px-3 py-2 text-[13px] rounded-lg"
+                                style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
+                                {blingData?.cost_price ? `R$ ${blingData.cost_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                            </div>
+                        </div>
+
+                        {/* Estoque — somente leitura */}
+                        <div>
+                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
+                                Estoque
+                            </label>
+                            <div className="px-3 py-2 text-[13px] rounded-lg font-semibold"
+                                style={{ background: 'var(--neutral-100)', border: '1px solid var(--neutral-200)',
+                                    color: (blingData?.stock_quantity ?? 0) > 0 ? 'var(--brand-teal)' : 'var(--color-danger)' }}>
+                                {blingData?.stock_quantity ?? 0} un
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Campos editáveis */}
+                <div className="rm-card space-y-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide"
+                        style={{ color: 'var(--neutral-500)' }}>Informações do produto</p>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 Modelo
                             </label>
-                            <select value={form.modelo} onChange={e => handleModeloChange(e.target.value)}
+                            <select value={form.modelo} onChange={e => set('modelo', e.target.value)}
                                 className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                                 <option value="">Selecionar modelo...</option>
                                 {modelos.map(m => (
                                     <option key={m.code} value={m.code}>{m.code}</option>
                                 ))}
                             </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Preço (R$)
-                            </label>
-                            <input type="number" placeholder="0,00" value={form.price}
-                                onChange={e => set('price', e.target.value)}
-                                className={inputClass} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
                         </div>
 
                         {/* Alça */}
@@ -245,17 +296,6 @@ export default function EditarProdutoPage() {
                                 className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                                 <option value="">Selecionar cor...</option>
                                 {cores.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
-                                Linha de Produto
-                            </label>
-                            <select value={form.category} onChange={e => set('category', e.target.value)}
-                                className={inputClass + ' bg-white'} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                                <option value="">Selecionar...</option>
-                                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
 
