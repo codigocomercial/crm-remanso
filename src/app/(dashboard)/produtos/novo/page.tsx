@@ -253,7 +253,7 @@ export default function NovoProdutoPage() {
                                 <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.is_active ? 'left-5' : 'left-0.5'}`} />
                             </button>
                             <span className="text-[13px] font-semibold" style={{ color: 'var(--neutral-700)' }}>
-                                {form.is_active ? 'Visível para a Laura' : 'Oculto para a Laura'}
+                                {form.is_active ? 'Produto ativo (visível para a Laura)' : 'Produto inativo'}
                             </span>
                         </div>
                     </div>
