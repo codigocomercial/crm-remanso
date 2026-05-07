@@ -46,6 +46,7 @@ export default function ProdutosPage() {
             .eq('org_id', ORG_ID)
             .order('sort_order', { ascending: true })
             .order('name', { ascending: true })
+            .limit(2000)
         setProducts(data ?? [])
         setLoading(false)
     }
