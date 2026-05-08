@@ -108,8 +108,13 @@ export default function PropostasPage() {
     const res = await fetch('/api/bling/sync/pedidos', { method: 'POST' })
     const data = await res.json()
     setSyncing(false)
-    if (data.success) alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.')
-    else alert('Erro: ' + data.error)
+    if (data.success) {
+      setTimeout(() => load(), 5000)
+      setTimeout(() => load(), 15000)
+      setTimeout(() => load(), 30000)
+    } else {
+      alert('Erro ao sincronizar: ' + data.error)
+    }
   }
 
   const fmt = (v: number | null) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
