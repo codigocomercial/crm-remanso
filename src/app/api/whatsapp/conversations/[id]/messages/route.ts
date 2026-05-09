@@ -6,7 +6,7 @@ const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 // GET — busca mensagens de uma conversa
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const conversationId = params.id
+    const { id: conversationId } = await params
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const before = searchParams.get('before')

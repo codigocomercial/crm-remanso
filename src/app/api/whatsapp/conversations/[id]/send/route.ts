@@ -9,7 +9,7 @@ const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'crm-remanso'
 // POST — envia mensagem e salva no banco
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const conversationId = params.id
+    const { id: conversationId } = await params
     const body = await request.json()
     const { content, message_type = 'text' } = body
 
