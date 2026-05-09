@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/recompra': 'Painel de Recompra',
   '/campanhas': 'Campanhas',
   '/atendimentos': 'Atendimentos',
+  '/whatsapp': 'WhatsApp Inbox',
   '/tarefas': 'Tarefas',
   '/empresas': 'Empresas',
   '/produtos': 'Produtos',
