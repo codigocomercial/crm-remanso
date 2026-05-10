@@ -10,13 +10,15 @@ import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 const STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  em_aberto:    { label: 'Em Aberto',    color: '#1D6FA4', bg: '#EBF4FB' },
+  em_aberto: { label: 'Em Aberto', color: '#1D6FA4', bg: '#EBF4FB' },
   em_andamento: { label: 'Em Andamento', color: '#B45309', bg: '#FEF3C7' },
-  em_digitacao: { label: 'Rascunho',     color: '#6B7280', bg: '#F1F5F9' },
-  atendido:     { label: 'Entregue',     color: '#2F6F5D', bg: '#EBF5F1' },
-  cancelado:    { label: 'Cancelado',    color: '#DC2626', bg: '#FEE2E2' },
-  perdido:      { label: 'Perdido',      color: '#9333EA', bg: '#F5F3FF' },
+  em_digitacao: { label: 'Rascunho', color: '#6B7280', bg: '#F1F5F9' },
+  atendido: { label: 'Entregue', color: '#2F6F5D', bg: '#EBF5F1' },
+  cancelado: { label: 'Cancelado', color: '#DC2626', bg: '#FEE2E2' },
+  perdido: { label: 'Perdido', color: '#9333EA', bg: '#F5F3FF' },
 }
+
+const TABLE_COLUMNS = '80px 100px minmax(260px, 1fr) 80px 140px 150px 180px 120px'
 
 interface Order {
   id: string
@@ -49,6 +51,7 @@ interface OrderItem {
 export default function PropostasPage() {
   const { can } = useUserRole()
   const supabase = createClient()
+
   const [orders, setOrders] = useState<Order[]>([])
   const [companies, setCompanies] = useState<Record<string, { fantasia: string | null; name: string }>>({})
   const [loading, setLoading] = useState(true)
@@ -63,6 +66,7 @@ export default function PropostasPage() {
   const [sellers, setSellers] = useState<string[]>([])
 
   useEffect(() => { load() }, [])
+
   useEffect(() => {
     const t = setTimeout(() => load(), 350)
     return () => clearTimeout(t)
@@ -81,7 +85,7 @@ export default function PropostasPage() {
     if (statusFilter !== 'todos') query = query.eq('status', statusFilter)
     if (sellerFilter !== 'todos') query = query.eq('seller_name', sellerFilter)
     if (dateFrom) query = query.gte('ordered_at', dateFrom)
-    if (dateTo) query = query.lte('ordered_at', dateTo + 'T23:59:59')
+    if (dateTo) query = query.lte('ordered_at', `${dateTo}T23:59:59`)
 
     const { data } = await query
     const list = data ?? []
@@ -97,6 +101,7 @@ export default function PropostasPage() {
       for (const c of comps ?? []) map[c.id] = c
       setCompanies(map)
     }
+
     setLoading(false)
   }
 
@@ -118,7 +123,7 @@ export default function PropostasPage() {
       setTimeout(() => load(), 15000)
       setTimeout(() => load(), 30000)
     } else {
-      alert('Erro ao sincronizar: ' + data.error)
+      alert(`Erro ao sincronizar: ${data.error}`)
     }
   }
 
@@ -140,7 +145,7 @@ export default function PropostasPage() {
     <div className="animate-fade-in">
       <PageHeader
         title="Pedidos de Venda"
-        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ' · Margem ' + margemMedia.toFixed(1) + '%' : ''}`}
+        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
       >
         <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
           <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
@@ -197,7 +202,9 @@ export default function PropostasPage() {
       {/* Tabela */}
       {loading ? (
         <div className="space-y-2">
-          {[...Array(5)].map((_, i) => <div key={i} className="rm-card animate-pulse h-14" style={{ background: 'var(--neutral-100)' }} />)}
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="rm-card animate-pulse h-14" style={{ background: 'var(--neutral-100)' }} />
+          ))}
         </div>
       ) : orders.length === 0 ? (
         <div className="rm-card flex flex-col items-center py-16 text-center">
@@ -217,9 +224,9 @@ export default function PropostasPage() {
       ) : (
         <div className="rm-card p-0 overflow-hidden">
           {/* Cabeçalho */}
-          <div className="hidden md:grid px-4 py-2.5 text-[11px] font-semibold uppercase"
+          <div className="hidden md:grid items-center gap-2 px-4 py-2.5 text-[11px] font-semibold uppercase"
             style={{
-              gridTemplateColumns: '80px 90px 1fr 80px 150px 150px 160px 110px',
+              gridTemplateColumns: TABLE_COLUMNS,
               borderBottom: '1px solid rgba(0,0,0,0.06)',
               background: 'var(--neutral-50)',
               color: 'var(--neutral-500)',
@@ -229,14 +236,14 @@ export default function PropostasPage() {
             <span>Data</span>
             <span>Cliente</span>
             <span className="text-center">Urnas</span>
-            <span className="text-right">Total</span>
-            <span className="text-left pl-2">Margem</span>
+            <span className="text-right pr-3">Total</span>
+            <span className="text-right pr-3">Margem</span>
             <span className="text-left">Vendedor</span>
             <span className="text-center">Status</span>
           </div>
 
           {orders.map((order, i) => {
-            const st = STATUS[order.status] ?? STATUS['em_aberto']
+            const st = STATUS[order.status] ?? STATUS.em_aberto
             const isExpanded = expandedId === order.id
             const items = itemsMap[order.id] ?? []
             const marginPct = order.margin_pct ?? 0
@@ -245,8 +252,7 @@ export default function PropostasPage() {
               <div key={order.id} style={{ borderBottom: i < orders.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
                 <button onClick={() => toggleExpand(order.id)}
                   className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
-                  <div className="grid items-center gap-2"
-                    style={{ gridTemplateColumns: '80px 90px 1fr 80px 150px 150px 160px 110px' }}>
+                  <div className="grid items-center gap-2" style={{ gridTemplateColumns: TABLE_COLUMNS }}>
 
                     <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
                       #{order.bling_number ?? '—'}
@@ -271,19 +277,15 @@ export default function PropostasPage() {
                       {order.units_count ?? '—'}
                     </span>
 
-                    <span className="text-[13px] font-semibold text-right" style={{ color: 'var(--neutral-800)' }}>
+                    <span className="text-[13px] font-semibold text-right pr-3" style={{ color: 'var(--neutral-800)' }}>
                       R$ {fmt(order.total_value)}
                     </span>
 
-                    <div className="pl-2">
-                      <MarginDisplay
-                        pct={marginPct}
-                        value={order.margin ?? 0}
-                        type="order"
-                      />
+                    <div className="flex justify-end pr-3">
+                      <MarginDisplay pct={marginPct} value={order.margin ?? 0} type="order" />
                     </div>
 
-                    <span className="text-[12px] truncate pl-1" style={{ color: 'var(--neutral-600)' }}>
+                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
                       {order.seller_name ?? '—'}
                     </span>
 
@@ -299,7 +301,8 @@ export default function PropostasPage() {
                 {/* Itens expandidos */}
                 {isExpanded && (
                   <div className="px-4 pb-4" style={{ background: 'var(--neutral-50)', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
-                    <p className="text-[11px] font-semibold uppercase pt-3 pb-2" style={{ color: 'var(--neutral-500)', letterSpacing: '0.05em' }}>
+                    <p className="text-[11px] font-semibold uppercase pt-3 pb-2"
+                      style={{ color: 'var(--neutral-500)', letterSpacing: '0.05em' }}>
                       Itens do Pedido
                     </p>
                     {items.length === 0 ? (
@@ -325,6 +328,7 @@ export default function PropostasPage() {
                             </div>
                           </div>
                         ))}
+
                         <div className="mt-3 pt-3 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                           <div className="flex justify-between text-[12px]">
                             <span style={{ color: 'var(--neutral-500)' }}>Valor urnas</span>
