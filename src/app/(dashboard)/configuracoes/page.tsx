@@ -818,6 +818,8 @@ function TabMargens() {
 }
 
 export default function ConfiguracoesPage() {
+  const { can } = useUserRole()
+
   return (
     <div className="space-y-6">
       {/* Header */}
