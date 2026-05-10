@@ -195,19 +195,19 @@ export default function CustosOperacionaisPage() {
         </div>
       )}
 
-      {/* Modal — mesma estrutura usada em outros modais do sistema */}
+      {/* Modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
         >
-              <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]"
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 pt-6 pb-4"
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4"
                   style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                   <h2 className="text-[17px] font-bold" style={{ color: 'var(--neutral-900)' }}>
                     {editing ? 'Editar Custos' : 'Novo Mês de Custos'}
@@ -217,8 +217,8 @@ export default function CustosOperacionaisPage() {
                   </button>
                 </div>
 
-                {/* Conteúdo */}
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            {/* Conteúdo */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                   {/* Mês / Ano / Urnas */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -295,15 +295,15 @@ export default function CustosOperacionaisPage() {
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div className="flex justify-end gap-3 px-6 pb-6 pt-4"
+            {/* Footer */}
+            <div className="flex justify-end gap-3 px-6 pb-6 pt-4"
                   style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                   <button onClick={() => setShowModal(false)} className="btn-remanso-outline">Cancelar</button>
                   <button onClick={save} disabled={saving} className="btn-remanso">
                     {saving ? 'Salvando...' : 'Salvar'}
                   </button>
                 </div>
-              </div>
+          </div>
         </div>
       )}
     </div>
