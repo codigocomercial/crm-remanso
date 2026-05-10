@@ -22,7 +22,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   Settings, User, Building2, KanbanSquare, Users,
   GripVertical, Pencil, Check, X, Loader2,
-  Lock, Mail, AlertCircle, Plus, Trash2, ShieldCheck,
+  Lock, Mail, AlertCircle, Plus, Trash2, ShieldCheck, TrendingUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
