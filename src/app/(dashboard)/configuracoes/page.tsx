@@ -720,18 +720,20 @@ function TabMargens() {
     margin_order_low: 15,
     margin_load_good: 20,
     margin_load_low: 8,
+    active_client_days: 180,
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    supabase.from('organizations').select('margin_order_good,margin_order_low,margin_load_good,margin_load_low').single()
+    supabase.from('organizations').select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days').single()
       .then(({ data }) => {
         if (data) setForm({
           margin_order_good: data.margin_order_good ?? 30,
           margin_order_low:  data.margin_order_low  ?? 15,
           margin_load_good:  data.margin_load_good  ?? 20,
           margin_load_low:   data.margin_load_low   ?? 8,
+          active_client_days: data.active_client_days ?? 180,
         })
       })
   }, [])
@@ -739,6 +741,8 @@ function TabMargens() {
   async function save() {
     setSaving(true)
     await supabase.from('organizations').update(form).eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
+    // Atualiza status ativo/inativo de todos os clientes
+    await supabase.rpc('update_companies_active_status', { p_org_id: '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2' })
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
@@ -788,6 +792,33 @@ function TabMargens() {
         <div className="space-y-2">
           {field("🟢 Carga viável — acima de", "margin_load_good", "Cargas acima desse % aparecem com indicador verde")}
           {field("🟡 Carga apertada — acima de", "margin_load_low", "Cargas entre esse % e o anterior aparecem em amarelo. Abaixo = vermelho")}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
+          Clientes Ativos
+        </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
+          Clientes sem compra há mais de esse período são marcados como inativos e não aparecem no painel de recompra
+        </p>
+        <div className="rm-card p-4">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>
+              Considerar inativo após
+            </label>
+            <div className="flex items-center gap-2">
+              <input type="number" min="30" max="365" step="30"
+                value={form.active_client_days}
+                onChange={e => setForm(f => ({ ...f, active_client_days: Number(e.target.value) }))}
+                className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
+                style={{ borderColor: "rgba(0,0,0,0.12)" }} />
+              <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>dias sem compra</span>
+            </div>
+          </div>
+          <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>
+            Padrão: 180 dias (6 meses). Ao salvar, atualiza o status de todos os clientes automaticamente.
+          </p>
         </div>
       </div>
 

@@ -225,4 +225,8 @@ async function runSync(token: string) {
   }
 
   console.log(`[sync/pedidos] ${total} pedidos sincronizados`)
+
+  // Atualiza status ativo/inativo de todos os clientes após o sync
+  await supabase.rpc('update_companies_active_status', { p_org_id: ORG_ID })
+  console.log('[sync/pedidos] status de clientes atualizado')
 }
