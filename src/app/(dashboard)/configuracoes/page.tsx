@@ -25,6 +25,7 @@ import {
   Lock, Mail, AlertCircle, Plus, Trash2, ShieldCheck, TrendingUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useUserRole } from '@/hooks/useUserRole'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -492,87 +493,219 @@ function TabPipeline() {
 function TabUsuarios() {
   const [users, setUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editingRole, setEditingRole] = useState<string | null>(null)
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'seller' })
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('users')
-        .select('id, email, full_name, role, created_at')
-        .order('created_at', { ascending: true })
-      setUsers(data ?? [])
-      setLoading(false)
+  async function load() {
+    setLoading(true)
+    const res = await fetch('/api/usuarios')
+    const data = await res.json()
+    setUsers(data.users || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function invite() {
+    if (!form.full_name || !form.email || !form.password) {
+      setError('Preencha todos os campos')
+      return
     }
+    setSaving(true)
+    setError('')
+    const res = await fetch('/api/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error || 'Erro ao criar usuário')
+    } else {
+      setShowModal(false)
+      setForm({ full_name: '', email: '', password: '', role: 'seller' })
+      load()
+    }
+    setSaving(false)
+  }
+
+  async function changeRole(user_id: string, role: string) {
+    setEditingRole(user_id)
+    await fetch('/api/usuarios', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, role }),
+    })
+    setEditingRole(null)
     load()
-  }, [])
-
-  const roleColor: Record<string, string> = {
-    admin: 'bg-purple-100 text-purple-700',
-    manager: 'bg-blue-100 text-blue-700',
-    user: 'bg-muted text-muted-foreground',
   }
 
-  const roleLabel: Record<string, string> = {
-    admin: 'Administrador',
-    manager: 'Gerente',
-    user: 'Usuário',
+  async function deleteUser(user_id: string, name: string) {
+    if (!confirm(`Excluir o usuário "${name}"? Esta ação não pode ser desfeita.`)) return
+    await fetch(`/api/usuarios?user_id=${user_id}`, { method: 'DELETE' })
+    load()
   }
+
+  const ROLES = [
+    { value: 'admin',   label: 'Administrador', color: '#1D6FA4', bg: '#EBF4FB' },
+    { value: 'manager', label: 'Gerente',        color: '#2F6F5D', bg: '#EBF5F1' },
+    { value: 'seller',  label: 'Vendedor',       color: '#B45309', bg: '#FEF3C7' },
+  ]
+
+  const getRoleConfig = (role: string) => ROLES.find(r => r.value === role) || ROLES[2]
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Usuários do sistema
+          <h3 className="font-semibold text-[15px] flex items-center gap-2" style={{ color: 'var(--neutral-900)' }}>
+            <Users className="w-4 h-4" style={{ color: 'var(--brand-teal)' }} />
+            Usuários do sistema
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Usuários com acesso ao CRM.</p>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
+            Somente admins podem criar e alterar usuários
+          </p>
         </div>
-        <Badge variant="secondary">{users.length} usuários</Badge>
+        <button onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-semibold text-white"
+          style={{ backgroundColor: 'var(--brand-teal)' }}>
+          <Plus size={13} /> Novo usuário
+        </button>
       </div>
 
-      {users.length === 0 ? (
-        <div className="border border-dashed border-border rounded-xl p-10 text-center">
-          <Users className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum usuário encontrado na tabela <code className="text-xs bg-muted px-1.5 py-0.5 rounded">users</code>.</p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          {users.map((u, i) => (
-            <div key={u.id} className={cn('flex items-center gap-4 px-4 py-3.5', i !== 0 && 'border-t border-border')}>
-              <Avatar className="h-9 w-9 flex-shrink-0">
-                <AvatarFallback className="text-sm bg-primary/10 text-primary font-semibold">
-                  {u.full_name ? initials(u.full_name) : u.email[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-foreground truncate">{u.full_name || 'Sem nome'}</p>
-                  {u.role && (
-                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', roleColor[u.role] ?? 'bg-muted text-muted-foreground')}>
-                      {roleLabel[u.role] ?? u.role}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+      <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
+        {users.map((u, i) => {
+          const rc = getRoleConfig(u.role || 'seller')
+          return (
+            <div key={u.id}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors"
+              style={{ borderBottom: i < users.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+                style={{ backgroundColor: 'var(--brand-teal)' }}>
+                {(u.full_name || u.email).slice(0, 2).toUpperCase()}
               </div>
-              <div className="text-right hidden sm:block flex-shrink-0">
-                <p className="text-xs text-muted-foreground">Desde</p>
-                <p className="text-xs font-medium text-foreground">{formatDate(u.created_at)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
+                  {u.full_name || 'Sem nome'}
+                </p>
+                <p className="text-[11px] truncate" style={{ color: 'var(--neutral-500)' }}>{u.email}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {editingRole === u.id ? (
+                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--neutral-400)' }} />
+                ) : (
+                  <select
+                    value={u.role || 'seller'}
+                    onChange={e => changeRole(u.id, e.target.value)}
+                    className="text-[11px] font-bold px-2 py-1 rounded-full border-0 outline-none cursor-pointer"
+                    style={{ color: rc.color, backgroundColor: rc.bg }}>
+                    {ROLES.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                )}
+                <button onClick={() => deleteUser(u.id, u.full_name || u.email)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                  <Trash2 size={13} style={{ color: '#EF4444' }} />
+                </button>
               </div>
             </div>
-          ))}
+          )
+        })}
+      </div>
+
+      {/* Modal novo usuário */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col"
+            style={{ maxHeight: '90vh' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <h2 className="text-[16px] font-bold" style={{ color: 'var(--neutral-900)' }}>
+                Novo Usuário
+              </h2>
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-neutral-100">
+                <X size={16} style={{ color: 'var(--neutral-400)' }} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {error && (
+                <div className="px-3 py-2 rounded-lg text-[12px] font-semibold"
+                  style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                  {error}
+                </div>
+              )}
+              <div>
+                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
+                  Nome completo *
+                </label>
+                <input type="text" value={form.full_name}
+                  onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                  placeholder="Ex: Tadeu Dias Rocha"
+                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
+                  E-mail *
+                </label>
+                <input type="email" value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="vendedor@urnasremanso.com.br"
+                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
+                  Senha inicial *
+                </label>
+                <input type="password" value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+                <p className="text-[10px] mt-1" style={{ color: 'var(--neutral-400)' }}>
+                  O usuário pode trocar a senha depois em Configurações → Perfil
+                </p>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
+                  Perfil de acesso *
+                </label>
+                <select value={form.role}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+                  style={{ borderColor: 'rgba(0,0,0,0.12)' }}>
+                  <option value="seller">Vendedor — acesso básico, sem dados financeiros</option>
+                  <option value="manager">Gerente — acesso completo, sem configurações</option>
+                  <option value="admin">Administrador — acesso total</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 flex-shrink-0"
+              style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <button onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-[13px] font-semibold rounded-xl border"
+                style={{ borderColor: 'rgba(0,0,0,0.1)', color: 'var(--neutral-600)' }}>
+                Cancelar
+              </button>
+              <button onClick={invite} disabled={saving}
+                className="px-4 py-2 text-[13px] font-semibold rounded-xl text-white disabled:opacity-50"
+                style={{ backgroundColor: 'var(--brand-teal)' }}>
+                {saving ? 'Criando...' : 'Criar usuário'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Para convidar novos usuários ou alterar permissões, acesse o painel do <strong className="text-foreground">Supabase Authentication</strong>. O gerenciamento de convites ainda será integrado nesta tela.
-        </p>
-      </div>
     </div>
   )
 }
@@ -712,10 +845,18 @@ export default function ConfiguracoesPage() {
             <KanbanSquare className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Pipeline</span>
           </TabsTrigger>
-          <TabsTrigger value="usuarios" id="tab-usuarios" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-            <Users className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Usuários</span>
-          </TabsTrigger>
+          {can('manage_users') && (
+            <TabsTrigger value="usuarios" id="tab-usuarios" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Usuários</span>
+            </TabsTrigger>
+          )}
+          {can('manage_margin_targets') && (
+            <TabsTrigger value="margens" id="tab-margens" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Margens</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="perfil">
