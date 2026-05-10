@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUserRole } from '@/hooks/useUserRole'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/rm-components'
 import { Plus, Search, Package, Edit2, Trash2, ImageOff, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react'
@@ -28,6 +29,7 @@ interface Product {
 }
 
 export default function ProdutosPage() {
+  const { can } = useUserRole()
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
@@ -235,7 +237,7 @@ export default function ProdutosPage() {
                                             R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>
                                     )}
-                                    {product.cost_price && (
+                                    {product.cost_price && can('view_cost_per_unit') && (
                                         <p className="text-[11px]" style={{ color: 'var(--neutral-400)' }}>
                                             Custo: R$ {product.cost_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>

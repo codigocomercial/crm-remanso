@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/rm-components'
+import { useUserRole } from '@/hooks/useUserRole'
 import { MarginDisplay } from '@/components/ui/MarginIndicator'
 import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
 
@@ -44,6 +45,7 @@ interface OrderItem {
 }
 
 export default function PropostasPage() {
+  const { can } = useUserRole()
   const supabase = createClient()
   const [orders, setOrders] = useState<Order[]>([])
   const [companies, setCompanies] = useState<Record<string, { fantasia: string | null; name: string }>>({})
@@ -136,7 +138,7 @@ export default function PropostasPage() {
     <div className="animate-fade-in">
       <PageHeader
         title="Pedidos de Venda"
-        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)} · Margem ${margemMedia.toFixed(1)}%`}
+        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ' · Margem ' + margemMedia.toFixed(1) + '%' : ''}`}
       >
         <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
           <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
