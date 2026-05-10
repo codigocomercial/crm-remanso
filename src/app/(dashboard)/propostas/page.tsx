@@ -226,10 +226,11 @@ export default function PropostasPage() {
             <span>Nº</span>
             <span>Data</span>
             <span>Cliente</span>
-            <span>Vendedor</span>
+            <span className="text-right">Urnas</span>
             <span className="text-right">Frete</span>
             <span className="text-right">Total</span>
             <span className="text-right">Margem</span>
+            <span>Vendedor</span>
             <span className="text-center">Status</span>
           </div>
 
@@ -244,7 +245,7 @@ export default function PropostasPage() {
                 <button onClick={() => toggleExpand(order.id)}
                   className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
                   <div className="grid items-center gap-2"
-                    style={{ gridTemplateColumns: '80px 90px 1fr 150px 100px 120px 110px 110px' }}>
+                    style={{ gridTemplateColumns: '80px 90px 1fr 70px 100px 120px 110px 130px 110px' }}>
 
                     <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
                       #{order.bling_number ?? '—'}
@@ -265,8 +266,8 @@ export default function PropostasPage() {
                       )}
                     </div>
 
-                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
-                      {order.seller_name ?? '—'}
+                    <span className="text-[12px] font-semibold text-right" style={{ color: 'var(--neutral-700)' }}>
+                      {order.units_count ?? '—'}
                     </span>
 
                     <span className="text-[12px] text-right" style={{ color: 'var(--neutral-600)' }}>
@@ -282,6 +283,10 @@ export default function PropostasPage() {
                       value={order.margin ?? 0}
                       type="order"
                     />
+
+                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
+                      {order.seller_name ?? '—'}
+                    </span>
 
                     <div className="flex justify-center">
                       <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
