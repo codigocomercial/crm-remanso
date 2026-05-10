@@ -578,6 +578,112 @@ function TabUsuarios() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
+
+// ─── Tab: Margens ─────────────────────────────────────────────────────────────
+function TabMargens() {
+  const supabase = createClient()
+  const [form, setForm] = useState({
+    margin_order_good: 30,
+    margin_order_low: 15,
+    margin_load_good: 20,
+    margin_load_low: 8,
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('organizations').select('margin_order_good,margin_order_low,margin_load_good,margin_load_low').single()
+      .then(({ data }) => {
+        if (data) setForm({
+          margin_order_good: data.margin_order_good ?? 30,
+          margin_order_low:  data.margin_order_low  ?? 15,
+          margin_load_good:  data.margin_load_good  ?? 20,
+          margin_load_low:   data.margin_load_low   ?? 8,
+        })
+      })
+  }, [])
+
+  async function save() {
+    setSaving(true)
+    await supabase.from('organizations').update(form).eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  function field(label: string, key: keyof typeof form, help: string) {
+    return (
+      <div className="rm-card p-4">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>{label}</label>
+          <div className="flex items-center gap-2">
+            <input type="number" min="0" max="100" step="1"
+              value={form[key]}
+              onChange={e => setForm(f => ({ ...f, [key]: Number(e.target.value) }))}
+              className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
+              style={{ borderColor: "rgba(0,0,0,0.12)" }} />
+            <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>%</span>
+          </div>
+        </div>
+        <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>{help}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5 max-w-xl">
+      <div>
+        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
+          Metas de Margem — Pedidos
+        </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
+          Define os indicadores 🟢🟡🔴 exibidos para o vendedor nos pedidos de venda
+        </p>
+        <div className="space-y-2">
+          {field("🟢 Boa margem — acima de", "margin_order_good", "Pedidos acima desse % aparecem com indicador verde")}
+          {field("🟡 Margem baixa — acima de", "margin_order_low", "Pedidos entre esse % e o anterior aparecem em amarelo. Abaixo = vermelho")}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
+          Metas de Margem — Cargas
+        </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
+          Define os indicadores exibidos para o vendedor nas cargas (considera custo de frete)
+        </p>
+        <div className="space-y-2">
+          {field("🟢 Carga viável — acima de", "margin_load_good", "Cargas acima desse % aparecem com indicador verde")}
+          {field("🟡 Carga apertada — acima de", "margin_load_low", "Cargas entre esse % e o anterior aparecem em amarelo. Abaixo = vermelho")}
+        </div>
+      </div>
+
+      <div className="rm-card p-4" style={{ backgroundColor: "var(--neutral-50)" }}>
+        <p className="text-[12px] font-semibold mb-2" style={{ color: "var(--neutral-700)" }}>
+          Preview dos indicadores com os valores atuais:
+        </p>
+        <div className="flex gap-4 text-[12px]">
+          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#2F6F5D", backgroundColor: "#EBF5F1" }}>
+            🟢 Acima de {form.margin_order_good}%
+          </span>
+          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#B45309", backgroundColor: "#FEF3C7" }}>
+            🟡 Entre {form.margin_order_low}% e {form.margin_order_good}%
+          </span>
+          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#DC2626", backgroundColor: "#FEE2E2" }}>
+            🔴 Abaixo de {form.margin_order_low}%
+          </span>
+        </div>
+      </div>
+
+      <button onClick={save} disabled={saving}
+        className="btn-remanso flex items-center gap-2">
+        <TrendingUp size={13} />
+        {saving ? "Salvando..." : saved ? "✓ Salvo!" : "Salvar metas"}
+      </button>
+    </div>
+  )
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6">
@@ -623,6 +729,9 @@ export default function ConfiguracoesPage() {
         </TabsContent>
         <TabsContent value="usuarios">
           <TabUsuarios />
+        </TabsContent>
+        <TabsContent value="margens">
+          <TabMargens />
         </TabsContent>
       </Tabs>
     </div>

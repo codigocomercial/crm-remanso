@@ -7,6 +7,7 @@ import {
   AlertCircle, Fuel, User, Clock, Edit2, Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MarginDisplay, ProtectedContent } from '@/components/ui/MarginIndicator'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 interface FreightLoad {
@@ -344,17 +345,18 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>Margem</p>
-            <p className="text-[13px] font-bold" style={{ color: marginColor(load.total_margin_pct) }}>
-              {fmtPct(load.total_margin_pct)}
-            </p>
+            <MarginDisplay pct={load.total_margin_pct} value={load.total_margin} type="load" />
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
               Frete {freightBalance >= 0 ? '✓' : '✗'}
             </p>
-            <p className="text-[13px] font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626' }}>
-              {fmt(freightBalance)}
-            </p>
+            <ProtectedContent permission="view_freight_cost"
+              fallback={<span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626', backgroundColor: freightBalance >= 0 ? '#EBF5F1' : '#FEE2E2' }}>{freightBalance >= 0 ? '✓ OK' : '✗ Déficit'}</span>}>
+              <p className="text-[13px] font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626' }}>
+                {fmt(freightBalance)}
+              </p>
+            </ProtectedContent>
           </div>
         </div>
 

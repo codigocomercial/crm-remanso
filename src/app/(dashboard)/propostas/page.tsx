@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/rm-components'
+import { MarginDisplay } from '@/components/ui/MarginIndicator'
 import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
@@ -274,14 +275,11 @@ export default function PropostasPage() {
                       R$ {fmt(order.total_value)}
                     </span>
 
-                    <div className="text-right">
-                      <p className="text-[13px] font-bold" style={{ color: marginPct >= 0 ? '#2F6F5D' : '#DC2626' }}>
-                        {marginPct.toFixed(1)}%
-                      </p>
-                      <p className="text-[10px]" style={{ color: 'var(--neutral-400)' }}>
-                        R$ {fmt(order.margin)}
-                      </p>
-                    </div>
+                    <MarginDisplay
+                      pct={marginPct}
+                      value={order.margin ?? 0}
+                      type="order"
+                    />
 
                     <div className="flex justify-center">
                       <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
