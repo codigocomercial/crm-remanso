@@ -228,7 +228,7 @@ export default function PropostasPage() {
             <span>Nº</span>
             <span>Data</span>
             <span>Cliente</span>
-            <span className="text-right">Urnas</span>
+            <span className="text-center">Urnas</span>
             <span className="text-right">Total</span>
             <span className="text-left pl-2">Margem</span>
             <span className="text-left">Vendedor</span>
@@ -267,7 +267,7 @@ export default function PropostasPage() {
                       )}
                     </div>
 
-                    <span className="text-[12px] font-semibold text-right" style={{ color: 'var(--neutral-700)' }}>
+                    <span className="text-[12px] font-semibold text-center" style={{ color: 'var(--neutral-700)' }}>
                       {order.units_count ?? '—'}
                     </span>
 
