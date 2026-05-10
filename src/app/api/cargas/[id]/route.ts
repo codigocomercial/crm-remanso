@@ -106,7 +106,8 @@ export async function PATCH(
 
       const units = order.units_count || 0
       const costOp = costPerUnit * units
-      const freightCharged = units * (body.freight_per_unit || 30)
+      // Usa o frete real do pedido (negociado com o cliente) — não o padrão da carga
+      const freightCharged = Number(order.freight) || 0
       const margin = (order.total_value || 0) - (order.total_cost || 0) - costOp
       const marginPct = order.total_value > 0 ? (margin / order.total_value) * 100 : 0
 

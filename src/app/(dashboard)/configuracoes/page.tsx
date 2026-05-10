@@ -839,6 +839,41 @@ function TabMargens() {
         </div>
       </div>
 
+      <div>
+        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
+          Tabela de Frete Padrão
+        </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
+          Referência para o vendedor na hora de negociar. Não é obrigatório — cada pedido pode ter valor diferente.
+        </p>
+        <div className="rm-card p-4 space-y-2">
+          <div className="grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-wide pb-2"
+            style={{ color: "var(--neutral-500)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+            <span>Faixa de distância</span>
+            <span className="text-center">Frete padrão</span>
+            <span className="text-right">por urna</span>
+          </div>
+          {[
+            { label: "Até 80km", value: "R$ 0", note: "Cliente retira ou desconto embutido" },
+            { label: "80 a 150km", value: "R$ 20", note: "" },
+            { label: "150 a 250km", value: "R$ 25", note: "" },
+            { label: "Acima de 250km", value: "R$ 30", note: "" },
+          ].map((tier, i) => (
+            <div key={i} className="grid grid-cols-3 gap-2 items-center py-1.5"
+              style={{ borderBottom: i < 3 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
+              <span className="text-[13px]" style={{ color: "var(--neutral-700)" }}>{tier.label}</span>
+              <span className="text-[13px] font-bold text-center" style={{ color: "var(--brand-teal)" }}>{tier.value}</span>
+              <span className="text-[11px] text-right" style={{ color: "var(--neutral-400)" }}>
+                {tier.note || "por urna"}
+              </span>
+            </div>
+          ))}
+          <p className="text-[11px] pt-2" style={{ color: "var(--neutral-400)" }}>
+            💡 Em breve: edição dos valores por faixa diretamente nesta tela
+          </p>
+        </div>
+      </div>
+
       <button onClick={save} disabled={saving}
         className="btn-remanso flex items-center gap-2">
         <TrendingUp size={13} />

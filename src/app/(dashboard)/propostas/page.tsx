@@ -227,7 +227,6 @@ export default function PropostasPage() {
             <span>Data</span>
             <span>Cliente</span>
             <span className="text-right">Urnas</span>
-            <span className="text-right">Frete</span>
             <span className="text-right">Total</span>
             <span className="text-right">Margem</span>
             <span>Vendedor</span>
@@ -245,7 +244,7 @@ export default function PropostasPage() {
                 <button onClick={() => toggleExpand(order.id)}
                   className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
                   <div className="grid items-center gap-2"
-                    style={{ gridTemplateColumns: '80px 90px 1fr 70px 100px 120px 110px 130px 110px' }}>
+                    style={{ gridTemplateColumns: '80px 90px 1fr 70px 120px 110px 130px 110px' }}>
 
                     <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
                       #{order.bling_number ?? '—'}
@@ -268,10 +267,6 @@ export default function PropostasPage() {
 
                     <span className="text-[12px] font-semibold text-right" style={{ color: 'var(--neutral-700)' }}>
                       {order.units_count ?? '—'}
-                    </span>
-
-                    <span className="text-[12px] text-right" style={{ color: 'var(--neutral-600)' }}>
-                      R$ {fmt(order.freight)}
                     </span>
 
                     <span className="text-[13px] font-semibold text-right" style={{ color: 'var(--neutral-800)' }}>
@@ -326,10 +321,33 @@ export default function PropostasPage() {
                             </div>
                           </div>
                         ))}
-                        <div className="flex justify-end pt-1">
-                          <span className="text-[12px] font-bold" style={{ color: 'var(--neutral-800)' }}>
-                            Total: R$ {fmt(order.total_value)}
-                          </span>
+                        <div className="mt-3 pt-3 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                          <div className="flex justify-between text-[12px]">
+                            <span style={{ color: 'var(--neutral-500)' }}>Valor urnas</span>
+                            <span className="font-semibold" style={{ color: 'var(--neutral-800)' }}>R$ {fmt(order.total_value)}</span>
+                          </div>
+                          {(order.freight ?? 0) > 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span style={{ color: 'var(--neutral-500)' }}>Frete cobrado</span>
+                              <span className="font-semibold" style={{ color: '#1D6FA4' }}>+ R$ {fmt(order.freight)}</span>
+                            </div>
+                          )}
+                          {(order.freight ?? 0) === 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span style={{ color: 'var(--neutral-500)' }}>Frete</span>
+                              <span className="font-semibold" style={{ color: '#B45309' }}>Negociado grátis</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-[12px]">
+                            <span style={{ color: 'var(--neutral-500)' }}>Custo MP</span>
+                            <span className="font-semibold" style={{ color: '#DC2626' }}>- R$ {fmt(order.total_cost)}</span>
+                          </div>
+                          <div className="flex justify-between text-[13px] pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                            <span className="font-bold" style={{ color: 'var(--neutral-700)' }}>Margem bruta</span>
+                            <span className="font-bold" style={{ color: (order.margin ?? 0) >= 0 ? '#2F6F5D' : '#DC2626' }}>
+                              R$ {fmt(order.margin)} ({(order.margin_pct ?? 0).toFixed(1)}%)
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}
