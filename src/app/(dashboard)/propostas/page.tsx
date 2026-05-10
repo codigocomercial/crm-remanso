@@ -219,7 +219,7 @@ export default function PropostasPage() {
           {/* Cabeçalho */}
           <div className="hidden md:grid px-4 py-2.5 text-[11px] font-semibold uppercase"
             style={{
-              gridTemplateColumns: '80px 90px 1fr 80px 130px 120px 150px 110px',
+              gridTemplateColumns: '80px 90px 1fr 80px 130px 130px 160px 110px',
               borderBottom: '1px solid rgba(0,0,0,0.06)',
               background: 'var(--neutral-50)',
               color: 'var(--neutral-500)',
@@ -230,8 +230,8 @@ export default function PropostasPage() {
             <span>Cliente</span>
             <span className="text-right">Urnas</span>
             <span className="text-right">Total</span>
-            <span className="text-right">Margem</span>
-            <span>Vendedor</span>
+            <span className="text-left pl-2">Margem</span>
+            <span className="text-left">Vendedor</span>
             <span className="text-center">Status</span>
           </div>
 
@@ -246,7 +246,7 @@ export default function PropostasPage() {
                 <button onClick={() => toggleExpand(order.id)}
                   className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
                   <div className="grid items-center gap-2"
-                    style={{ gridTemplateColumns: '80px 90px 1fr 80px 130px 120px 150px 110px' }}>
+                    style={{ gridTemplateColumns: '80px 90px 1fr 80px 130px 130px 160px 110px' }}>
 
                     <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
                       #{order.bling_number ?? '—'}
@@ -275,13 +275,15 @@ export default function PropostasPage() {
                       R$ {fmt(order.total_value)}
                     </span>
 
-                    <MarginDisplay
-                      pct={marginPct}
-                      value={order.margin ?? 0}
-                      type="order"
-                    />
+                    <div className="pl-2">
+                      <MarginDisplay
+                        pct={marginPct}
+                        value={order.margin ?? 0}
+                        type="order"
+                      />
+                    </div>
 
-                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
+                    <span className="text-[12px] truncate pl-1" style={{ color: 'var(--neutral-600)' }}>
                       {order.seller_name ?? '—'}
                     </span>
 
