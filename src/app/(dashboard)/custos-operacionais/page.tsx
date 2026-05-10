@@ -198,14 +198,12 @@ export default function CustosOperacionaisPage() {
       {/* Modal — mesma estrutura usada em outros modais do sistema */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.5)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
         >
-          <div className="absolute inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-start justify-center p-6">
               <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -220,7 +218,7 @@ export default function CustosOperacionaisPage() {
                 </div>
 
                 {/* Conteúdo */}
-                <div className="px-6 py-5 space-y-5">
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
                   {/* Mês / Ano / Urnas */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -306,8 +304,6 @@ export default function CustosOperacionaisPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
