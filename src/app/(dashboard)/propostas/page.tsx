@@ -31,6 +31,8 @@ interface Order {
   freight: number | null
   margin: number | null
   margin_pct: number | null
+  total_cost: number | null
+  units_count: number | null
   ordered_at: string | null
   company_id: string | null
 }
