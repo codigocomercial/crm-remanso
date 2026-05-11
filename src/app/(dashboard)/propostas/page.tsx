@@ -18,7 +18,7 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
   perdido: { label: 'Perdido', color: '#9333EA', bg: '#F5F3FF' },
 }
 
-const TABLE_COLUMNS = '80px 100px minmax(260px, 1fr) 80px 150px 200px 220px 120px'
+const TABLE_COLUMNS = '80px 100px minmax(200px, 1fr) 70px 120px 160px 180px 100px'
 
 interface Order {
   id: string
@@ -237,7 +237,7 @@ export default function PropostasPage() {
             <span>Cliente</span>
             <span className="text-center">Urnas</span>
             <span className="text-right pr-3">Total</span>
-            <span className="text-right pr-3">Margem</span>
+            <span className="text-left pl-2">Margem</span>
             <span className="text-left">Vendedor</span>
             <span className="text-center">Status</span>
           </div>
@@ -281,11 +281,11 @@ export default function PropostasPage() {
                       R$ {fmt(order.total_value)}
                     </span>
 
-                    <div className="flex justify-end pr-3">
+                    <div className="flex justify-start pl-2">
                       <MarginDisplay pct={marginPct} value={order.margin ?? 0} type="order" />
                     </div>
 
-                    <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
+                    <span className="text-[12px] truncate text-left" style={{ color: 'var(--neutral-600)' }}>
                       {order.seller_name ?? '—'}
                     </span>
 
