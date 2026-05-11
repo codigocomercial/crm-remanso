@@ -237,7 +237,7 @@ export default function PropostasPage() {
             <span>Data</span>
             <span>Cliente</span>
             <span className="text-center">Urnas</span>
-            <span className="text-left">Total</span>
+            <span className="text-center">Total</span>
             <span className="text-center">Margem</span>
             <span className="text-center">Vendedor</span>
             <span className="text-center">Status</span>
