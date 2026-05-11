@@ -109,7 +109,7 @@ export default function AtendimentosPage() {
 
       </div>
 
-      {/* List */
+      {/* List */}
       {loading ? (
           <div className="p-12 flex flex-col items-center justify-center text-center h-[400px]">
              <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
