@@ -346,11 +346,7 @@ export default function PropostasPage() {
                               <span className="font-semibold" style={{ color: '#B45309' }}>Negociado grátis</span>
                             </div>
                           )}
-                          <div className="flex justify-between text-[12px]">
-                            <span style={{ color: 'var(--neutral-500)' }}>Custo MP</span>
-                            <span className="font-semibold" style={{ color: '#DC2626' }}>- R$ {fmt(order.total_cost)}</span>
-                          </div>
-                          <div className="flex justify-between text-[13px] pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+<div className="flex justify-between text-[13px] pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                             <span className="font-bold" style={{ color: 'var(--neutral-700)' }}>Margem bruta</span>
                             <span className="font-bold" style={{ color: (order.margin ?? 0) >= 0 ? '#2F6F5D' : '#DC2626' }}>
                               R$ {fmt(order.margin)} ({(order.margin_pct ?? 0).toFixed(1)}%)
