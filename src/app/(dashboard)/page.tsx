@@ -22,14 +22,7 @@ interface RecentContact {
 
 const BAR_COLORS = ["#DCEFEA", "#BFE3D8", "#9FD6C4", "#7FC2AB", "#B8963A", "#9E7F2E"]
 
-const chartData = [
-  { mes: 'Nov', pedidos: 18, novos: 3 },
-  { mes: 'Dez', pedidos: 24, novos: 5 },
-  { mes: 'Jan', pedidos: 20, novos: 2 },
-  { mes: 'Fev', pedidos: 31, novos: 4 },
-  { mes: 'Mar', pedidos: 27, novos: 6 },
-  { mes: 'Abr', pedidos: 35, novos: 4 },
-]
+
 
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
@@ -48,6 +41,7 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState({
     totalContacts: 0, pendingTasks: 0, reorders: 0, pipelineCount: 0, novosMes: 0,
   })
+  const [chartData, setChartData] = useState<{ mes: string; pedidos: number; novos: number }[]>([])
 
   const hoje = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
   const hojeLabel = hoje.charAt(0).toUpperCase() + hoje.slice(1)
@@ -65,6 +59,7 @@ export default function DashboardPage() {
         { count: reorders },
         { data: recentContacts },
         { data: recomprasData },
+        { data: pedidosMes },
       ] = await Promise.all([
         supabase.from('contacts').select('*', { count: 'exact', head: true }),
         supabase.from('contacts').select('*', { count: 'exact', head: true }).gte('created_at', mesInicio),
@@ -78,6 +73,10 @@ export default function DashboardPage() {
           .not('next_followup_at', 'is', null)
           .lte('next_followup_at', em7dias)
           .order('next_followup_at', { ascending: true }).limit(5),
+        supabase.from('orders')
+          .select('ordered_at')
+          .gte('ordered_at', new Date(new Date().setMonth(new Date().getMonth() - 5)).toISOString().split('T')[0])
+          .order('ordered_at', { ascending: true }),
       ])
 
       setMetrics({
