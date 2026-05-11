@@ -239,7 +239,7 @@ export default function PropostasPage() {
             <span className="text-center">Urnas</span>
             <span className="text-right">Total</span>
             <span className="text-center">Margem</span>
-            <span className="text-left">Vendedor</span>
+            <span className="text-center">Vendedor</span>
             <span className="text-center">Status</span>
           </div>
 
@@ -286,7 +286,7 @@ export default function PropostasPage() {
                       <MarginDisplay pct={marginPct} value={order.margin ?? 0} type="order" />
                     </div>
 
-                    <span className="text-[12px] truncate text-left" style={{ color: 'var(--neutral-600)' }}>
+                    <span className="text-[12px] truncate text-center" style={{ color: 'var(--neutral-600)' }}>
                       {order.seller_name ?? '—'}
                     </span>
 
