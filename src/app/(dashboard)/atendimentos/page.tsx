@@ -79,6 +79,7 @@ export default function AtendimentosPage() {
         </div>
       </div>
 
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       {/* Toolbar / Filtros */}
       <div className="flex flex-col sm:flex-row items-center gap-3 bg-card p-3 rounded-lg border border-border shadow-sm">
         <div className="relative w-full sm:flex-1">
@@ -106,10 +107,9 @@ export default function AtendimentosPage() {
         </div>
       </div>
 
-      {/* List */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        </div>
+      </div>
 
+      {/* List */
       {loading ? (
           <div className="p-12 flex flex-col items-center justify-center text-center h-[400px]">
              <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
