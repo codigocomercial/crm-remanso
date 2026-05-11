@@ -224,7 +224,7 @@ export default function PropostasPage() {
       ) : (
         <div className="rm-card p-0 overflow-hidden">
           {/* Cabeçalho */}
-          <div className="hidden md:grid items-center gap-2 px-4 py-2.5 text-[11px] font-semibold uppercase"
+          <div className="hidden md:grid items-center px-4 py-2.5 text-[11px] font-semibold uppercase"
             style={{
               gridTemplateColumns: TABLE_COLUMNS,
               borderBottom: '1px solid rgba(0,0,0,0.06)',
@@ -252,7 +252,7 @@ export default function PropostasPage() {
               <div key={order.id} style={{ borderBottom: i < orders.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
                 <button onClick={() => toggleExpand(order.id)}
                   className="w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors">
-                  <div className="grid items-center gap-2" style={{ gridTemplateColumns: TABLE_COLUMNS }}>
+                  <div className="grid items-center" style={{ gridTemplateColumns: TABLE_COLUMNS }}>
 
                     <span className="text-[14px] font-bold" style={{ color: 'var(--brand-teal)' }}>
                       #{order.bling_number ?? '—'}
@@ -281,8 +281,10 @@ export default function PropostasPage() {
                       R$ {fmt(order.total_value)}
                     </span>
 
-                    <div className="flex justify-end pr-3">
-                      <MarginDisplay pct={marginPct} value={order.margin ?? 0} type="order" />
+                    <div className="flex justify-end pr-6 min-w-0">
+                      <div className="w-[90px] text-right">
+                        <MarginDisplay pct={marginPct} value={order.margin ?? 0} type="order" />
+                      </div>
                     </div>
 
                     <span className="text-[12px] truncate" style={{ color: 'var(--neutral-600)' }}>
