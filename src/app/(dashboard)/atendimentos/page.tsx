@@ -108,7 +108,9 @@ export default function AtendimentosPage() {
 
       {/* List */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        {loading ? (
+        </div>
+
+      {loading ? (
           <div className="p-12 flex flex-col items-center justify-center text-center h-[400px]">
              <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
              <p className="text-muted-foreground text-sm">Carregando histórico unificado...</p>

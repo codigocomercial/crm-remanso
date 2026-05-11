@@ -72,6 +72,7 @@ export default function VendedoresPage() {
 
   return (
     <div className="space-y-6">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -102,7 +103,9 @@ export default function VendedoresPage() {
           ))}
         </div>
 
-        {loading ? (
+        </div>
+
+      {loading ? (
           <div className="flex items-center justify-center py-16 gap-2">
             <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--brand-teal)' }} />
             <p className="text-[13px]" style={{ color: 'var(--neutral-500)' }}>Carregando...</p>

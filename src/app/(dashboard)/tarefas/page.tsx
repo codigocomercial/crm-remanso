@@ -81,6 +81,7 @@ export default function TarefasPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -113,7 +114,9 @@ export default function TarefasPage() {
 
       {/* List */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        {loading ? (
+        </div>
+
+      {loading ? (
           <div className="p-8 flex flex-col items-center justify-center text-center h-[400px]">
              <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50 mb-4" />
              <p className="text-muted-foreground text-sm">Carregando tarefas...</p>

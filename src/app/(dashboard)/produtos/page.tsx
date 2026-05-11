@@ -83,6 +83,7 @@ export default function ProdutosPage() {
 
     return (
         <div className="animate-fade-in">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
             <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
                 <button onClick={async () => {
                     setSyncing(true)
@@ -115,7 +116,9 @@ export default function ProdutosPage() {
             </div>
 
             {/* Grid */}
-            {loading ? (
+            </div>
+
+      {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="rm-card animate-pulse h-64" style={{ background: 'var(--neutral-100)' }} />

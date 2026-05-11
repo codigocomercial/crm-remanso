@@ -84,6 +84,7 @@ export default function EmpresasPage() {
 
   return (
     <div className="animate-fade-in">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
         <button
           onClick={handleSync}
@@ -115,6 +116,8 @@ export default function EmpresasPage() {
             onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
           />
         </div>
+      </div>
+
       </div>
 
       {loading ? (

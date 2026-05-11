@@ -594,6 +594,7 @@ export default function CargasPage() {
         </button>
       </div>
 
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       {/* Métricas */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
@@ -645,6 +646,8 @@ export default function CargasPage() {
       </div>
 
       {/* Lista de cargas */}
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-40">
           <RefreshCw size={20} className="animate-spin" style={{ color: 'var(--neutral-400)' }} />

@@ -58,6 +58,7 @@ export default function ContatosPage() {
 
   return (
     <div className="space-y-6">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>
@@ -81,6 +82,8 @@ export default function ContatosPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+      </div>
+
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
