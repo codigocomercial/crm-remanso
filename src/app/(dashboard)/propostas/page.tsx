@@ -144,6 +144,7 @@ export default function PropostasPage() {
 
   return (
     <div className="animate-fade-in">
+      <div className="sticky top-0 z-20" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
       <PageHeader
         title="Pedidos de Venda"
         subtitle={`${orders.length} pedido(s) · ${totalUrnas} urnas · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
@@ -155,7 +156,7 @@ export default function PropostasPage() {
       </PageHeader>
 
       {/* Filtros */}
-      <div className="rm-card mb-5 space-y-3 sticky top-0 z-20" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(255,255,255,0.95)" }}>
+      <div className="rm-card mb-5 space-y-3">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
@@ -198,6 +199,8 @@ export default function PropostasPage() {
             </button>
           ))}
         </div>
+      </div>
+
       </div>
 
       {/* Tabela */}
