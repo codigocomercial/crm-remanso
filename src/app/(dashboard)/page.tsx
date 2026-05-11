@@ -90,6 +90,22 @@ export default function DashboardPage() {
         ...r,
         diasRestantes: Math.round((new Date(r.next_followup_at).getTime() - hoje0.getTime()) / 86400000),
       })))
+      // Gera chartData dos últimos 6 meses com dados reais
+      const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+      const hoje2 = new Date()
+      const chartArr = []
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(hoje2.getFullYear(), hoje2.getMonth() - i, 1)
+        const mes = MESES_PT[d.getMonth()]
+        const ano = d.getFullYear()
+        const count = (pedidosMes ?? []).filter((p: any) => {
+          const pd = new Date(p.ordered_at)
+          return pd.getMonth() === d.getMonth() && pd.getFullYear() === ano
+        }).length
+        chartArr.push({ mes, pedidos: count, novos: 0 })
+      }
+      setChartData(chartArr)
+
       setLoading(false)
     }
     load()
