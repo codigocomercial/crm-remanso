@@ -18,7 +18,7 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
   perdido: { label: 'Perdido', color: '#9333EA', bg: '#F5F3FF' },
 }
 
-const TABLE_COLUMNS = '80px 100px minmax(260px, 1fr) 80px 150px 170px 220px 120px'
+const TABLE_COLUMNS = '80px 100px minmax(260px, 1fr) 80px 150px 200px 220px 120px'
 
 interface Order {
   id: string
