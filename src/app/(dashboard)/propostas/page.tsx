@@ -139,13 +139,14 @@ export default function PropostasPage() {
 
   const totalVenda = orders.reduce((s, o) => s + (o.total_value ?? 0), 0)
   const totalMargem = orders.reduce((s, o) => s + (o.margin ?? 0), 0)
+  const totalUrnas = orders.reduce((s, o) => s + (o.units_count ?? 0), 0)
   const margemMedia = totalVenda > 0 ? (totalMargem / totalVenda) * 100 : 0
 
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Pedidos de Venda"
-        subtitle={`${orders.length} pedido(s) · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
+        subtitle={`${orders.length} pedido(s) · ${totalUrnas} urnas · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
       >
         <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
           <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
