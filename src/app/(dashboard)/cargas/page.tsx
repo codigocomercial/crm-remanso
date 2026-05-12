@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MarginDisplay, ProtectedContent } from '@/components/ui/MarginIndicator'
+import { useUserRole } from '@/hooks/useUserRole'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 interface FreightLoad {
@@ -215,6 +216,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   const [searchOrder, setSearchOrder] = useState('')
   const [adding, setAdding] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
+  const { can } = useUserRole()
 
   const st = STATUS_CONFIG[load.status] || STATUS_CONFIG.forming
   const freightCostTotal = (load.distance_km || 0) * 2 * (load.cost_per_km || 0) +
@@ -401,18 +403,20 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
             ) : (
               <div className="space-y-1.5">
                 {/* Header */}
-                <div className="grid grid-cols-12 gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
+                <div className="grid gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)',
+                    gridTemplateColumns: can('view_margins') ? 'repeat(12, minmax(0, 1fr))' : 'repeat(10, minmax(0, 1fr))' }}>
                   <div className="col-span-4">Cliente</div>
                   <div className="col-span-2">Cidade</div>
                   <div className="col-span-1 text-right">Urnas</div>
                   <div className="col-span-2 text-right">Valor</div>
-                  <div className="col-span-2 text-right">Margem</div>
+                  {can('view_margins') && <div className="col-span-2 text-right">Margem</div>}
                   <div className="col-span-1"></div>
                 </div>
 
                 {load.freight_load_orders.map(lo => (
-                  <div key={lo.id} className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg hover:bg-neutral-50 items-center">
+                  <div key={lo.id} className="grid gap-2 px-2 py-2 rounded-lg hover:bg-neutral-50 items-center"
+                    style={{ gridTemplateColumns: can('view_margins') ? 'repeat(12, minmax(0, 1fr))' : 'repeat(10, minmax(0, 1fr))' }}>
                     <div className="col-span-4">
                       <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
                         {lo.client_name}
@@ -431,12 +435,14 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                       <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{fmt(lo.order_value)}</p>
                       <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>+{fmt(lo.freight_charged)} frete</p>
                     </div>
-                    <div className="col-span-2 text-right">
-                      <p className="text-[12px] font-bold" style={{ color: marginColor(lo.margin_pct) }}>
-                        {fmtPct(lo.margin_pct)}
-                      </p>
-                      <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>{fmt(lo.margin)}</p>
-                    </div>
+                    {can('view_margins') && (
+                      <div className="col-span-2 text-right">
+                        <p className="text-[12px] font-bold" style={{ color: marginColor(lo.margin_pct) }}>
+                          {fmtPct(lo.margin_pct)}
+                        </p>
+                        <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>{fmt(lo.margin)}</p>
+                      </div>
+                    )}
                     <div className="col-span-1 flex justify-end">
                       {load.status === 'forming' && (
                         <button onClick={() => removeOrder(lo.order_id)}
@@ -453,8 +459,9 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                 ))}
 
                 {/* Totais */}
-                <div className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg mt-1 border-t"
-                  style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                <div className="grid gap-2 px-2 py-2 rounded-lg mt-1 border-t"
+                  style={{ borderColor: 'rgba(0,0,0,0.06)',
+                    gridTemplateColumns: can('view_margins') ? 'repeat(12, minmax(0, 1fr))' : 'repeat(10, minmax(0, 1fr))' }}>
                   <div className="col-span-4">
                     <p className="text-[11px] font-bold" style={{ color: 'var(--neutral-700)' }}>TOTAL</p>
                   </div>
@@ -465,11 +472,13 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                   <div className="col-span-2 text-right">
                     <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmt(load.total_revenue)}</p>
                   </div>
-                  <div className="col-span-2 text-right">
-                    <p className="text-[12px] font-bold" style={{ color: marginColor(load.total_margin_pct) }}>
-                      {fmtPct(load.total_margin_pct)}
-                    </p>
-                  </div>
+                  {can('view_margins') && (
+                    <div className="col-span-2 text-right">
+                      <p className="text-[12px] font-bold" style={{ color: marginColor(load.total_margin_pct) }}>
+                        {fmtPct(load.total_margin_pct)}
+                      </p>
+                    </div>
+                  )}
                   <div className="col-span-1"></div>
                 </div>
               </div>
