@@ -350,14 +350,14 @@ export default function PropostasPage() {
                               <span className="font-semibold" style={{ color: '#B45309' }}>Negociado grátis</span>
                             </div>
                           )}
-                          <div className="flex justify-between text-[13px] pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                            <span className="font-bold" style={{ color: 'var(--neutral-700)' }}>Margem bruta</span>
-                            <span className="font-bold" style={{ color: (order.margin ?? 0) >= 0 ? '#2F6F5D' : '#DC2626' }}>
-                              {can('view_margins')
-                                ? `R$ ${fmt(order.margin)} (${(order.margin_pct ?? 0).toFixed(1)}%)`
-                                : `R$ ${fmt(order.margin)}`}
-                            </span>
-                          </div>
+                          {can('view_margins') && (
+                            <div className="flex justify-between text-[13px] pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                              <span className="font-bold" style={{ color: 'var(--neutral-700)' }}>Margem bruta</span>
+                              <span className="font-bold" style={{ color: (order.margin ?? 0) >= 0 ? '#2F6F5D' : '#DC2626' }}>
+                                R$ {fmt(order.margin)} ({(order.margin_pct ?? 0).toFixed(1)}%)
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
