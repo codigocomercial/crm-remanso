@@ -207,7 +207,118 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
   )
 }
 
-// ── Card de Carga ──────────────────────────────────────────────────────────
+// ── Modal Editar Carga ─────────────────────────────────────────────────────
+function EditLoadModal({ load, onClose, onSave }: { load: FreightLoad; onClose: () => void; onSave: () => void }) {
+  const [form, setForm] = useState({
+    route_name: load.route_name || '',
+    destination_city: load.destination_city || '',
+    destination_state: load.destination_state || '',
+    distance_km: String(load.distance_km || ''),
+    max_units: String(load.max_units || '48'),
+    transport_type: load.transport_type || 'own',
+    cost_per_km: String(load.cost_per_km || ''),
+    driver_daily_cost: String(load.driver_daily_cost || ''),
+    trip_days: String(load.trip_days || '1'),
+    freight_per_unit: String(load.freight_per_unit || '30'),
+    estimated_departure: load.estimated_departure ? load.estimated_departure.slice(0, 10) : '',
+    observations: load.observations || '',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
+    if (!form.route_name || !form.destination_city) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/cargas/${load.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          distance_km: parseFloat(form.distance_km) || null,
+          max_units: parseFloat(form.max_units) || 48,
+          cost_per_km: parseFloat(form.cost_per_km) || null,
+          driver_daily_cost: parseFloat(form.driver_daily_cost) || null,
+          trip_days: parseInt(form.trip_days) || 1,
+          freight_per_unit: parseFloat(form.freight_per_unit) || 30,
+        }),
+      })
+      if (res.ok) { onSave(); onClose() }
+    } finally { setSaving(false) }
+  }
+
+  const field = (label: string, key: keyof typeof form, type = 'text', placeholder = '') => (
+    <div>
+      <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--neutral-500)' }}>{label}</label>
+      <input
+        type={type} value={form[key]} placeholder={placeholder}
+        onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+        className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+        style={{ borderColor: 'var(--surface-border)' }}
+      />
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
+        style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
+          <h2 className="text-[15px] font-bold" style={{ color: 'var(--neutral-900)' }}>Editar Carga #{load.load_number}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X size={16} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">{field('Nome da Rota *', 'route_name')}</div>
+            {field('Cidade Destino *', 'destination_city')}
+            {field('Estado', 'destination_state', 'text', 'BA')}
+            {field('Distância (km)', 'distance_km', 'number')}
+            {field('Capacidade (urnas)', 'max_units', 'number')}
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--neutral-500)' }}>Tipo de Transporte</label>
+            <select value={form.transport_type} onChange={e => setForm(p => ({ ...p, transport_type: e.target.value }))}
+              className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
+              style={{ borderColor: 'var(--surface-border)' }}>
+              <option value="own">Caminhão Próprio</option>
+              <option value="third_party">Terceirizado</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {field('Custo/km (R$)', 'cost_per_km', 'number', '1.70')}
+            {field('Diária motorista', 'driver_daily_cost', 'number', '250')}
+            {field('Dias de viagem', 'trip_days', 'number', '2')}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {field('Frete/urna (R$)', 'freight_per_unit', 'number', '30')}
+            {field('Saída prevista', 'estimated_departure', 'date')}
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--neutral-500)' }}>Observações</label>
+            <textarea value={form.observations} onChange={e => setForm(p => ({ ...p, observations: e.target.value }))}
+              rows={2} placeholder="Notas sobre a rota, clientes, etc."
+              className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none resize-none"
+              style={{ borderColor: 'var(--surface-border)' }} />
+          </div>
+        </div>
+        <div className="p-4 border-t flex gap-2" style={{ borderColor: 'var(--surface-border)' }}>
+          <button onClick={onClose} className="flex-1 py-2 text-[13px] font-semibold rounded-xl border"
+            style={{ borderColor: 'var(--surface-border)', color: 'var(--neutral-500)' }}>Cancelar</button>
+          <button onClick={save} disabled={saving || !form.route_name || !form.destination_city}
+            className="flex-1 py-2 text-[13px] font-semibold rounded-xl text-white disabled:opacity-40"
+            style={{ backgroundColor: 'var(--brand-teal)' }}>
+            {saving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [showAddOrder, setShowAddOrder] = useState(false)
@@ -267,6 +378,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   }
 
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   const deleteLoad = async () => {
     try {
@@ -284,7 +396,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   })
 
   return (
-    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
+    <>
+    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--surface-border)' }}>
       {/* Header do card */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -317,6 +430,16 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
           </div>
 
           <div className="flex items-center gap-1">
+            {load.status === 'forming' && !confirmDelete && (
+              <button onClick={() => setShowEdit(true)}
+                title="Editar carga"
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--neutral-400)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand-teal)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--neutral-400)')}>
+                <Edit2 size={13} />
+              </button>
+            )}
             {load.status === 'forming' && !confirmDelete && (
               <button onClick={() => setConfirmDelete(true)}
                 className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
@@ -565,10 +688,12 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
         </div>
       )}
     </div>
+    {showEdit && (
+      <EditLoadModal load={load} onClose={() => setShowEdit(false)} onSave={() => { onRefresh(); setShowEdit(false) }} />
+    )}
+  </>
   )
 }
-
-// ── Página principal ───────────────────────────────────────────────────────
 export default function CargasPage() {
   const [loads, setLoads] = useState<FreightLoad[]>([])
   const [loading, setLoading] = useState(true)
