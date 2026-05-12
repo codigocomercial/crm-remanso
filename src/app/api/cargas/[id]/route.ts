@@ -47,7 +47,7 @@ export async function GET(
         company:companies ( id, fantasia, city, state, distance_km, reorder_cycle_days, last_order_at )
       `)
       .eq('org_id', ORG_ID)
-      .eq('status', 'em_aberto')
+      .in('status', ['em_aberto', 'em_andamento'])
       .not('id', 'in', `(${['00000000-0000-0000-0000-000000000000', ...orderIdsInLoad].join(',')})`)
       .order('ordered_at', { ascending: false })
       .limit(50)
