@@ -508,14 +508,12 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                         <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
                           {o.company?.fantasia || o.client_name}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
-                            📍 {o.client_city}/{o.client_state}
-                          </span>
-                          <span className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
-                            📦 {o.units_count} urnas
-                          </span>
-                        </div>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
+                          📍 {o.client_city}/{o.client_state}
+                        </p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--neutral-400)' }}>
+                          Ped. #{o.bling_number} · {o.units_count} urnas
+                        </p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>
