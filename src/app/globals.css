@@ -430,6 +430,8 @@
   background: linear-gradient(135deg, #A8842F, #C9A54C) !important;
   border-color: transparent !important;
   box-shadow: 0 8px 20px rgba(184, 150, 58, 0.25) !important;
+}
+
 /* Sticky header padrão — usa variável para dark mode automático */
 .sticky-header {
   background-color: var(--neutral-100);
