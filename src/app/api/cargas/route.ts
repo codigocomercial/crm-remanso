@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         freight_load_orders (
-          id, units_count, order_value, cost_mp, cost_op,
+          id, order_id, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
           client_name, client_city, client_state,
           added_at,
