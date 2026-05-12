@@ -83,7 +83,7 @@ export default function ProdutosPage() {
 
     return (
         <div className="animate-fade-in">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }} className2="bg-[var(--neutral-100)]">
             <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
                 <button onClick={async () => {
                     setSyncing(true)

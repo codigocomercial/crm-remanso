@@ -423,3 +423,84 @@
   border-color: transparent !important;
   box-shadow: 0 8px 20px rgba(184, 150, 58, 0.25) !important;
 }
+
+/* Sticky header padrão — usa variável para dark mode automático */
+.sticky-header {
+  background-color: var(--neutral-100);
+  backdrop-filter: blur(8px);
+}
+
+
+/* Superfícies brancas → escuro */
+.dark .bg-white {
+  background-color: oklch(0.17 0.005 240) !important;
+}
+
+/* Cards, modais, painéis */
+.dark .rounded-2xl.bg-white,
+.dark .rounded-2xl.border,
+.dark [class*="rounded-2xl"],
+.dark [class*="rounded-xl"].border,
+.dark [class*="rounded-lg"].border {
+  border-color: oklch(1 0 0 / 7%) !important;
+}
+
+/* Bordas globais */
+.dark .border {
+  border-color: oklch(1 0 0 / 8%) !important;
+}
+.dark .border-b,
+.dark .border-t {
+  border-color: oklch(1 0 0 / 8%) !important;
+}
+
+/* Inputs e selects */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: oklch(0.20 0.005 240) !important;
+  color: var(--neutral-900) !important;
+  border-color: oklch(1 0 0 / 10%) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--neutral-300) !important;
+  opacity: 1;
+}
+
+/* Hover neutro em botões e linhas de tabela */
+.dark .hover\:bg-neutral-100:hover,
+.dark .hover\:bg-neutral-50:hover {
+  background-color: oklch(1 0 0 / 5%) !important;
+}
+
+/* Fundo de headers de tabela e seções internas */
+.dark [style*="backgroundColor: 'var(--neutral-100)'"],
+.dark [style*="background-color: var(--neutral-100)"] {
+  background-color: oklch(0.20 0.005 240) !important;
+}
+
+/* Painel "adicionar pedido" (#f8fffe) */
+.dark [style*="#f8fffe"],
+.dark [style*="f8fffe"] {
+  background-color: oklch(0.18 0.01 180) !important;
+}
+
+/* Shadows mais fortes no dark */
+.dark .shadow-sm {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+.dark .shadow-2xl {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Scrollbar dark */
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--neutral-200);
+}
+
+/* Backdrop modal */
+.dark .bg-white.rounded-2xl.shadow-2xl {
+  background-color: oklch(0.17 0.005 240) !important;
+}

@@ -594,7 +594,7 @@ export default function CargasPage() {
         </button>
       </div>
 
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
+      <div className="sticky top-0 z-20 pb-2 bg-[var(--neutral-100)]" style={{ backdropFilter: "blur(8px)" }}>
       {/* Métricas */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[

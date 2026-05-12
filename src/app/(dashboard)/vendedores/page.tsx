@@ -72,7 +72,7 @@ export default function VendedoresPage() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)", backgroundColor: "rgba(248,250,252,0.97)" }}>
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }} className2="bg-[var(--neutral-100)]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

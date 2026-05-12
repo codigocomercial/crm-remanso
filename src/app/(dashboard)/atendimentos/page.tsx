@@ -59,7 +59,7 @@ export default function AtendimentosPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
 
       {/* Sticky — Header + Filtros */}
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(248,250,252,0.97)' }}>
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: 'blur(8px)' }}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 pb-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
