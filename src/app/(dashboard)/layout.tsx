@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Bell, Search, Menu, X } from 'lucide-react'
+import { Bell, Search, Menu, X, Sun, Moon } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { useTheme } from '@/app/providers'
 import { cn } from '@/lib/utils'
 
 const PAGE_TITLES: Record<string, string> = {
@@ -26,6 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
+  const { theme, toggleTheme } = useTheme()
 
   const title = Object.entries(PAGE_TITLES)
     .sort((a, b) => b[0].length - a[0].length)
@@ -103,13 +105,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          {/* Sino + avatar */}
+          {/* Sino + toggle tema + avatar */}
           <div className="flex items-center gap-2 ml-auto">
             <button
               className="relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
               style={{ color: 'var(--neutral-500)' }}
             >
               <Bell size={16} />
+            </button>
+
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+              style={{ color: 'var(--neutral-500)' }}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
             <div
