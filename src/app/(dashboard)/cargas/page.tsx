@@ -515,9 +515,6 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                           <span className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
                             📦 {o.units_count} urnas
                           </span>
-                          <span className="text-[10px] font-semibold" style={{ color: marginColor(o.margin_pct) }}>
-                            {fmtPct(o.margin_pct)} margem
-                          </span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
