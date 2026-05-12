@@ -118,8 +118,8 @@ export async function PATCH(request: NextRequest) {
       pause_bot: {
         handled_by_bot: false,
         bot_paused_at: new Date().toISOString(),
-        bot_paused_by: user.id,
-        assigned_to: user.id,
+        bot_paused_by: '0890984d-99a3-4a12-bc7a-618edef29dfd',
+        assigned_to: '0890984d-99a3-4a12-bc7a-618edef29dfd',
       },
       resume_bot: {
         handled_by_bot: true,
