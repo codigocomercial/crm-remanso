@@ -186,8 +186,7 @@ export async function PATCH(
     const totalCostOp = loadOrders?.reduce((s, o) => s + (o.cost_op || 0), 0) || 0
     const totalFreightCharged = loadOrders?.reduce((s, o) => s + (o.freight_charged || 0), 0) || 0
 
-    const distanceRound = (loadData?.distance_km || 0) * 2
-    const freightCost = (distanceRound * (loadData?.cost_per_km || 0)) +
+    const freightCost = ((loadData?.distance_km || 0) * (loadData?.cost_per_km || 0)) +
       ((loadData?.driver_daily_cost || 0) * (loadData?.trip_days || 1))
 
     const totalMargin = totalRevenue - totalCostMp - totalCostOp - freightCost + totalFreightCharged

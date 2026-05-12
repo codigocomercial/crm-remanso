@@ -332,7 +332,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   const { can } = useUserRole()
 
   const st = STATUS_CONFIG[load.status] || STATUS_CONFIG.forming
-  const freightCostTotal = (load.distance_km || 0) * 2 * (load.cost_per_km || 0) +
+  const freightCostTotal = (load.distance_km || 0) * (load.cost_per_km || 0) +
     (load.driver_daily_cost || 0) * (load.trip_days || 1)
   const freightBalance = (load.total_freight_charged || 0) - freightCostTotal
 
@@ -535,7 +535,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
             <User size={10} /> R${load.driver_daily_cost}/dia × {load.trip_days}d
           </span>
           <span className="flex items-center gap-1">
-            <Clock size={10} /> {(load.distance_km || 0) * 2}km totais — {fmt(freightCostTotal)} custo frete
+            <Clock size={10} /> {load.distance_km || 0}km totais — {fmt(freightCostTotal)} custo frete
           </span>
         </div>
       </div>
