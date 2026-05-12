@@ -392,7 +392,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
     const q = searchOrder.toLowerCase()
     return o.client_name?.toLowerCase().includes(q) ||
       o.client_city?.toLowerCase().includes(q) ||
-      o.company?.fantasia?.toLowerCase().includes(q)
+      o.company?.fantasia?.toLowerCase().includes(q) ||
+      o.bling_number?.toLowerCase().includes(q)
   })
 
   return (
@@ -640,7 +641,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
               <div className="relative mb-2">
                 <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
                 <input value={searchOrder} onChange={e => setSearchOrder(e.target.value)}
-                  placeholder="Buscar por cliente ou cidade..."
+                  placeholder="Buscar por cliente, cidade ou nº pedido..."
                   className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
                   style={{ borderColor: 'rgba(128,128,128,0.2)' }} />
               </div>
