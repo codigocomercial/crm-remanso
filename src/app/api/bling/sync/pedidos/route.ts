@@ -165,7 +165,7 @@ async function runSync(token: string) {
           client_name: contato?.nome ?? '',
           client_cnpj: cnpj,
           seller_name: sellerName,
-          ordered_at: detail.data ? new Date(detail.data).toISOString() : null,
+          ordered_at: detail.data ? detail.data + 'T12:00:00-03:00' : null,
           observations: detail.observacoes ?? null,
           company_id: companyId,
           bling_synced_at: new Date().toISOString(),
