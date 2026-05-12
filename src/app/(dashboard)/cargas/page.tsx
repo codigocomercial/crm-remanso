@@ -274,6 +274,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
       onRefresh()
     } catch {}
   }
+
+  const filteredOrders = availableOrders.filter(o => {
     if (!searchOrder) return true
     const q = searchOrder.toLowerCase()
     return o.client_name?.toLowerCase().includes(q) ||
