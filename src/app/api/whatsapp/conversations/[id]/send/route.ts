@@ -86,7 +86,7 @@ export async function POST(
         message_type,
         whatsapp_message_id: whatsappMessageId,
         status: 'sent',
-        sent_by_user_id: user.id,
+        sent_by_user_id: '0890984d-99a3-4a12-bc7a-618edef29dfd',
         sent_at: new Date().toISOString(),
       })
       .select()
@@ -115,8 +115,8 @@ export async function POST(
         .update({
           handled_by_bot: false,
           bot_paused_at: new Date().toISOString(),
-          bot_paused_by: user.id,
-          assigned_to: user.id,
+          bot_paused_by: '0890984d-99a3-4a12-bc7a-618edef29dfd',
+          assigned_to: '0890984d-99a3-4a12-bc7a-618edef29dfd',
         })
         .eq('id', conversationId)
     }
