@@ -30,11 +30,12 @@ export async function POST(
       return NextResponse.json({ error: 'Mensagem não pode estar vazia' }, { status: 400 })
     }
 
-    // Busca dados do usuário logado
+    // Busca dados do usuário logado (usa org_id para pegar o admin)
     const { data: userData } = await supabase
       .from('users')
       .select('full_name')
-      .eq('id', user.id)
+      .eq('org_id', ORG_ID)
+      .eq('role', 'admin')
       .single()
 
     // Busca conversa
