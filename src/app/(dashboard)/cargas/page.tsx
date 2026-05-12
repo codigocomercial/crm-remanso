@@ -65,7 +65,7 @@ interface Order {
   units_count: number
   margin_pct: number
   ordered_at: string
-  company: { id: string; fantasia: string; distance_km: number }
+  company: { id: string; fantasia: string; city: string; state: string; distance_km: number }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -509,7 +509,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                           {o.company?.fantasia || o.client_name}
                         </p>
                         <p className="text-[11px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
-                          📍 {o.client_city}/{o.client_state}
+                          📍 {o.company?.city || o.client_city}/{o.company?.state || o.client_state}
                         </p>
                         <p className="text-[10px] mt-0.5" style={{ color: 'var(--neutral-400)' }}>
                           Ped. #{o.bling_number} · {o.units_count} urnas

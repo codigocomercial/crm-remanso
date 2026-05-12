@@ -40,7 +40,7 @@ export async function GET(
       .select(`
         id, bling_number, client_name, client_city, client_state,
         total_value, units_count, margin_pct, ordered_at,
-        company:companies ( id, fantasia, distance_km, reorder_cycle_days, last_order_at )
+        company:companies ( id, fantasia, city, state, distance_km, reorder_cycle_days, last_order_at )
       `)
       .eq('org_id', ORG_ID)
       .eq('status', 'em_aberto')
