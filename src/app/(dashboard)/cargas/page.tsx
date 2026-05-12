@@ -325,6 +325,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [searchOrder, setSearchOrder] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [adding, setAdding] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const { can } = useUserRole()
@@ -334,10 +336,13 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
     (load.driver_daily_cost || 0) * (load.trip_days || 1)
   const freightBalance = (load.total_freight_charged || 0) - freightCostTotal
 
-  const loadAvailableOrders = async () => {
+  const loadAvailableOrders = async (from = dateFrom, to = dateTo) => {
     setLoadingOrders(true)
     try {
-      const res = await fetch(`/api/cargas/${load.id}`)
+      const params = new URLSearchParams()
+      if (from) params.set('date_from', from)
+      if (to) params.set('date_to', to)
+      const res = await fetch(`/api/cargas/${load.id}?${params}`)
       const data = await res.json()
       setAvailableOrders(data.suggestions || [])
     } finally { setLoadingOrders(false) }
@@ -634,16 +639,43 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
 
           {/* Painel adicionar pedido */}
           {showAddOrder && load.status === 'forming' && (
-            <div className="border-t p-3 bg-[var(--neutral-50)]" style={{ borderColor: 'rgba(128,128,128,0.15)' }}>
+            <div className="border-t p-3 bg-[var(--neutral-50)]" style={{ borderColor: 'var(--surface-border)' }}>
               <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--neutral-500)' }}>
                 Pedidos disponíveis para adicionar
               </p>
+
+              {/* Filtro de período */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>De</span>
+                  <input type="date" value={dateFrom}
+                    onChange={e => { setDateFrom(e.target.value); loadAvailableOrders(e.target.value, dateTo) }}
+                    className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                    style={{ borderColor: 'var(--surface-border)' }} />
+                </div>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>Até</span>
+                  <input type="date" value={dateTo}
+                    onChange={e => { setDateTo(e.target.value); loadAvailableOrders(dateFrom, e.target.value) }}
+                    className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                    style={{ borderColor: 'var(--surface-border)' }} />
+                </div>
+                {(dateFrom || dateTo) && (
+                  <button onClick={() => { setDateFrom(''); setDateTo(''); loadAvailableOrders('', '') }}
+                    className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors hover:bg-neutral-100"
+                    style={{ color: 'var(--neutral-400)' }}>
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              {/* Busca por texto */}
               <div className="relative mb-2">
                 <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
                 <input value={searchOrder} onChange={e => setSearchOrder(e.target.value)}
                   placeholder="Buscar por cliente, cidade ou nº pedido..."
                   className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
-                  style={{ borderColor: 'rgba(128,128,128,0.2)' }} />
+                  style={{ borderColor: 'var(--surface-border)' }} />
               </div>
 
               {loadingOrders ? (

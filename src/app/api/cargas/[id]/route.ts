@@ -35,6 +35,10 @@ export async function GET(
     // Sugestões: pedidos em aberto não vinculados a cargas
     const orderIdsInLoad = load.freight_load_orders?.map((o: any) => o.order?.id).filter(Boolean) || []
 
+    const { searchParams } = new URL(request.url)
+    const dateFrom = searchParams.get('date_from')
+    const dateTo = searchParams.get('date_to')
+
     let suggestionsQuery = supabase
       .from('orders')
       .select(`
@@ -46,7 +50,10 @@ export async function GET(
       .eq('status', 'em_aberto')
       .not('id', 'in', `(${['00000000-0000-0000-0000-000000000000', ...orderIdsInLoad].join(',')})`)
       .order('ordered_at', { ascending: false })
-      .limit(20)
+      .limit(50)
+
+    if (dateFrom) suggestionsQuery = suggestionsQuery.gte('ordered_at', dateFrom)
+    if (dateTo) suggestionsQuery = suggestionsQuery.lte('ordered_at', dateTo + 'T23:59:59')
 
     const { data: suggestions } = await suggestionsQuery
 
