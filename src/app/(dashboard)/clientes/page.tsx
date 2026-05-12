@@ -58,7 +58,7 @@ export default function ContatosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }} className2="bg-[var(--neutral-100)]">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>

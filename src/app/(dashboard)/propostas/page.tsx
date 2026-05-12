@@ -144,7 +144,7 @@ export default function PropostasPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="sticky top-0 z-20" style={{ backdropFilter: "blur(8px)" }} className2="bg-[var(--neutral-100)]">
+      <div className="sticky top-0 z-20" style={{ backdropFilter: "blur(8px)" }}>
       <PageHeader
         title="Pedidos de Venda"
         subtitle={`${orders.length} pedido(s) · ${totalUrnas} urnas · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}

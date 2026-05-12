@@ -81,7 +81,7 @@ export default function TarefasPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }} className2="bg-[var(--neutral-100)]">
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
