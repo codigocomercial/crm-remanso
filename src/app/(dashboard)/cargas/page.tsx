@@ -479,7 +479,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
 
           {/* Painel adicionar pedido */}
           {showAddOrder && load.status === 'forming' && (
-            <div className="border-t p-3" style={{ borderColor: 'rgba(0,0,0,0.06)', backgroundColor: '#f8fffe' }}>
+            <div className="border-t p-3 bg-[var(--neutral-50)]" style={{ borderColor: 'rgba(128,128,128,0.15)' }}>
               <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--neutral-500)' }}>
                 Pedidos disponíveis para adicionar
               </p>
@@ -487,8 +487,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                 <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
                 <input value={searchOrder} onChange={e => setSearchOrder(e.target.value)}
                   placeholder="Buscar por cliente ou cidade..."
-                  className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.1)', backgroundColor: 'white' }} />
+                  className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                  style={{ borderColor: 'rgba(128,128,128,0.2)' }} />
               </div>
 
               {loadingOrders ? (
@@ -502,8 +502,8 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
               ) : (
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {filteredOrders.map(o => (
-                    <div key={o.id} className="flex items-center justify-between gap-3 px-2 py-2 rounded-lg bg-white border"
-                      style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                    <div key={o.id} className="flex items-center justify-between gap-3 px-2 py-2 rounded-lg bg-[var(--neutral-100)] border"
+                      style={{ borderColor: 'rgba(128,128,128,0.15)' }}>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
                           {o.company?.fantasia || o.client_name}
