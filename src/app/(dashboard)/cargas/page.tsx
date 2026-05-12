@@ -266,7 +266,14 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
     onRefresh()
   }
 
-  const filteredOrders = availableOrders.filter(o => {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const deleteLoad = async () => {
+    try {
+      await fetch(`/api/cargas/${load.id}`, { method: 'DELETE' })
+      onRefresh()
+    } catch {}
+  }
     if (!searchOrder) return true
     const q = searchOrder.toLowerCase()
     return o.client_name?.toLowerCase().includes(q) ||
@@ -308,7 +315,29 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
           </div>
 
           <div className="flex items-center gap-1">
-            {load.status === 'forming' && (
+            {load.status === 'forming' && !confirmDelete && (
+              <button onClick={() => setConfirmDelete(true)}
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                title="Excluir carga"
+                style={{ color: 'var(--neutral-400)' }}>
+                <Trash2 size={13} />
+              </button>
+            )}
+            {load.status === 'forming' && confirmDelete && (
+              <div className="flex items-center gap-1">
+                <span className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>Excluir?</span>
+                <button onClick={deleteLoad}
+                  className="text-[11px] font-bold px-2 py-1 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors">
+                  Sim
+                </button>
+                <button onClick={() => setConfirmDelete(false)}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors"
+                  style={{ borderColor: 'rgba(128,128,128,0.3)', color: 'var(--neutral-500)' }}>
+                  Não
+                </button>
+              </div>
+            )}
+            {load.status === 'forming' && !confirmDelete && (
               <button onClick={() => updateStatus('closed')}
                 className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-green-50"
                 style={{ borderColor: '#2F6F5D', color: '#2F6F5D' }}>
