@@ -100,11 +100,14 @@ export function Sidebar({
                 'h-full flex flex-col',
                 'w-[216px]',
                 mobile ? 'shadow-xl' : '',
-                'bg-white dark:bg-[#0F172A] border-r border-black/[0.07] dark:border-white/[0.07]'
             )}
+            style={{
+                backgroundColor: 'var(--surface-sidebar, #FFFFFF)',
+                borderRight: '1px solid var(--surface-border, #E5E7EB)',
+            }}
         >
             {/* Logo */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+            <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: '#3E8F76' }}>
                     <LogoMaos className="w-6 h-6" />
@@ -159,7 +162,7 @@ export function Sidebar({
             </nav>
 
             {/* Usuário + Logout */}
-            <div className="px-3 py-3 border-t border-black/[0.06] dark:border-white/[0.06]">
+            <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0"
                         style={{ backgroundColor: '#3E8F76' }}>

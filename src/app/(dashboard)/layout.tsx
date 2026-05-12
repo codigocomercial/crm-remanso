@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ?.[1] ?? 'CRM'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--neutral-100)]">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--surface-bg, var(--neutral-100))' }}>
 
       {/* ── Sidebar desktop (fixa) ── */}
       <div className="hidden lg:flex flex-shrink-0 h-full">
@@ -69,8 +69,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* ── Topbar ── */}
         <header
-          className="flex-shrink-0 bg-white dark:bg-[#0F172A] border-b border-black/[0.07] dark:border-white/[0.07] flex items-center px-5 gap-3"
-          style={{ height: '60px' }}
+          className="flex-shrink-0 border-b flex items-center px-5 gap-3"
+          style={{
+            height: '56px',
+            backgroundColor: 'var(--surface-sidebar, #FFFFFF)',
+            borderColor: 'var(--surface-border, #E5E7EB)',
+          }}
         >
           {/* Menu mobile */}
           <button
