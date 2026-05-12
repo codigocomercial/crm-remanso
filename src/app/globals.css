@@ -82,6 +82,10 @@
   --color-danger: #DC2626;
   --color-danger-bg: #FEF2F2;
 
+  /* ── rm-components ── */
+  --rm-card-bg: #FFFFFF;
+  --rm-card-border: #F1F5F9;
+
   /* ── shadcn overrides ── */
   --background: oklch(0.98 0 0);
   --foreground: oklch(0.13 0.01 240);
@@ -165,6 +169,10 @@
   --brand-teal-soft: rgba(62, 143, 118, 0.20);
   --brand-teal-bg:   rgba(62, 143, 118, 0.12);
   --brand-gold-bg:   rgba(184, 150, 58, 0.12);
+
+  /* ── rm-components dark ── */
+  --rm-card-bg: oklch(0.17 0.005 240);
+  --rm-card-border: oklch(1 0 0 / 7%);
 }
 
 @layer base {
@@ -422,8 +430,6 @@
   background: linear-gradient(135deg, #A8842F, #C9A54C) !important;
   border-color: transparent !important;
   box-shadow: 0 8px 20px rgba(184, 150, 58, 0.25) !important;
-}
-
 /* Sticky header padrão — usa variável para dark mode automático */
 .sticky-header {
   background-color: var(--neutral-100);

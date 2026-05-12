@@ -42,14 +42,14 @@ export function StatCard({
         padding: '20px',
       }
       : {
-        background: '#FFFFFF',
-        border: '1px solid #F1F5F9',
+        background: 'var(--rm-card-bg, #FFFFFF)',
+        border: '1px solid var(--rm-card-border, #F1F5F9)',
         boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
         padding: '20px',
       }
 
-  const labelColor = isColor ? 'rgba(255,255,255,0.72)' : '#6B7280'
-  const valueColor = isColor ? '#FFFFFF' : '#1F2937'
+  const labelColor = isColor ? 'rgba(255,255,255,0.72)' : 'var(--neutral-600)'
+  const valueColor = isColor ? '#FFFFFF' : 'var(--neutral-900)'
   const iconBg = isColor ? 'rgba(255,255,255,0.15)' : '#F1F5F9'
   const iconColor = isColor ? 'rgba(255,255,255,0.85)' : '#3E8F76'
   const trendColor = isColor
@@ -123,13 +123,13 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         <h1 style={{
           fontSize: '22px',
           fontWeight: 600,
-          color: '#1F2937',
+          color: 'var(--neutral-900)',
           letterSpacing: '-0.5px',
         }}>
           {title}
         </h1>
         {subtitle && (
-          <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', fontWeight: 400 }}>
+          <p style={{ fontSize: '12px', color: 'var(--neutral-600)', marginTop: '2px', fontWeight: 400 }}>
             {subtitle}
           </p>
         )}
@@ -151,7 +151,7 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, linkHref, linkLabel }: SectionHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <p style={{ fontSize: '13px', fontWeight: 600, color: '#1F2937' }}>{title}</p>
+      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--neutral-900)' }}>{title}</p>
       {linkHref && linkLabel && (
         <Link href={linkHref}
           className="hover:opacity-70 transition-opacity"
