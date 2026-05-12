@@ -46,7 +46,9 @@ export default function EmpresasPage() {
       .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role), sellers(name)`)
       .eq('org_id', ORG_ID)
       .order('name')
-    if (search) query = query.ilike('name', `%${search}%`)
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,fantasia.ilike.%${search}%,city.ilike.%${search}%`)
+    }
     const { data } = await query
     setCompanies((data ?? []).map((d: any) => ({
       id: d.id,

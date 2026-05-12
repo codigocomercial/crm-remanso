@@ -266,10 +266,13 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
     onRefresh()
   }
 
-  const filteredOrders = availableOrders.filter(o =>
-    !searchOrder || o.client_name?.toLowerCase().includes(searchOrder.toLowerCase()) ||
-    o.client_city?.toLowerCase().includes(searchOrder.toLowerCase())
-  )
+  const filteredOrders = availableOrders.filter(o => {
+    if (!searchOrder) return true
+    const q = searchOrder.toLowerCase()
+    return o.client_name?.toLowerCase().includes(q) ||
+      o.client_city?.toLowerCase().includes(q) ||
+      o.company?.fantasia?.toLowerCase().includes(q)
+  })
 
   return (
     <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
@@ -503,7 +506,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                       style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                          {o.client_name}
+                          {o.company?.fantasia || o.client_name}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
