@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ?.[1] ?? 'CRM'
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--neutral-100)' }}>
+    <div className="flex h-screen overflow-hidden bg-[var(--neutral-100)]">
 
       {/* ── Sidebar desktop (fixa) ── */}
       <div className="hidden lg:flex flex-shrink-0 h-full">
@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Sidebar mobile onClose={() => setMobileOpen(false)} />
               <button
                 onClick={() => setMobileOpen(false)}
-                className="absolute top-4 right-3 p-1 rounded-lg hover:bg-neutral-100"
+                className="absolute top-4 right-3 p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10"
                 style={{ color: 'var(--neutral-500)' }}
               >
                 <X size={16} />
@@ -67,8 +67,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* ── Topbar ── */}
         <header
-          className="flex-shrink-0 bg-white border-b flex items-center px-5 gap-3"
-          style={{ height: '60px', borderColor: 'rgba(0,0,0,0.07)' }}
+          className="flex-shrink-0 bg-white dark:bg-[#0F172A] border-b border-black/[0.07] dark:border-white/[0.07] flex items-center px-5 gap-3"
+          style={{ height: '60px' }}
         >
           {/* Menu mobile */}
           <button
@@ -90,19 +90,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <input
                 type="text"
                 placeholder="Buscar clientes, pedidos..."
-                className="w-full pl-8 pr-4 py-1.5 text-[13px] rounded-lg border outline-none transition-all"
-                style={{
-                  borderColor: 'rgba(0,0,0,0.08)',
-                  backgroundColor: 'var(--neutral-100)',
-                  color: 'var(--neutral-900)',
-                }}
+                className="w-full pl-8 pr-4 py-1.5 text-[13px] rounded-lg border outline-none transition-all bg-[var(--neutral-100)] border-black/[0.08] dark:border-white/[0.08] text-[var(--neutral-900)]"
                 onFocus={e => {
                   e.currentTarget.style.borderColor = 'var(--brand-teal)'
-                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.backgroundColor = 'var(--neutral-50)'
                 }}
                 onBlur={e => {
-                  e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'
-                  e.currentTarget.style.backgroundColor = 'var(--neutral-100)'
+                  e.currentTarget.style.borderColor = ''
+                  e.currentTarget.style.backgroundColor = ''
                 }}
               />
             </div>
@@ -111,7 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Sino + avatar */}
           <div className="flex items-center gap-2 ml-auto">
             <button
-              className="relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 transition-colors"
+              className="relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
               style={{ color: 'var(--neutral-500)' }}
             >
               <Bell size={16} />

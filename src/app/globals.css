@@ -118,32 +118,53 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* ── shadcn dark ── */
+  --background: oklch(0.13 0.005 240);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.17 0.005 240);
+  --card-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.17 0.005 240);
+  --popover-foreground: oklch(0.93 0 0);
+  --primary: oklch(0.60 0.09 163);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.22 0.005 240);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.20 0.005 240);
+  --muted-foreground: oklch(0.60 0 0);
+  --accent: oklch(0.68 0.08 75);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.65 0.20 27);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.60 0.09 163);
+  --sidebar: oklch(0.15 0.005 240);
+  --sidebar-foreground: oklch(0.93 0 0);
+  --sidebar-primary: oklch(0.60 0.09 163);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.22 0.005 240);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.60 0.09 163);
+
+  /* ── Neutros dark ── */
+  --neutral-900: #F1F5F9;
+  --neutral-700: #E2E8F0;
+  --neutral-600: #CBD5E1;
+  --neutral-500: #94A3B8;
+  --neutral-300: #475569;
+  --neutral-200: #334155;
+  --neutral-100: #1E293B;
+  --neutral-50:  #0F172A;
+
+  /* ── Semânticas dark ── */
+  --color-success-bg: rgba(62, 143, 118, 0.18);
+  --color-warning-bg: rgba(184, 150, 58, 0.18);
+  --color-danger-bg:  rgba(220, 38,  38,  0.18);
+
+  /* ── Brand teal ajustado para dark ── */
+  --brand-teal-soft: rgba(62, 143, 118, 0.20);
+  --brand-teal-bg:   rgba(62, 143, 118, 0.12);
+  --brand-gold-bg:   rgba(184, 150, 58, 0.12);
 }
 
 @layer base {
@@ -245,6 +266,16 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
 }
 
+.dark .rm-card {
+  background: oklch(0.17 0.005 240);
+  border-color: oklch(1 0 0 / 7%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.dark .rm-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
 /* ── Botão WhatsApp — PRINCIPAL (gradiente verde) ── */
 .btn-wpp {
   display: inline-flex;
@@ -297,6 +328,17 @@
   transform: translateY(-1px);
 }
 
+.dark .btn-remanso {
+  color: #CBD5E1;
+  background: oklch(0.22 0.005 240);
+  border-color: oklch(1 0 0 / 10%);
+}
+
+.dark .btn-remanso:hover {
+  background: oklch(0.26 0.005 240);
+  border-color: oklch(1 0 0 / 15%);
+}
+
 /* ── Nav item sidebar — Linear style ── */
 .nav-item {
   display: flex;
@@ -322,6 +364,14 @@
   background-color: var(--brand-teal-soft);
   color: var(--brand-teal-dark);
   font-weight: 600;
+}
+
+.dark .nav-item:hover {
+  color: var(--brand-teal-light);
+}
+
+.dark .nav-item.active {
+  color: var(--brand-teal-light);
 }
 
 /* ── Badges de status ── */

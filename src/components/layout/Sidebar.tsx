@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useUserRole } from '@/hooks/useUserRole'
 import { type Permission } from '@/lib/permissions'
+import { createClient } from '@/lib/supabase/client'
 import {
     LayoutDashboard, KanbanSquare, Users, Building2,
     MessageSquare, CheckSquare, BarChart2, Settings,
     Zap, Megaphone, RefreshCw, Package, FileText,
-    UserCheck, Calculator, MessageCircle, Truck,
+    UserCheck, Calculator, MessageCircle, Truck, LogOut,
 } from 'lucide-react'
 
 function LogoMaos({ className }: { className?: string }) {
@@ -83,26 +84,34 @@ export function Sidebar({
     userEmail = 'contato@urnasremanso.com.br',
 }: SidebarProps) {
     const pathname = usePathname()
+    const router = useRouter()
     const { can, role } = useUserRole()
+
+    async function handleLogout() {
+        const supabase = createClient()
+        await supabase.auth.signOut()
+        router.push('/login')
+        router.refresh()
+    }
 
     return (
         <aside
             className={cn(
-                'h-full bg-white border-r flex flex-col',
+                'h-full flex flex-col',
                 'w-[216px]',
-                mobile ? 'shadow-xl' : ''
+                mobile ? 'shadow-xl' : '',
+                'bg-white dark:bg-[#0F172A] border-r border-black/[0.07] dark:border-white/[0.07]'
             )}
-            style={{ borderColor: 'rgba(0,0,0,0.07)' }}
         >
             {/* Logo */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+            <div className="flex items-center gap-3 px-4 py-4 border-b border-black/[0.06] dark:border-white/[0.06]">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: '#3E8F76' }}>
                     <LogoMaos className="w-6 h-6" />
                 </div>
                 <div>
-                    <p className="text-[13px] font-black tracking-wide leading-tight"
-                        style={{ fontFamily: 'Inter, sans-serif', color: 'var(--neutral-900)' }}>
+                    <p className="text-[13px] font-black tracking-wide leading-tight text-[var(--neutral-900)]"
+                        style={{ fontFamily: 'Inter, sans-serif' }}>
                         REMANSO
                     </p>
                     <p className="text-[9px] font-bold tracking-[1.5px] uppercase"
@@ -122,8 +131,7 @@ export function Sidebar({
 
                     return (
                         <div key={section} className="mb-2">
-                            <p className="text-[9px] font-bold uppercase tracking-[1.5px] px-2.5 py-1.5"
-                                style={{ color: 'var(--neutral-300)' }}>
+                            <p className="text-[9px] font-bold uppercase tracking-[1.5px] px-2.5 py-1.5 text-[var(--neutral-300)]">
                                 {section}
                             </p>
                             {visibleItems.map(({ href, label, icon: Icon, badge }) => {
@@ -150,24 +158,24 @@ export function Sidebar({
                 })}
             </nav>
 
-            {/* Usuário */}
-            <div className="px-3 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+            {/* Usuário + Logout */}
+            <div className="px-3 py-3 border-t border-black/[0.06] dark:border-white/[0.06]">
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0"
                         style={{ backgroundColor: '#3E8F76' }}>
                         {userName.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-800)' }}>
+                        <p className="text-[12px] font-semibold truncate text-[var(--neutral-800)]">
                             {userName}
                         </p>
-                        <p className="text-[10px] truncate" style={{ color: 'var(--neutral-400)' }}>
+                        <p className="text-[10px] truncate text-[var(--neutral-400)]">
                             {userEmail}
                         </p>
                     </div>
                 </div>
                 {/* Badge de role */}
-                <div className="mt-2">
+                <div className="mt-2 flex items-center justify-between">
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide"
                         style={{
                             color: role === 'admin' ? '#1D6FA4' : role === 'manager' ? '#2F6F5D' : '#B45309',
@@ -175,6 +183,13 @@ export function Sidebar({
                         }}>
                         {role === 'admin' ? 'Administrador' : role === 'manager' ? 'Gerente' : 'Vendedor'}
                     </span>
+                    <button
+                        onClick={handleLogout}
+                        title="Sair"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50 dark:hover:bg-red-950/40 text-[var(--neutral-400)] hover:text-red-500"
+                    >
+                        <LogOut size={13} />
+                    </button>
                 </div>
             </div>
         </aside>
