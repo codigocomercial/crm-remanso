@@ -53,6 +53,19 @@ function fmt(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// Converte valor numérico para string formatada para exibição no input
+function fmtInput(v: number): string {
+  if (!v) return ''
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// Converte string digitada para número
+function parseInput(val: string): number {
+  // Remove tudo exceto dígitos e vírgula/ponto
+  const clean = val.replace(/[^\d,]/g, '').replace(',', '.')
+  return parseFloat(clean) || 0
+}
+
 function totalMes(r: OpCost) {
   return r.labor + r.admin + r.truck + r.maintenance + r.misc +
          r.tax + r.icms + r.freight_purchase + r.interest + r.discount_boletos
@@ -71,8 +84,13 @@ export default function CustosOperacionaisPage() {
   const [editing, setEditing] = useState<OpCost | null>(null)
   const [form, setForm] = useState<Omit<OpCost, 'id'>>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  useEffect(() => { load() }, [])
+  function handleNum(key: string, val: string) {
+    // Permite digitar livremente — só parseia ao sair do campo
+    const n = parseInput(val)
+    setForm(f => ({ ...f, [key]: n }))
+  }
 
   async function load() {
     setLoading(true)
@@ -100,7 +118,15 @@ export default function CustosOperacionaisPage() {
 
   async function save() {
     setSaving(true)
-    const payload = { ...form, org_id: ORG_ID }
+    // Garantir que todos os campos numéricos são números, não strings
+    const payload = {
+      ...form,
+      org_id: ORG_ID,
+      ...CAMPOS.reduce((acc, c) => ({
+        ...acc,
+        [c.key]: parseInput(String((form as any)[c.key] || '0'))
+      }), {})
+    }
     if (editing) {
       await supabase.from('operational_costs').update(payload).eq('id', editing.id)
     } else {
@@ -268,12 +294,28 @@ export default function CustosOperacionaisPage() {
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px]"
                         style={{ color: 'var(--neutral-400)' }}>R$</span>
-                      <input type="text" inputMode="decimal"
-                        value={(form as any)[c.key] || ''}
-                        onChange={e => handleNum(c.key, e.target.value)}
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={
+                          focusedField === c.key
+                            ? ((form as any)[c.key] || '')
+                            : fmtInput((form as any)[c.key] || 0)
+                        }
+                        onFocus={() => setFocusedField(c.key)}
+                        onBlur={e => {
+                          setFocusedField(null)
+                          handleNum(c.key, e.target.value)
+                        }}
+                        onChange={e => {
+                          if (focusedField === c.key) {
+                            setForm(f => ({ ...f, [c.key]: e.target.value as any }))
+                          }
+                        }}
                         placeholder="0,00"
                         className="w-full pl-9 pr-3 py-2 text-[13px] rounded-lg border outline-none text-right"
-                        style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
+                        style={{ borderColor: 'var(--surface-border)' }}
+                      />
                     </div>
                   </div>
                 ))}
