@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Calculator, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Calculator, X, RefreshCw } from 'lucide-react'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
@@ -85,6 +85,22 @@ export default function CustosOperacionaisPage() {
   const [form, setForm] = useState<Omit<OpCost, 'id'>>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [recalculating, setRecalculating] = useState(false)
+  const [recalcMsg, setRecalcMsg] = useState('')
+
+  async function recalcularMargens() {
+    setRecalculating(true)
+    setRecalcMsg('')
+    try {
+      const res = await fetch('/api/bling/sync/recalcular-margens', { method: 'POST' })
+      const data = await res.json()
+      setRecalcMsg(data.message || 'Concluído')
+    } catch {
+      setRecalcMsg('Erro ao recalcular')
+    } finally {
+      setRecalculating(false)
+    }
+  }
 
   function handleNum(key: string, val: string) {
     // Permite digitar livremente — só parseia ao sair do campo
@@ -159,11 +175,24 @@ export default function CustosOperacionaisPage() {
             Custos mensais rateados por urna produzida
           </p>
         </div>
-        <button onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
-          style={{ backgroundColor: 'var(--brand-teal)' }}>
-          <Plus size={14} /> Novo Mês
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end">
+            <button onClick={recalcularMargens} disabled={recalculating}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold border transition-colors disabled:opacity-50"
+              style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal)' }}>
+              <RefreshCw size={13} className={recalculating ? 'animate-spin' : ''} />
+              {recalculating ? 'Recalculando...' : 'Recalcular Margens'}
+            </button>
+            {recalcMsg && (
+              <p className="text-[11px] mt-1" style={{ color: 'var(--brand-teal)' }}>{recalcMsg}</p>
+            )}
+          </div>
+          <button onClick={openNew}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
+            style={{ backgroundColor: 'var(--brand-teal)' }}>
+            <Plus size={14} /> Novo Mês
+          </button>
+        </div>
       </div>
 
       {loading ? (
