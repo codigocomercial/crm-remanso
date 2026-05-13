@@ -40,18 +40,21 @@ async function runSync(token: string) {
   let page = 1
 
   while (true) {
-    const data = await blingFetch(`/produtos?pagina=${page}&limite=100&situacao=A`, token)
+    // Busca todos os produtos ativos (simples e com composição)
+    const data = await blingFetch(`/produtos?pagina=${page}&limite=100&situacao=A&tipo=P,K`, token)
     const produtos = data?.data ?? []
     if (produtos.length === 0) break
 
     for (const p of produtos) {
-      await supabase.from('products').upsert({
+      if (!p.id) continue
+
+      const { error } = await supabase.from('products').upsert({
         org_id: ORG_ID,
         bling_id: p.id,
         name: p.nome ?? '',
         sku: p.codigo ?? null,
         product_line: p.linhaProduto?.descricao ?? null,
-        category: p.linhaProduto?.descricao ?? null, // usar category como linha de produto
+        category: p.linhaProduto?.descricao ?? null,
         price: p.preco ?? null,
         cost_price: p.precoCusto ?? null,
         stock_quantity: p.estoque?.saldoVirtualTotal ?? 0,
@@ -60,7 +63,8 @@ async function runSync(token: string) {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'bling_id', ignoreDuplicates: false })
 
-      total++
+      if (error) console.error(`[sync/produtos] erro SKU ${p.codigo}:`, error.message)
+      else total++
     }
 
     if (produtos.length < 100) break
