@@ -7,7 +7,7 @@ export async function POST() {
   try {
     const supabase = await createClient()
 
-    // 1. Buscar todos os custos operacionais
+    // 1. Buscar custos operacionais por mês
     const { data: opCosts } = await supabase
       .from('operational_costs')
       .select('*')
@@ -21,10 +21,28 @@ export async function POST() {
       opCostMap[`${oc.year}-${oc.month}`] = perUnit
     }
 
-    // 2. Buscar todos os pedidos com seus itens
+    // 2. Buscar custo MP de todos os pedidos via order_items + products
+    const { data: costRows } = await supabase
+      .from('order_items')
+      .select(`
+        order_id,
+        quantity,
+        product:products ( cost_price )
+      `)
+      .eq('org_id', ORG_ID)
+
+    // Agregar custo MP por order_id
+    const costMpMap: Record<string, number> = {}
+    for (const row of costRows ?? []) {
+      const costPrice = Number((row.product as any)?.cost_price ?? 0)
+      const qty = Number(row.quantity ?? 1)
+      costMpMap[row.order_id] = (costMpMap[row.order_id] ?? 0) + costPrice * qty
+    }
+
+    // 3. Buscar todos os pedidos
     const { data: orders } = await supabase
       .from('orders')
-      .select('id, total_value, freight, units_count, ordered_at, cost_mp')
+      .select('id, total_value, freight, units_count, ordered_at')
       .eq('org_id', ORG_ID)
 
     if (!orders?.length) {
@@ -32,48 +50,31 @@ export async function POST() {
     }
 
     let updated = 0
-    const updates: any[] = []
 
     for (const order of orders) {
       const orderedAt = order.ordered_at ? new Date(order.ordered_at) : new Date()
       const mesKey = `${orderedAt.getFullYear()}-${orderedAt.getMonth() + 1}`
       const opCostPerUnit = opCostMap[mesKey] ?? 0
       const unitsCount = order.units_count || 0
-      const costMp = order.cost_mp || 0
+      const costMp = costMpMap[order.id] ?? 0
       const totalCost = costMp + (opCostPerUnit * unitsCount)
       const totalVenda = order.total_value || 0
       const frete = order.freight || 0
       const margin = totalVenda - totalCost - frete
       const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
 
-      updates.push({
-        id: order.id,
-        total_cost: totalCost,
-        margin,
-        margin_pct: marginPct,
-      })
-    }
+      await supabase
+        .from('orders')
+        .update({ total_cost: totalCost, margin, margin_pct: marginPct })
+        .eq('id', order.id)
 
-    // Atualizar em lotes de 50
-    for (let i = 0; i < updates.length; i += 50) {
-      const batch = updates.slice(i, i + 50)
-      for (const u of batch) {
-        await supabase
-          .from('orders')
-          .update({
-            total_cost: u.total_cost,
-            margin: u.margin,
-            margin_pct: u.margin_pct,
-          })
-          .eq('id', u.id)
-        updated++
-      }
+      updated++
     }
 
     return NextResponse.json({
       success: true,
       updated,
-      message: `${updated} pedidos recalculados com os custos operacionais atuais`,
+      message: `${updated} pedidos recalculados com custos operacionais e MP atuais`,
     })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
