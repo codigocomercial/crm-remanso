@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Pencil, Trash2, Calculator, X, RefreshCw } from 'lucide-react'
+import { PageHeader } from '@/components/ui/rm-components'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
@@ -173,35 +174,31 @@ export default function CustosOperacionaisPage() {
   const totalForm = CAMPOS.reduce((s, c) => s + (Number((form as any)[c.key]) || 0), 0)
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold flex items-center gap-2" style={{ color: 'var(--neutral-900)' }}>
-            <Calculator size={20} style={{ color: 'var(--brand-teal)' }} />
-            Custos Operacionais
-          </h1>
-          <p className="text-[13px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
-            Custos mensais rateados por urna produzida
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-end">
-            <button onClick={recalcularMargens} disabled={recalculating}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold border transition-colors disabled:opacity-50"
-              style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal)' }}>
-              <RefreshCw size={13} className={recalculating ? 'animate-spin' : ''} />
-              {recalculating ? 'Recalculando...' : 'Recalcular Margens'}
+    <div className="animate-fade-in">
+      <div className="sticky top-0 z-20" style={{ backdropFilter: 'blur(8px)' }}>
+        <PageHeader
+          title="Custos Operacionais"
+          subtitle="Custos mensais rateados por urna produzida"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end">
+              <button onClick={recalcularMargens} disabled={recalculating}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold border transition-colors disabled:opacity-50"
+                style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal)' }}>
+                <RefreshCw size={13} className={recalculating ? 'animate-spin' : ''} />
+                {recalculating ? 'Recalculando...' : 'Recalcular Margens'}
+              </button>
+              {recalcMsg && (
+                <p className="text-[11px] mt-1" style={{ color: 'var(--brand-teal)' }}>{recalcMsg}</p>
+              )}
+            </div>
+            <button onClick={openNew}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
+              style={{ backgroundColor: 'var(--brand-teal)' }}>
+              <Plus size={14} /> Novo Mês
             </button>
-            {recalcMsg && (
-              <p className="text-[11px] mt-1" style={{ color: 'var(--brand-teal)' }}>{recalcMsg}</p>
-            )}
           </div>
-          <button onClick={openNew}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
-            style={{ backgroundColor: 'var(--brand-teal)' }}>
-            <Plus size={14} /> Novo Mês
-          </button>
-        </div>
+        </PageHeader>
       </div>
 
       {loading ? (
