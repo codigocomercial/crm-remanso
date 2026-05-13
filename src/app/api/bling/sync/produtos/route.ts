@@ -58,7 +58,7 @@ async function runSync(token: string) {
         is_active: p.situacao === 'A',
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'org_id,sku', ignoreDuplicates: false })
+      }, { onConflict: 'bling_id', ignoreDuplicates: false })
 
       total++
     }
