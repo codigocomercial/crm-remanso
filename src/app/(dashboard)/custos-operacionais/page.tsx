@@ -143,11 +143,6 @@ export default function CustosOperacionaisPage() {
     load()
   }
 
-  function handleNum(key: string, val: string) {
-    const n = parseFloat(val.replace(',', '.')) || 0
-    setForm(f => ({ ...f, [key]: n }))
-  }
-
   const totalForm = CAMPOS.reduce((s, c) => s + (Number((form as any)[c.key]) || 0), 0)
 
   return (
