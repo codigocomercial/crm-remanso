@@ -36,6 +36,7 @@ export default function ProdutosPage() {
     const [search, setSearch] = useState('')
     const [deleting, setDeleting] = useState<string | null>(null)
     const [syncing, setSyncing] = useState(false)
+    const [syncMsg, setSyncMsg] = useState('')
     const supabase = createClient()
 
     useEffect(() => { load('') }, [])
@@ -87,11 +88,19 @@ export default function ProdutosPage() {
             <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
                 <button onClick={async () => {
                     setSyncing(true)
-                    const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
-                    const data = await res.json()
-                    setSyncing(false)
-                    if (data.success) alert('Sincronização iniciada! Aguarde 1-2 minutos e recarregue a página.')
-                    else alert('Erro: ' + data.error)
+                    setSyncMsg('')
+                    try {
+                      const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
+                      const data = await res.json()
+                      if (data.success) {
+                        setSyncMsg('Sincronizando... recarregando em 15s')
+                        setTimeout(() => { loadProducts(); setSyncMsg('') }, 15000)
+                      } else {
+                        setSyncMsg('Erro: ' + data.error)
+                      }
+                    } finally {
+                      setSyncing(false)
+                    }
                 }} disabled={syncing} className="btn-remanso-outline mr-2 flex items-center gap-1.5">
                     <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
                     {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
@@ -100,6 +109,12 @@ export default function ProdutosPage() {
                     <Plus size={13} /> Novo produto
                 </Link>
             </PageHeader>
+            {syncMsg && (
+              <div className="mb-3 px-4 py-2 rounded-lg text-[12px] font-medium"
+                style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--brand-teal)' }}>
+                ✓ {syncMsg}
+              </div>
+            )}
 
             {/* Busca */}
             <div className="rm-card mb-5">
