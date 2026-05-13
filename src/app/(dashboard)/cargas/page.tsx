@@ -763,7 +763,7 @@ export default function CargasPage() {
   return (
     <div className="animate-fade-in">
       {/* Header sticky — padrão do sistema */}
-      <div className="sticky top-0 z-20" style={{ backdropFilter: 'blur(8px)' }}>
+      <div className="sticky top-0 z-20">
         <PageHeader
           title="Gerenciador de Cargas"
           subtitle="Formação e controle de cargas para entrega"
