@@ -21,22 +21,39 @@ export async function POST() {
       opCostMap[`${oc.year}-${oc.month}`] = perUnit
     }
 
-    // 2. Buscar custo MP de todos os pedidos via order_items + products
-    const { data: costRows } = await supabase
-      .from('order_items')
-      .select(`
-        order_id,
-        quantity,
-        product:products ( cost_price )
-      `)
-      .eq('org_id', ORG_ID)
+    // 2. Buscar custo MP agregado por pedido via SQL
+    const { data: costRows, error: costError } = await supabase
+      .rpc('calc_cost_mp_by_order', { p_org_id: ORG_ID })
 
-    // Agregar custo MP por order_id
-    const costMpMap: Record<string, number> = {}
-    for (const row of costRows ?? []) {
-      const costPrice = Number((row.product as any)?.cost_price ?? 0)
-      const qty = Number(row.quantity ?? 1)
-      costMpMap[row.order_id] = (costMpMap[row.order_id] ?? 0) + costPrice * qty
+    // Fallback: se RPC não existir, buscar manualmente
+    let costMpMap: Record<string, number> = {}
+
+    if (costError || !costRows) {
+      // Buscar order_items e products separadamente
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('order_id, sku, quantity')
+        .eq('org_id', ORG_ID)
+
+      const { data: prods } = await supabase
+        .from('products')
+        .select('sku, cost_price')
+        .eq('org_id', ORG_ID)
+
+      const prodMap: Record<string, number> = {}
+      for (const p of prods ?? []) {
+        prodMap[p.sku] = Number(p.cost_price ?? 0)
+      }
+
+      for (const item of items ?? []) {
+        const cost = prodMap[item.sku] ?? 0
+        const qty = Number(item.quantity ?? 1)
+        costMpMap[item.order_id] = (costMpMap[item.order_id] ?? 0) + cost * qty
+      }
+    } else {
+      for (const row of costRows) {
+        costMpMap[row.order_id] = Number(row.cost_mp)
+      }
     }
 
     // 3. Buscar todos os pedidos
