@@ -153,6 +153,15 @@ export default function CustosOperacionaisPage() {
     setSaving(false)
     setShowModal(false)
     load()
+
+    // Recalcular margens automaticamente em segundo plano
+    setRecalcMsg('Recalculando margens...')
+    setRecalculating(true)
+    fetch('/api/bling/sync/recalcular-margens', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => setRecalcMsg(d.message || 'Margens atualizadas'))
+      .catch(() => setRecalcMsg('Erro ao recalcular'))
+      .finally(() => setRecalculating(false))
   }
 
   async function remove(id: string) {
