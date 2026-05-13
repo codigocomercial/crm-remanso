@@ -104,6 +104,8 @@ export default function CustosOperacionaisPage() {
     setLoading(false)
   }
 
+  useEffect(() => { load() }, [])
+
   function openNew() {
     setEditing(null)
     setForm(EMPTY)
