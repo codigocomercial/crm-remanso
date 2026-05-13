@@ -94,7 +94,7 @@ export default function ProdutosPage() {
                       const data = await res.json()
                       if (data.success) {
                         setSyncMsg('Sincronizando... recarregando em 15s')
-                        setTimeout(() => { loadProducts(); setSyncMsg('') }, 15000)
+                        setTimeout(() => { load(search); setSyncMsg('') }, 15000)
                       } else {
                         setSyncMsg('Erro: ' + data.error)
                       }
