@@ -7,6 +7,7 @@ import {
   AlertCircle, Fuel, User, Clock, Edit2, Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PageHeader } from '@/components/ui/rm-components'
 import { MarginDisplay, ProtectedContent } from '@/components/ui/MarginIndicator'
 import { useUserRole } from '@/hooks/useUserRole'
 
@@ -760,28 +761,23 @@ export default function CargasPage() {
     : 0
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold flex items-center gap-2" style={{ color: 'var(--neutral-900)' }}>
-            <Truck size={20} style={{ color: 'var(--brand-teal)' }} />
-            Gerenciador de Cargas
-          </h1>
-          <p className="text-[13px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
-            Formação e controle de cargas para entrega
-          </p>
-        </div>
-        <button onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
-          style={{ backgroundColor: 'var(--brand-teal)' }}>
-          <Plus size={14} /> Nova Carga
-        </button>
+    <div className="animate-fade-in">
+      {/* Header sticky — padrão do sistema */}
+      <div className="sticky top-0 z-20" style={{ backdropFilter: 'blur(8px)' }}>
+        <PageHeader
+          title="Gerenciador de Cargas"
+          subtitle="Formação e controle de cargas para entrega"
+        >
+          <button onClick={() => setShowNew(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
+            style={{ backgroundColor: 'var(--brand-teal)' }}>
+            <Plus size={14} /> Nova Carga
+          </button>
+        </PageHeader>
       </div>
 
-      <div className="sticky top-0 z-20 pb-2 bg-[var(--neutral-100)]" style={{ backdropFilter: "blur(8px)" }}>
       {/* Métricas */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-5">
         {[
           { label: 'Cargas Ativas', value: totalLoads, icon: Truck, suffix: '' },
           { label: 'Total Urnas', value: totalUnits, icon: Package, suffix: '' },
@@ -831,7 +827,6 @@ export default function CargasPage() {
       </div>
 
       {/* Lista de cargas */}
-      </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-40">
