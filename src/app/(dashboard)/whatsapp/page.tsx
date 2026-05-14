@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { WhatsAppInbox } from '@/components/whatsapp/WhatsAppInbox'
 
