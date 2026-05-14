@@ -176,7 +176,7 @@ export default function CustosOperacionaisPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="sticky top-0 z-20">
+      <div>
         <PageHeader
           title="Custos Operacionais"
           subtitle="Custos mensais rateados por urna produzida"
