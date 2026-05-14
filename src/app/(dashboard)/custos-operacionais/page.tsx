@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Pencil, Trash2, Calculator, X, RefreshCw } from 'lucide-react'
-import { PageHeader } from '@/components/ui/rm-components'
+import { PageHeader, Modal } from '@/components/ui/rm-components'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
@@ -270,11 +270,7 @@ export default function CustosOperacionaisPage() {
       )}
 
       {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
-        >
+        <Modal onClose={() => setShowModal(false)}>
           <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col"
             style={{ maxHeight: '90vh' }}
@@ -394,7 +390,7 @@ export default function CustosOperacionaisPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

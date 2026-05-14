@@ -1,9 +1,46 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
+
+/* ════════════════════════════
+   ModalPortal — renderiza no body via createPortal
+════════════════════════════ */
+interface ModalPortalProps {
+  children: ReactNode
+}
+
+export function ModalPortal({ children }: ModalPortalProps) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
+  return createPortal(children, document.body)
+}
+
+/* ════════════════════════════
+   Modal — overlay + container padrão
+════════════════════════════ */
+interface ModalProps {
+  children: ReactNode
+  onClose: () => void
+}
+
+export function Modal({ children, onClose }: ModalProps) {
+  return (
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      >
+        {children}
+      </div>
+    </ModalPortal>
+  )
+}
 
 /* ════════════════════════════
    StatCard — Premium Final
