@@ -730,6 +730,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
   )
 }
 export default function CargasPage() {
+  const { can } = useUserRole()
   const [loads, setLoads] = useState<FreightLoad[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -780,10 +781,9 @@ export default function CargasPage() {
       {/* Métricas */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         {[
-          { label: 'Cargas Ativas', value: totalLoads, icon: Truck, suffix: '' },
-          { label: 'Total Urnas', value: totalUnits, icon: Package, suffix: '' },
-          { label: 'Receita Total', value: fmt(totalRevenue), icon: TrendingUp, suffix: '' },
-          { label: 'Margem Média', value: fmtPct(avgMargin), icon: TrendingUp, suffix: '' },
+          { label: 'Cargas Ativas', value: totalLoads },
+          { label: 'Total Urnas', value: totalUnits },
+          { label: 'Receita Total', value: fmt(totalRevenue) },
         ].map(m => (
           <div key={m.label} className="bg-white rounded-2xl p-4 border shadow-sm" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
             <p className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
@@ -792,6 +792,15 @@ export default function CargasPage() {
             <p className="text-[20px] font-bold" style={{ color: 'var(--neutral-900)' }}>{m.value}</p>
           </div>
         ))}
+        <div className="bg-white rounded-2xl p-4 border shadow-sm" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
+            Margem Média
+          </p>
+          {can('view_margins')
+            ? <p className="text-[20px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmtPct(avgMargin)}</p>
+            : <MarginDisplay pct={avgMargin} value={0} type="load" />
+          }
+        </div>
       </div>
 
       {/* Filtros */}
