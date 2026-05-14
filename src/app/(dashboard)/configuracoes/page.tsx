@@ -727,7 +727,10 @@ function TabMargens() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    supabase.from('organizations').select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days').single()
+    supabase.from('organizations')
+      .select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days')
+      .eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
+      .single()
       .then(({ data }) => {
         if (data) setForm({
           margin_order_good: data.margin_order_good ?? 30,
@@ -741,7 +744,15 @@ function TabMargens() {
 
   async function save() {
     setSaving(true)
-    await supabase.from('organizations').update(form).eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
+    const { error } = await supabase
+      .from('organizations')
+      .update(form)
+      .eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
+    if (error) {
+      console.error('Erro ao salvar margens:', error)
+      setSaving(false)
+      return
+    }
     // Atualiza status ativo/inativo de todos os clientes
     await supabase.rpc('update_companies_active_status', { p_org_id: '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2' })
     setSaving(false)
