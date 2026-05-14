@@ -130,7 +130,7 @@ async function runSync(token: string) {
       }
 
       const totalCost = totalCostMp + (opCostPerUnit * unitsCount)
-      const margin = totalVenda - totalCost - frete
+      const margin = totalVenda - totalCost   // frete NÃO entra na CML do pedido — só na margem da carga
       const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
 
       // Buscar empresa pelo CNPJ
