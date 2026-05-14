@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SECRET_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
 // GET — busca mensagens de uma conversa
 export async function GET(
@@ -17,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getServiceClient()
+    const supabase = createServiceClient()
 
     const { id: conversationId } = await params
     const { searchParams } = new URL(request.url)

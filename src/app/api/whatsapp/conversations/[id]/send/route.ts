@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SECRET_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'https://evo.promptcomercial.com.br'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '967A510F45A3-4E5D-9BC4-29FE1E97B15F'
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'crm-remanso'
@@ -20,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getServiceClient()
+    const supabase = createServiceClient()
 
     const { id: conversationId } = await params
     const body = await request.json()

@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
 
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SECRET_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
 // GET — lista conversas com dados do contato e empresa
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getServiceClient()
+    const supabase = createServiceClient()
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'open'
@@ -105,7 +96,7 @@ export async function GET(request: NextRequest) {
 // PATCH — ações na conversa: pause_bot, resume_bot, close, reopen, mark_read
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = getServiceClient()
+    const supabase = createServiceClient()
 
     const body = await request.json()
     const { conversation_id, action } = body
