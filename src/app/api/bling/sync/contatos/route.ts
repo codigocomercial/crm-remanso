@@ -64,7 +64,7 @@ export async function POST() {
           seller_id = seller?.id ?? null
         }
 
-        await supabase.from('contacts').upsert({
+        const payload = {
           org_id: ORG_ID,
           bling_id: c.id,
           full_name: c.nome,
@@ -80,7 +80,18 @@ export async function POST() {
           source: 'bling',
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'bling_id' })
+        }
+
+        // Tenta upsert por bling_id primeiro
+        const { error } = await supabase.from('contacts').upsert(payload, { onConflict: 'bling_id' })
+
+        // Se falhou e tem CNPJ, tenta atualizar registro existente por CNPJ
+        if (error && c.numeroDocumento) {
+          await supabase.from('contacts')
+            .update(payload)
+            .eq('org_id', ORG_ID)
+            .eq('cnpj', c.numeroDocumento)
+        }
         totalContatos++
       }
 
