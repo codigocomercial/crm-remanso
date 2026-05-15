@@ -152,7 +152,7 @@ export async function syncEmpresas() {
 
     let page = 1
     while (true) {
-      const data = await blingFetch(`/contatos?pagina=${page}&limite=100`, token)
+      const data = await blingFetch(`/contatos?pagina=${page}&limite=100&tipoContato=C`, token)
       const contatos = data?.data ?? []
       if (contatos.length === 0) break
 
