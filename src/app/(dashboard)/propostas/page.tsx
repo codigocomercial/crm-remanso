@@ -19,7 +19,7 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
   perdido: { label: 'Perdido', color: '#9333EA', bg: '#F5F3FF' },
 }
 
-const TABLE_COLUMNS = '80px 100px minmax(300px, 1fr) 70px 90px 110px 100px 110px'
+const TABLE_COLUMNS = '80px 100px minmax(200px, 1fr) 60px 90px 110px 100px 110px'
 
 interface Order {
   id: string
@@ -228,6 +228,7 @@ export default function PropostasPage() {
         </div>
       ) : (
         <div className="rm-card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
           {/* Cabeçalho */}
           <div className="hidden md:grid items-center gap-2 px-4 py-2.5 text-[11px] font-semibold uppercase"
             style={{
@@ -367,6 +368,7 @@ export default function PropostasPage() {
               </div>
             )
           })}
+          </div>
         </div>
       )}
     </div>
