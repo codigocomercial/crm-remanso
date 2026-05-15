@@ -97,6 +97,21 @@ export async function PATCH(
 
       if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
 
+      // Calcular custo MP real — soma cost_price × quantity de cada item
+      const itemIds = (order.order_items || []).map((i: any) => i.sku)
+      const { data: products } = await supabase
+        .from('products')
+        .select('sku, cost_price')
+        .eq('org_id', ORG_ID)
+        .in('sku', itemIds)
+
+      const costBySkU: Record<string, number> = {}
+      for (const p of products || []) costBySkU[p.sku] = Number(p.cost_price || 0)
+
+      const costMp = (order.order_items || []).reduce((sum: number, item: any) => {
+        return sum + (costBySkU[item.sku] || 0) * Number(item.quantity || 0)
+      }, 0)
+
       // Busca custo operacional do mês do pedido
       const orderDate = new Date(order.ordered_at)
       const { data: opCost } = await supabase
@@ -113,10 +128,10 @@ export async function PATCH(
 
       const units = order.units_count || 0
       const costOp = costPerUnit * units
-      // Usa o frete real do pedido (negociado com o cliente) — não o padrão da carga
       const freightCharged = Number(order.freight) || 0
-      const margin = (order.total_value || 0) - (order.total_cost || 0) - costOp
-      const marginPct = order.total_value > 0 ? (margin / order.total_value) * 100 : 0
+      const margin = (order.total_value || 0) + freightCharged - costMp - costOp
+      const marginPct = (order.total_value + freightCharged) > 0 
+        ? (margin / (order.total_value + freightCharged)) * 100 : 0
 
       const { error: insertError } = await supabase
         .from('freight_load_orders')
@@ -126,7 +141,7 @@ export async function PATCH(
           org_id: ORG_ID,
           units_count: units,
           order_value: order.total_value,
-          cost_mp: order.total_cost,
+          cost_mp: costMp,
           cost_op: costOp,
           freight_charged: freightCharged,
           margin,
