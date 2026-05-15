@@ -222,7 +222,7 @@ async function runSync(token: string, supabase: any) {
           .not('total_value', 'is', null)
         if (allOrders && allOrders.length > 0) {
           const avg = allOrders.reduce((s: number, o: any) => s + Number(o.total_value ?? 0), 0) / allOrders.length
-          const last = allOrders.sort((a, b) =>
+          const last = allOrders.sort((a: any, b: any) =>
             new Date(b.ordered_at ?? 0).getTime() - new Date(a.ordered_at ?? 0).getTime())[0]
           await supabase.from('companies').update({
             last_order_at: last.ordered_at,
