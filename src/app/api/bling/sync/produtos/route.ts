@@ -68,7 +68,7 @@ async function runSync(token: string) {
         is_active: detail.situacao === 'A',
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'bling_id', ignoreDuplicates: false })
+      }, { onConflict: 'org_id,sku', ignoreDuplicates: false })
 
       if (error) console.error(`[sync/produtos] erro SKU ${p.codigo}:`, error.message)
       else total++
