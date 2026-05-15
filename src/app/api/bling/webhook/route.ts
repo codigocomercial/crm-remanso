@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 import { createHmac } from 'crypto'
 
-const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET ?? 'cb1f6b4a5f0b2e99f55808c81fa4d3c7e1ddece7f0ce61401ecff24ffec4'
+const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET ?? '95bf4297fe093bab99e168f15737c7d31e5a454d944e21f1bc53e95f5aec'
 
 // Valida assinatura HMAC do Bling
 function validateSignature(payload: string, signature: string): boolean {

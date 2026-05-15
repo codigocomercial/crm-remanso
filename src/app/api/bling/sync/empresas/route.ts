@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
@@ -233,13 +234,12 @@ async function blingFetch(path: string, token: string) {
 
 export async function POST() {
   try {
-    const { createClient } = await import('@/lib/supabase/server')
-    const supabase = await createClient()
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
 
-    // Executa em background para não dar timeout
-    runSync(token).catch(err => console.error('[sync/empresas] erro background:', err.message))
+    const supabase = createServiceClient()
+
+    runSync(token, supabase).catch(err => console.error('[sync/empresas] erro background:', err.message))
 
     return NextResponse.json({ success: true, message: 'Sincronização iniciada em background. Aguarde 2-3 minutos.' })
 
@@ -249,12 +249,7 @@ export async function POST() {
   }
 }
 
-async function runSync(token: string) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SECRET_KEY!
-  )
+async function runSync(token: string, supabase: any) {
 
     let totalVendedores = 0
     let totalEmpresas = 0
@@ -296,7 +291,7 @@ async function runSync(token: string) {
     // Buscar sellers salvos para vincular pelo bling_id
     const { data: sellersDb } = await supabase
       .from('sellers').select('id, bling_id').eq('org_id', ORG_ID)
-    const sellersByBlingId = new Map((sellersDb ?? []).map(s => [s.bling_id, s.id]))
+    const sellersByBlingId = new Map((sellersDb ?? []).map((s: any) => [s.bling_id, s.id]))
 
     // Processar apenas contatos com cidade (são as funerárias)
     // Contatos sem cidade são fornecedores/outros — ignorar

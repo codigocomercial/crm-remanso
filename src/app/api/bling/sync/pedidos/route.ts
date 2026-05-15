@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
@@ -34,16 +35,17 @@ export async function POST() {
   try {
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
-    runSync(token).catch(err => console.error('[sync/pedidos] erro:', err.message))
+
+    const supabase = createServiceClient()
+
+    runSync(token, supabase).catch(err => console.error('[sync/pedidos] erro:', err.message))
     return NextResponse.json({ success: true, message: 'Sincronização de pedidos iniciada' })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
 
-async function runSync(token: string) {
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
+async function runSync(token: string, supabase: any) {
 
   // Buscar configurações da organização (tax_rate)
   const { data: org } = await supabase
