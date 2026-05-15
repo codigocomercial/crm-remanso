@@ -48,17 +48,24 @@ async function runSync(token: string) {
     for (const p of produtos) {
       if (!p.id) continue
 
+      // Busca detalhe individual — precoCusto na listagem pode estar desatualizado
+      let detail = p
+      try {
+        const d = await blingFetch(`/produtos/${p.id}`, token)
+        if (d?.data) detail = d.data
+      } catch { /* usa dados da listagem */ }
+
       const { error } = await supabase.from('products').upsert({
         org_id: ORG_ID,
-        bling_id: p.id,
-        name: p.nome ?? '',
-        sku: p.codigo ?? null,
-        product_line: p.linhaProduto?.descricao ?? null,
-        category: p.linhaProduto?.descricao ?? null,
-        price: p.preco ?? null,
-        cost_price: p.precoCusto ?? null,
-        stock_quantity: p.estoque?.saldoVirtualTotal ?? 0,
-        is_active: p.situacao === 'A',
+        bling_id: detail.id,
+        name: detail.nome ?? '',
+        sku: detail.codigo ?? null,
+        product_line: detail.linhaProduto?.descricao ?? null,
+        category: detail.linhaProduto?.descricao ?? null,
+        price: detail.preco ?? null,
+        cost_price: detail.precoCusto ?? null,
+        stock_quantity: detail.estoque?.saldoVirtualTotal ?? 0,
+        is_active: detail.situacao === 'A',
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'bling_id', ignoreDuplicates: false })
