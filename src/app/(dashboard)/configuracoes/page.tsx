@@ -722,13 +722,14 @@ function TabMargens() {
     margin_load_good: 20,
     margin_load_low: 8,
     active_client_days: 180,
+    tax_rate: 4.5,
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     supabase.from('organizations')
-      .select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days')
+      .select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days,tax_rate')
       .eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
       .single()
       .then(({ data }) => {
@@ -738,6 +739,7 @@ function TabMargens() {
           margin_load_good:  data.margin_load_good  ?? 20,
           margin_load_low:   data.margin_load_low   ?? 8,
           active_client_days: data.active_client_days ?? 180,
+          tax_rate: data.tax_rate ?? 4.5,
         })
       })
   }, [])
@@ -809,8 +811,32 @@ function TabMargens() {
 
       <div>
         <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
-          Clientes Ativos
+          Impostos sobre Venda
         </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
+          Alíquota aplicada sobre o valor total de cada pedido no cálculo da CML
+        </p>
+        <div className="rm-card p-4">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>
+              Alíquota de imposto
+            </label>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" max="100" step="0.1"
+                value={form.tax_rate}
+                onChange={e => setForm(f => ({ ...f, tax_rate: Number(e.target.value) }))}
+                className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
+                style={{ borderColor: "rgba(0,0,0,0.12)" }} />
+              <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>%</span>
+            </div>
+          </div>
+          <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>
+            CML = Total Venda − Custo MP − Custo Operacional − (Total Venda × {form.tax_rate}%)
+          </p>
+        </div>
+      </div>
+
+      <div>
         <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
           Clientes sem compra há mais de esse período são marcados como inativos e não aparecem no painel de recompra
         </p>

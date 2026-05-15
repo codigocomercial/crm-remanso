@@ -45,6 +45,14 @@ async function runSync(token: string) {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
+  // Buscar configurações da organização (tax_rate)
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('tax_rate')
+    .eq('id', ORG_ID)
+    .single()
+  const taxRate = Number(org?.tax_rate ?? 4.5) / 100
+
   // Buscar custos operacionais
   const { data: opCosts } = await supabase
     .from('operational_costs')
@@ -130,7 +138,8 @@ async function runSync(token: string) {
       }
 
       const totalCost = totalCostMp + (opCostPerUnit * unitsCount)
-      const margin = totalVenda - totalCost   // frete NÃO entra na CML do pedido — só na margem da carga
+      const impostos = totalVenda * taxRate
+      const margin = totalVenda - totalCost - impostos  // CML = Venda - CustoMP - CustoOp - Impostos
       const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
 
       // Buscar empresa pelo CNPJ
