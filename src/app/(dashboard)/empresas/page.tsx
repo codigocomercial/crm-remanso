@@ -89,6 +89,39 @@ export default function EmpresasPage() {
     <div className="animate-fade-in">
       <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
       <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
+        {/* Input CSV oculto */}
+        <input type="file" accept=".csv" id="csv-empresas" className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            setSyncing(true)
+            setSyncResult(null)
+            try {
+              const text = await file.text()
+              const res = await fetch('/api/bling/import-empresas-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ csv: text }),
+              })
+              const data = await res.json()
+              if (data.success) {
+                setSyncResult(`✓ ${data.imported} empresas importadas`)
+                setTimeout(() => { load(); setSyncResult(null) }, 1500)
+              } else {
+                setSyncResult(`Erro: ${data.error}`)
+              }
+            } finally {
+              setSyncing(false)
+              ;(document.getElementById('csv-empresas') as HTMLInputElement).value = ''
+            }
+          }}
+        />
+        <button onClick={() => document.getElementById('csv-empresas')?.click()}
+          disabled={syncing}
+          className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? 'Importando...' : 'Importar CSV Bling'}
+        </button>
         <button
           onClick={handleSync}
           disabled={syncing}
