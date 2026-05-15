@@ -87,6 +87,39 @@ export default function ProdutosPage() {
         <div className="animate-fade-in">
       <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
             <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
+                {/* Input file oculto para CSV */}
+                <input type="file" accept=".csv" id="csv-import" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setSyncing(true)
+                    setSyncMsg('Importando CSV...')
+                    try {
+                      const text = await file.text()
+                      const res = await fetch('/api/bling/import-csv', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ csv: text }),
+                      })
+                      const data = await res.json()
+                      if (data.success) {
+                        setSyncMsg(`✓ ${data.imported} produtos importados`)
+                        setTimeout(() => { load(search); setSyncMsg('') }, 2000)
+                      } else {
+                        setSyncMsg('Erro: ' + data.error)
+                      }
+                    } finally {
+                      setSyncing(false)
+                      ;(document.getElementById('csv-import') as HTMLInputElement).value = ''
+                    }
+                  }}
+                />
+                <button onClick={() => document.getElementById('csv-import')?.click()}
+                  disabled={syncing}
+                  className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+                  <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                  {syncing ? 'Importando...' : 'Importar CSV Bling'}
+                </button>
                 <button onClick={async () => {
                     setSyncing(true)
                     setSyncMsg('')
