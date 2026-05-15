@@ -13,12 +13,12 @@ export async function GET() {
   const json = await res.json()
   const d = json?.data ?? {}
   return NextResponse.json({
-    total: d.total,
+    http_status: res.status,
     totalProdutos: d.totalProdutos,
     desconto: d.desconto,
     outrasDespesas: d.outrasDespesas,
-    totalVenda: d.totalVenda,
-    valor: d.valor,
+    total: d.total,
     keys_top_level: Object.keys(d),
+    raw_desconto: JSON.stringify(d.desconto),
   })
 }

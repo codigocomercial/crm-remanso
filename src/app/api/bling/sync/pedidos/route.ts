@@ -108,8 +108,10 @@ async function runSync(token: string) {
       const situacaoId = Number(detail?.situacao?.id ?? 6)
       const status = mapStatus(situacaoId)
 
-      // total = valor final com desconto já abatido; totalProdutos = bruto sem desconto
-      const totalVenda = Number(detail?.total ?? detail?.totalProdutos ?? 0)
+      // total = valor bruto dos itens; desconto.valor = desconto global do pedido
+      const totalBruto = Number(detail?.totalProdutos ?? 0)
+      const descontoGlobal = Number(detail?.desconto?.valor ?? 0)
+      const totalVenda = totalBruto - descontoGlobal
       const frete = Number(detail?.transporte?.frete ?? 0)
       const unitsCount = itens.reduce((s: number, i: any) => s + Number(i?.quantidade ?? 1), 0)
 
