@@ -24,7 +24,11 @@ export async function POST() {
     const token = await getBlingToken()
     if (!token) return NextResponse.json({ error: 'Bling não conectado' }, { status: 401 })
 
-    runSync(token).catch(err => console.error('[sync/produtos] erro:', err.message))
+    // Criar o client aqui — import dinâmico dentro de background task falha no Docker
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+
+    runSync(token, supabase).catch(err => console.error('[sync/produtos] erro:', err.message))
 
     return NextResponse.json({ success: true, message: 'Sincronização de produtos iniciada' })
   } catch (error: any) {
@@ -32,10 +36,7 @@ export async function POST() {
   }
 }
 
-async function runSync(token: string) {
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
-
+async function runSync(token: string, supabase: any) {
   let total = 0
   let page = 1
 
