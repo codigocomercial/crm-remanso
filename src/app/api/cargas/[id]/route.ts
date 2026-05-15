@@ -88,50 +88,44 @@ export async function PATCH(
     const { action } = body
 
     if (action === 'add_order') {
-      // Busca dados do pedido
+      // Busca dados do pedido — margin já calculada corretamente pelo sync
       const { data: order } = await supabase
         .from('orders')
-        .select('*, order_items(*)')
+        .select('id, bling_number, total_value, freight, margin, margin_pct, total_cost, units_count, client_name, client_city, client_state, ordered_at')
         .eq('id', body.order_id)
         .single()
 
       if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
 
-      // Calcular custo MP real — soma cost_price × quantity de cada item
-      const itemIds = (order.order_items || []).map((i: any) => i.sku)
-      const { data: products } = await supabase
-        .from('products')
-        .select('sku, cost_price')
-        .eq('org_id', ORG_ID)
-        .in('sku', itemIds)
-
-      const costBySkU: Record<string, number> = {}
-      for (const p of products || []) costBySkU[p.sku] = Number(p.cost_price || 0)
-
-      const costMp = (order.order_items || []).reduce((sum: number, item: any) => {
-        return sum + (costBySkU[item.sku] || 0) * Number(item.quantity || 0)
-      }, 0)
-
-      // Busca custo operacional do mês do pedido
-      const orderDate = new Date(order.ordered_at)
-      const { data: opCost } = await supabase
-        .from('operational_costs')
-        .select('*')
-        .eq('org_id', ORG_ID)
-        .eq('year', orderDate.getFullYear())
-        .eq('month', orderDate.getMonth() + 1)
+      // Busca dados da carga para calcular frete proporcional
+      const { data: load } = await supabase
+        .from('freight_loads')
+        .select('distance_km, cost_per_km, driver_daily_cost, trip_days, max_units')
+        .eq('id', id)
         .single()
 
-      const costPerUnit = opCost && opCost.units_produced > 0
-        ? (opCost.labor + opCost.admin + opCost.truck + opCost.maintenance + opCost.misc) / opCost.units_produced
+      // Total de urnas já na carga (para ratear frete)
+      const { data: loadOrders } = await supabase
+        .from('freight_load_orders')
+        .select('units_count')
+        .eq('load_id', id)
+      const unitsInLoad = (loadOrders || []).reduce((s: number, o: any) => s + (o.units_count || 0), 0)
+      const totalUnits = unitsInLoad + (order.units_count || 0)
+
+      // Custo total do frete da carga
+      const freightCostTotal = load
+        ? (load.distance_km || 0) * (load.cost_per_km || 0) + (load.driver_daily_cost || 0) * (load.trip_days || 1)
         : 0
 
+      // Frete proporcional deste pedido = frete_carga × (urnas_pedido / total_urnas)
       const units = order.units_count || 0
-      const costOp = costPerUnit * units
+      const freightProportional = totalUnits > 0 ? freightCostTotal * (units / totalUnits) : 0
+
+      // Margem na carga = margem do pedido (já calculada) − frete proporcional da carga
       const freightCharged = Number(order.freight) || 0
-      const margin = (order.total_value || 0) + freightCharged - costMp - costOp
-      const marginPct = (order.total_value + freightCharged) > 0 
-        ? (margin / (order.total_value + freightCharged)) * 100 : 0
+      const marginOnLoad = (order.margin || 0) - freightProportional
+      const marginOnLoadPct = (order.total_value + freightCharged) > 0
+        ? (marginOnLoad / (order.total_value + freightCharged)) * 100 : 0
 
       const { error: insertError } = await supabase
         .from('freight_load_orders')
@@ -141,11 +135,11 @@ export async function PATCH(
           org_id: ORG_ID,
           units_count: units,
           order_value: order.total_value,
-          cost_mp: costMp,
-          cost_op: costOp,
+          cost_mp: order.total_cost,   // referência apenas
+          cost_op: 0,
           freight_charged: freightCharged,
-          margin,
-          margin_pct: marginPct,
+          margin: marginOnLoad,
+          margin_pct: marginOnLoadPct,
           client_name: order.client_name,
           client_city: order.client_city,
           client_state: order.client_state,
