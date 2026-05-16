@@ -87,18 +87,17 @@ export async function syncProdutos() {
           sku: detail.codigo?.trim(),
           name: detail.nome ?? '',
           price: detail.preco ?? null,
-          cost_price: detail.precoCusto ?? null,
           stock_quantity: detail.estoque?.saldoVirtualTotal ?? 0,
-<<<<<<< Updated upstream
-          is_active: detail.situacao === 'A' && detail?.tributacao?.spedTipoItem === '04',
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           updated_at_bling: detail.dataAlteracao ?? null,
           raw_json: detail,
-        }, { onConflict: 'bling_id', ignoreDuplicates: false })
-=======
-          bling_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+        }
+
+        // Só atualiza cost_price se Bling retornar valor válido (> 0)
+        // Se vier null ou 0, preserva o valor importado via CSV
+        if (detail.precoCusto && Number(detail.precoCusto) > 0) {
+          payload.cost_price = detail.precoCusto
         }
 
         // is_active = visibilidade para Laura IA — nunca sobrescrever em produto existente
@@ -109,7 +108,6 @@ export async function syncProdutos() {
           payload,
           { onConflict: 'bling_id', ignoreDuplicates: false }
         )
->>>>>>> Stashed changes
 
         if (error) {
           stats.errors++
