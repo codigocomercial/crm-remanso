@@ -118,14 +118,23 @@ export default function PropostasPage() {
     setSyncing(true)
     const res = await fetch('/api/bling/sync/pedidos', { method: 'POST' })
     const data = await res.json()
-    setSyncing(false)
-    if (data.success) {
-      setTimeout(() => load(), 5000)
-      setTimeout(() => load(), 15000)
-      setTimeout(() => load(), 30000)
-    } else {
+    if (!data.success) {
       alert(`Erro ao sincronizar: ${data.error}`)
+      setSyncing(false)
+      return
     }
+    // Recarregar a cada 30s por 30 minutos
+    let attempts = 0
+    const interval = setInterval(() => {
+      load()
+      attempts++
+      if (attempts >= 60) {
+        clearInterval(interval)
+        setSyncing(false)
+      }
+    }, 30000)
+    // Primeira recarga em 30s
+    setTimeout(() => load(), 30000)
   }
 
   const fmt = (v: number | null) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
