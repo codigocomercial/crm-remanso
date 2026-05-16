@@ -122,6 +122,23 @@ export default function EmpresasPage() {
           <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
           {syncing ? 'Importando...' : 'Importar CSV Bling'}
         </button>
+        <button onClick={async () => {
+            setSyncing(true)
+            setSyncResult('Calculando distâncias...')
+            try {
+              const res = await fetch('/api/util/calcular-distancias', { method: 'POST' })
+              const data = await res.json()
+              if (data.success) {
+                setSyncResult(`✓ ${data.updated} distâncias calculadas`)
+                setTimeout(() => { load(); setSyncResult(null) }, 2000)
+              } else setSyncResult(`Erro: ${data.error}`)
+            } finally { setSyncing(false) }
+          }}
+          disabled={syncing}
+          className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+          <RefreshCw size={13} />
+          Calcular Distâncias
+        </button>
         <button
           onClick={handleSync}
           disabled={syncing}
