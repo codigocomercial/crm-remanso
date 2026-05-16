@@ -81,7 +81,7 @@ export async function syncProdutos() {
         const { data: existing } = await supabase.from('products')
           .select('id').eq('bling_id', detail.id).eq('org_id', ORG_ID).maybeSingle()
 
-        const { error } = await supabase.from('products').upsert({
+        const payload: any = {
           org_id: ORG_ID,
           bling_id: detail.id,
           sku: detail.codigo?.trim(),
@@ -89,12 +89,27 @@ export async function syncProdutos() {
           price: detail.preco ?? null,
           cost_price: detail.precoCusto ?? null,
           stock_quantity: detail.estoque?.saldoVirtualTotal ?? 0,
+<<<<<<< Updated upstream
           is_active: detail.situacao === 'A' && detail?.tributacao?.spedTipoItem === '04',
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           updated_at_bling: detail.dataAlteracao ?? null,
           raw_json: detail,
         }, { onConflict: 'bling_id', ignoreDuplicates: false })
+=======
+          bling_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+
+        // is_active = visibilidade para Laura IA — nunca sobrescrever em produto existente
+        // Novos produtos entram como false (inativo) por padrão
+        if (!existing) payload.is_active = false
+
+        const { error } = await supabase.from('products').upsert(
+          payload,
+          { onConflict: 'bling_id', ignoreDuplicates: false }
+        )
+>>>>>>> Stashed changes
 
         if (error) {
           stats.errors++
