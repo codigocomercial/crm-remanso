@@ -89,7 +89,7 @@ export async function syncProdutos() {
           price: detail.preco ?? null,
           cost_price: detail.precoCusto ?? null,
           stock_quantity: detail.estoque?.saldoVirtualTotal ?? 0,
-          is_active: detail.situacao === 'A',
+          is_active: detail.situacao === 'A' && detail?.tributacao?.spedTipoItem === '04',
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           updated_at_bling: detail.dataAlteracao ?? null,
