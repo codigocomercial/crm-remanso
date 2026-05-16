@@ -109,27 +109,26 @@ export async function POST(req: NextRequest) {
       else {
         imported += upserts.length
 
-        // Salvar contatos (nome + celular do CSV)
+        // Salvar contatos linha por linha
         for (const line of batch) {
           const cols = line.split(';').map((c: string) => c.replace(/"/g, '').trim())
           const blingId = cols[idx('ID')]
-          const nomeContato = cols[idx('Contatos')]
-          const celularContato = cols[idx('Celular')]
-          const foneContato = cols[idx('Fone')]
+          const nomeContato = cols[idx('Contatos')]?.trim()
+          const fone = cols[idx('Fone')]?.trim()
+          const celular = cols[idx('Celular')]?.trim()
 
           if (!nomeContato || !blingId) continue
 
-          // Buscar a empresa recém salva
           const { data: company } = await supabase.from('companies')
-            .select('id').eq('bling_id', Number(blingId)).eq('org_id', ORG_ID).single()
+            .select('id').eq('bling_id', Number(blingId)).eq('org_id', ORG_ID).maybeSingle()
           if (!company) continue
 
           await supabase.from('contacts').upsert({
             org_id: ORG_ID,
             company_id: company.id,
             full_name: nomeContato,
-            phone: foneContato || null,
-            whatsapp: celularContato || null,
+            phone: fone || null,
+            whatsapp: celular || null,
             source: 'bling',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'org_id,full_name,company_id', ignoreDuplicates: false })
