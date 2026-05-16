@@ -76,7 +76,7 @@ export async function syncProdutos() {
         try {
           const d = await blingFetch(`/produtos/${p.id}`, token)
           if (d?.data) detail = d.data
-        } catch {}
+        } catch { }
 
         const { data: existing } = await supabase.from('products')
           .select('id').eq('bling_id', detail.id).eq('org_id', ORG_ID).maybeSingle()
@@ -92,6 +92,8 @@ export async function syncProdutos() {
           is_active: detail.situacao === 'A',
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          updated_at_bling: detail.dataAlteracao ?? null,
+          raw_json: detail,
         }, { onConflict: 'bling_id', ignoreDuplicates: false })
 
         if (error) {
@@ -130,8 +132,8 @@ export async function syncEmpresas() {
     const R = 6371
     const dLat = (lat - FABRICA_LAT) * Math.PI / 180
     const dLng = (lng - FABRICA_LNG) * Math.PI / 180
-    const a = Math.sin(dLat/2)**2 + Math.cos(FABRICA_LAT * Math.PI/180) * Math.cos(lat * Math.PI/180) * Math.sin(dLng/2)**2
-    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(FABRICA_LAT * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
   }
 
   try {
@@ -243,7 +245,7 @@ export async function syncPedidos() {
         try {
           const d = await blingFetch(`/pedidos/vendas/${p.id}`, token)
           if (d?.data) detail = d.data
-        } catch {}
+        } catch { }
 
         const itens = detail?.itens ?? []
         const unitsCount = itens.reduce((s: number, i: any) => s + Number(i.quantidade ?? 1), 0)
@@ -270,8 +272,8 @@ export async function syncPedidos() {
 
         const opPerUnit = opCost
           ? (opCost.labor + opCost.admin + opCost.truck + opCost.maintenance +
-             opCost.misc + opCost.tax + opCost.icms + opCost.freight_purchase +
-             opCost.interest + opCost.discount_boletos) / opCost.units_produced
+            opCost.misc + opCost.tax + opCost.icms + opCost.freight_purchase +
+            opCost.interest + opCost.discount_boletos) / opCost.units_produced
           : 0
 
         const totalCost = totalCostMp + (opPerUnit * unitsCount)
