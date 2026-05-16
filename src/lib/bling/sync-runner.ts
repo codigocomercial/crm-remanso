@@ -138,11 +138,13 @@ export async function syncEmpresas() {
     // Sync vendedores
     const vendRes = await blingFetch('/vendedores?limite=100', token)
     for (const v of vendRes?.data ?? []) {
+      const nome = v.nome || v.apelido || v.contato?.nome || v.contato?.apelido || ''
+      if (!nome) continue
       await supabase.from('sellers').upsert({
         org_id: ORG_ID,
         bling_id: v.id,
-        name: v.nome ?? v.apelido ?? '',
-        email: v.email ?? null,
+        name: nome,
+        email: v.email || v.contato?.email || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'bling_id', ignoreDuplicates: false })
     }
