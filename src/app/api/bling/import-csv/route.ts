@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
           bling_id: blingId ? Number(blingId) : null,
           sku,
           name: name || sku,
-          price,
-          cost_price: costPrice,
-          is_active: isActive,
-          stock_quantity: stock,
+          sale_price: price,
+          cost_price: costPrice > 0 ? costPrice : null,
+          is_active: false, // nunca sobrescrever is_active via CSV
+          stock_quantity: Math.round(stock),
           bling_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
 
       if (upserts.length === 0) continue
 
-      const { error } = await supabase.from('products').upsert(upserts, {
-        onConflict: 'org_id,sku',
+      const { error } = await supabase.schema('crm').from('products').upsert(upserts, {
+        onConflict: 'bling_id',
         ignoreDuplicates: false,
       })
 
