@@ -74,13 +74,14 @@ export default function EmpresaDetailPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: comp }, { data: conts }, { data: sellersData }] = await Promise.all([
-      supabase.from('crm_companies').select('*, sellers(name)').eq('id', id).single(),
+    const [{ data: comp, error: compError }, { data: conts }, { data: sellersData }] = await Promise.all([
+      supabase.from('crm_companies').select('*').eq('id', id).single(),
       supabase.from('contacts')
         .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
       supabase.from('crm_sellers').select('id,name').eq('is_active', true).order('name'),
     ])
+    if (compError) console.error('[empresa/detalhe] erro:', compError)
     setCompany(comp)
     setContacts(conts ?? [])
     setSellers(sellersData ?? [])
@@ -246,6 +247,10 @@ export default function EmpresaDetailPage() {
           className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold hover:bg-neutral-100 transition-colors"
           style={{ color: 'var(--neutral-500)' }}>
           <ArrowLeft size={13} /> Voltar
+        </Link>
+        <Link href={`/empresas/${id}/editar`}
+          className="btn-remanso inline-flex items-center gap-1.5">
+          ✏️ Editar
         </Link>
       </PageHeader>
 
