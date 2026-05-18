@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { cn, timeAgo } from '@/lib/utils'
+import { SectionImportCSV } from '@/components/import/ImportCSV'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationEvent {
@@ -464,6 +465,8 @@ function IntegracoesBlingStatus() {
 
   return <SectionBling initialToast={initialToast} />
 }
+// ─── Section: Import CSV ──────────────────────────────────────────────────────
+// (componente importado de @/components/import/ImportCSV)
 
 // ─── Section: Logs ────────────────────────────────────────────────────────────
 function SectionLogs() {
@@ -629,10 +632,12 @@ export default function IntegracoesPage() {
       <SectionEvolutionAPI />
       <Separator />
       <Suspense fallback={null}>
-        <IntegracoesBlingStatus />
-      </Suspense>
-      <Separator />
-      <SectionLogs />
+  <IntegracoesBlingStatus />
+</Suspense>
+<Separator />
+<SectionImportCSV />
+<Separator />
+<SectionLogs />
     </div>
   )
 }
