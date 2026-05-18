@@ -49,13 +49,14 @@ export default function ProdutosPage() {
 
     async function load(q: string) {
         setLoading(true)
-        let query = supabase
-            .from('crm_products')
-            .select('*')
-            .eq('org_id', ORG_ID)
-            .order('sort_order', { ascending: true })
-            .order('name', { ascending: true })
-            .limit(500)
+  let query = supabase
+    .from('crm_products')
+    .select('*')
+    .eq('org_id', ORG_ID)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
+    .limit(500)
 
         if (q.trim()) {
             query = query.or(
