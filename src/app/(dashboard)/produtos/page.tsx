@@ -59,7 +59,7 @@ export default function ProdutosPage() {
 
         if (q.trim()) {
             query = query.or(
-                `name.ilike.%${q}%,modelo.ilike.%${q}%,sku.ilike.%${q}%,category.ilike.%${q}%`
+                `name.ilike.%${q}%,sku.ilike.%${q}%`
             )
         }
 
