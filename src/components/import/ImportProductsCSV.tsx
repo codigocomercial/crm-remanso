@@ -81,7 +81,7 @@ async function importProducts(rows: Record<string, string>[]): Promise<ImportRes
     sale_price: parseBR(row['Preço'] ?? ''),
     cost_price: parseBR(row['Preço de custo'] ?? ''),
     is_active: (row['Situação'] ?? '').trim() === 'Ativo',
-    stock_quantity: parseBR(row['Estoque'] ?? '') || null,
+    stock_quantity: Math.round(parseBR(row['Estoque'] ?? '0') || 0),
   }))
 
   const res = await fetch('/api/import/products', {

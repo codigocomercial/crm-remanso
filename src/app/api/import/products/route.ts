@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         sale_price: p.sale_price,
         cost_price: p.cost_price > 0 ? p.cost_price : null,
         is_active: false, // nunca sobrescrever via import
-        stock_quantity: p.stock_quantity,
+        stock_quantity: p.stock_quantity != null ? Math.round(p.stock_quantity) : 0,
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }))
