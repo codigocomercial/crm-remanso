@@ -54,7 +54,7 @@ export default function EditarProdutoPage() {
 
     async function loadProduct() {
         setLoading(true)
-        const { data } = await supabase.from('products').select('*').eq('id', id).single()
+        const { data } = await supabase.from('crm_products').select('*').eq('id', id).single()
         if (data) {
             setBlingData({
                 name: data.name ?? '',

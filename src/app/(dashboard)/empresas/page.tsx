@@ -43,7 +43,7 @@ export default function EmpresasPage() {
     setLoading(true)
     const supabase = createClient()
     let query = supabase
-      .from('companies')
+      .from('crm_companies')
       .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role), sellers(name)`)
       .eq('org_id', ORG_ID)
       .order('name')

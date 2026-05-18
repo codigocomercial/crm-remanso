@@ -75,11 +75,11 @@ export default function EmpresaDetailPage() {
   async function load() {
     setLoading(true)
     const [{ data: comp }, { data: conts }, { data: sellersData }] = await Promise.all([
-      supabase.from('companies').select('*, sellers(name)').eq('id', id).single(),
+      supabase.from('crm_companies').select('*, sellers(name)').eq('id', id).single(),
       supabase.from('contacts')
         .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
-      supabase.from('sellers').select('id,name').eq('is_active', true).order('name'),
+      supabase.from('crm_sellers').select('id,name').eq('is_active', true).order('name'),
     ])
     setCompany(comp)
     setContacts(conts ?? [])

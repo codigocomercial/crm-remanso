@@ -45,7 +45,7 @@ export default function NovoContatoPage() {
 
   // Carregar empresas para vincular
   useEffect(() => {
-    supabase.from('companies').select('id, name')
+    supabase.from('crm_companies').select('id, name')
       .eq('org_id', ORG_ID).order('name')
       .then(({ data }) => setCompanies(data ?? []))
   }, [])

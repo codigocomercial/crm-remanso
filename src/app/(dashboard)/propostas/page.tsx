@@ -97,7 +97,7 @@ export default function PropostasPage() {
 
     const companyIds = [...new Set(list.map(o => o.company_id).filter(Boolean))] as string[]
     if (companyIds.length > 0) {
-      const { data: comps } = await supabase.from('companies').select('id, fantasia, name').in('id', companyIds)
+      const { data: comps } = await supabase.from('crm_companies').select('id, fantasia, name').in('id', companyIds)
       const map: Record<string, { fantasia: string | null; name: string }> = {}
       for (const c of comps ?? []) map[c.id] = c
       setCompanies(map)
