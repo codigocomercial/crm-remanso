@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn, timeAgo } from '@/lib/utils'
 import { SectionImportCSV } from '@/components/import/ImportCSV'
 import { SectionImportProductsCSV } from '@/components/import/ImportProductsCSV'
+import { SectionImportOrdersCSV } from '@/components/import/ImportOrdersCSV'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationEvent {
@@ -617,6 +618,8 @@ export default function IntegracoesPage() {
       <SectionImportCSV />
       <Separator />
       <SectionImportProductsCSV />
+      <Separator />
+      <SectionImportOrdersCSV />
       <Separator />
       <SectionLogs />
     </div>

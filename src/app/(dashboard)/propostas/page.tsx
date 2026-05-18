@@ -159,39 +159,6 @@ export default function PropostasPage() {
         title="Pedidos de Venda"
         subtitle={`${orders.length} pedido(s) · ${totalUrnas} urnas · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
       >
-        <input type="file" accept=".csv,.txt" id="csv-pedidos" className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            setSyncing(true)
-            try {
-              const text = await file.text()
-              const res = await fetch('/api/import/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ csv: text }),
-              })
-              const data = await res.json()
-              if (data.success || data.created > 0 || data.updated > 0) {
-                alert(`✓ ${data.created} criados, ${data.updated} atualizados${data.errors > 0 ? `, ${data.errors} erros` : ''}`)
-                load()
-              } else {
-                alert(`Erro: ${data.error_details?.[0] ?? data.error ?? 'Falha'}`)
-              }
-            } catch (err: any) {
-              alert(`Erro: ${err.message}`)
-            } finally {
-              setSyncing(false)
-              ;(document.getElementById('csv-pedidos') as HTMLInputElement).value = ''
-            }
-          }}
-        />
-        <button onClick={() => document.getElementById('csv-pedidos')?.click()}
-          disabled={syncing}
-          className="btn-remanso-outline flex items-center gap-1.5 mr-2">
-          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Importando...' : 'Importar CSV Bling'}
-        </button>
         <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
           <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
           {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
