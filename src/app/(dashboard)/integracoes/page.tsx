@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { cn, timeAgo } from '@/lib/utils'
 import { SectionImportCSV } from '@/components/import/ImportCSV'
+import { SectionImportProductsCSV } from '@/components/import/ImportProductsCSV'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationEvent {
@@ -122,7 +123,6 @@ function SectionWebhooks() {
         </div>
       </div>
 
-      {/* Instruction box */}
       <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800">
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
         <p className="text-xs leading-relaxed">
@@ -177,7 +177,6 @@ function SectionEvolutionAPI() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
 
-  // Load from localStorage as a simple persistence
   useEffect(() => {
     if (typeof window === 'undefined') return
     const stored = localStorage.getItem('evolution_api_config')
@@ -312,7 +311,6 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  // Exibe feedback vindo do callback via prop
   useEffect(() => {
     if (initialToast) {
       setToast(initialToast)
@@ -402,23 +400,14 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
               <span className="font-medium text-foreground">Conectado ao Bling</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="gap-2"
-              >
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
                 {refreshing
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Renovando...</>
                   : <><RefreshCw className="w-3.5 h-3.5" />Renovar token</>
                 }
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-                disabled={disconnecting}
+                variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}
                 className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
               >
                 {disconnecting
@@ -451,7 +440,7 @@ function SectionBling({ initialToast }: { initialToast?: { type: 'success' | 'er
   )
 }
 
-// Lê os search params do callback e repassa como prop — deve ficar dentro de <Suspense>
+// Lê os search params do callback e repassa como prop
 function IntegracoesBlingStatus() {
   const searchParams = useSearchParams()
   const connected = searchParams.get('bling_connected')
@@ -465,8 +454,6 @@ function IntegracoesBlingStatus() {
 
   return <SectionBling initialToast={initialToast} />
 }
-// ─── Section: Import CSV ──────────────────────────────────────────────────────
-// (componente importado de @/components/import/ImportCSV)
 
 // ─── Section: Logs ────────────────────────────────────────────────────────────
 function SectionLogs() {
@@ -513,8 +500,7 @@ function SectionLogs() {
             <p className="text-xs text-muted-foreground">Últimos 20 eventos da tabela <code className="bg-muted px-1 rounded text-[10px]">automation_events</code></p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing}
-          className="gap-2 text-xs h-8">
+        <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing} className="gap-2 text-xs h-8">
           <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
           Atualizar
         </Button>
@@ -545,13 +531,10 @@ function SectionLogs() {
                 onClick={() => hasDetails && setExpanded(isExpanded ? null : event.id)}
               >
                 <div className="flex items-center gap-3 px-4 py-3">
-                  {/* Status */}
                   <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium flex-shrink-0', sc.className)}>
                     {sc.icon}
                     <span className="hidden sm:inline">{sc.label}</span>
                   </div>
-
-                  {/* Event type */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-foreground truncate">{event.event_type}</span>
@@ -568,8 +551,6 @@ function SectionLogs() {
                       </p>
                     )}
                   </div>
-
-                  {/* Time */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-muted-foreground hidden sm:block">{timeAgo(event.created_at)}</span>
                     {hasDetails && (
@@ -578,7 +559,6 @@ function SectionLogs() {
                   </div>
                 </div>
 
-                {/* Expanded payload */}
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-0" onClick={e => e.stopPropagation()}>
                     <Separator className="mb-3" />
@@ -616,7 +596,6 @@ function SectionLogs() {
 export default function IntegracoesPage() {
   return (
     <div className="space-y-8 max-w-3xl">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
           <Zap className="w-5 h-5 text-primary" />
@@ -632,12 +611,14 @@ export default function IntegracoesPage() {
       <SectionEvolutionAPI />
       <Separator />
       <Suspense fallback={null}>
-  <IntegracoesBlingStatus />
-</Suspense>
-<Separator />
-<SectionImportCSV />
-<Separator />
-<SectionLogs />
+        <IntegracoesBlingStatus />
+      </Suspense>
+      <Separator />
+      <SectionImportCSV />
+      <Separator />
+      <SectionImportProductsCSV />
+      <Separator />
+      <SectionLogs />
     </div>
   )
 }
