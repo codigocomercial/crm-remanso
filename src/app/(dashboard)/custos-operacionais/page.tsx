@@ -8,19 +8,19 @@ import { PageHeader, Modal } from '@/components/ui/rm-components'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const CAMPOS = [
-  { key: 'labor',            label: 'Mão-de-Obra' },
-  { key: 'admin',            label: 'Despesas Adm' },
-  { key: 'truck',            label: 'Caminhão' },
-  { key: 'maintenance',      label: 'Manutenção' },
-  { key: 'misc',             label: 'Desp. Diversas' },
-  { key: 'tax',              label: 'Impostos' },
-  { key: 'icms',             label: 'ICMS' },
+  { key: 'labor', label: 'Mão-de-Obra' },
+  { key: 'admin', label: 'Despesas Adm' },
+  { key: 'truck', label: 'Caminhão' },
+  { key: 'maintenance', label: 'Manutenção' },
+  { key: 'misc', label: 'Desp. Diversas' },
+  { key: 'tax', label: 'Impostos' },
+  { key: 'icms', label: 'ICMS' },
   { key: 'freight_purchase', label: 'Frete Compra' },
-  { key: 'interest',         label: 'Juros' },
+  { key: 'interest', label: 'Juros' },
   { key: 'discount_boletos', label: 'Desconto Boletos' },
 ]
 
@@ -55,22 +55,19 @@ function fmt(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// Converte valor numérico para string formatada para exibição no input
 function fmtInput(v: number): string {
   if (!v) return ''
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// Converte string digitada para número
 function parseInput(val: string): number {
-  // Remove tudo exceto dígitos e vírgula/ponto
   const clean = val.replace(/[^\d,]/g, '').replace(',', '.')
   return parseFloat(clean) || 0
 }
 
 function totalMes(r: OpCost) {
   return r.labor + r.admin + r.truck + r.maintenance + r.misc +
-         r.tax + r.icms + r.freight_purchase + r.interest + r.discount_boletos
+    r.tax + r.icms + r.freight_purchase + r.interest + r.discount_boletos
 }
 
 function custoPorUrna(r: OpCost) {
@@ -105,14 +102,15 @@ export default function CustosOperacionaisPage() {
   }
 
   function handleNum(key: string, val: string) {
-    // Permite digitar livremente — só parseia ao sair do campo
     const n = parseInput(val)
     setForm(f => ({ ...f, [key]: n }))
   }
 
   async function load() {
     setLoading(true)
+    // Lendo de crm.operational_costs
     const { data } = await supabase
+      .schema('crm')
       .from('operational_costs')
       .select('*')
       .eq('org_id', ORG_ID)
@@ -138,7 +136,6 @@ export default function CustosOperacionaisPage() {
 
   async function save() {
     setSaving(true)
-    // Garantir que todos os campos numéricos são números, não strings
     const payload = {
       ...form,
       org_id: ORG_ID,
@@ -147,10 +144,11 @@ export default function CustosOperacionaisPage() {
         [c.key]: parseInput(String((form as any)[c.key] || '0'))
       }), {})
     }
+    // Gravando em crm.operational_costs
     if (editing) {
-      await supabase.from('operational_costs').update(payload).eq('id', editing.id)
+      await supabase.schema('crm').from('operational_costs').update(payload).eq('id', editing.id)
     } else {
-      await supabase.from('operational_costs').insert(payload)
+      await supabase.schema('crm').from('operational_costs').insert(payload)
     }
     setSaving(false)
     setShowModal(false)
@@ -168,7 +166,7 @@ export default function CustosOperacionaisPage() {
 
   async function remove(id: string) {
     if (!confirm('Excluir este registro?')) return
-    await supabase.from('operational_costs').delete().eq('id', id)
+    await supabase.schema('crm').from('operational_costs').delete().eq('id', id)
     load()
   }
 
