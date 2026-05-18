@@ -35,7 +35,7 @@ export async function POST() {
 
   try {
     // Buscar IDs do Bling — desde nov/2025 (marco inicial)
-    const dataInicio = '2025-11-01'
+    const dataInicio = '2026-01-01'
     let blingIds: number[] = []
     let page = 1
     while (true) {
