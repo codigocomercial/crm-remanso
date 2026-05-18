@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
       }))
 
       const { error, count } = await supabase
+        .schema('crm')
         .from('companies')
         .upsert(batch, {
           onConflict: 'bling_id',
