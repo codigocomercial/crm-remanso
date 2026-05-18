@@ -70,13 +70,13 @@ export async function POST(req: NextRequest) {
           onConflict: 'bling_id',
           ignoreDuplicates: false,
         })
-        .select('id', { count: 'exact' })
+        .select('id')
 
       if (error) {
         errors.push(`Lote ${Math.floor(i / BATCH) + 1}: ${error.message}`)
       } else {
         // Aproximação: se já existia = update, se não = insert
-        updated += count ?? 0
+        updated += batch.length
       }
     }
 
