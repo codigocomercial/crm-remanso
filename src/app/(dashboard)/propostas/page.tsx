@@ -76,7 +76,7 @@ export default function PropostasPage() {
   async function load() {
     setLoading(true)
     let query = supabase
-      .from('orders')
+      .from('crm_orders')
       .select('*')
       .eq('org_id', ORG_ID)
       .order('ordered_at', { ascending: false })
@@ -110,7 +110,7 @@ export default function PropostasPage() {
     if (expandedId === orderId) { setExpandedId(null); return }
     setExpandedId(orderId)
     if (itemsMap[orderId]) return
-    const { data } = await supabase.from('order_items').select('*').eq('order_id', orderId).order('description')
+    const { data } = await supabase.from('crm_order_items').select('*').eq('order_id', orderId).order('description')
     setItemsMap(prev => ({ ...prev, [orderId]: data ?? [] }))
   }
 
