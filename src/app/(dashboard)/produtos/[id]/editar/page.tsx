@@ -8,9 +8,6 @@ import { PageHeader } from '@/components/ui/rm-components'
 import { Upload, ImageOff, ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 
-const CATEGORIAS = ['Econômica', 'Intermediária', 'Luxo', 'Super Luxo', 'Infantil', 'Especial']
-const MATERIAIS = ['MDF', 'Madeira', 'Compensado', 'Pinus', 'Eucalipto']
-
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 export default function EditarProdutoPage() {
@@ -27,16 +24,24 @@ export default function EditarProdutoPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [imageUrl, setImageUrl] = useState<string | null>(null)
 
-    // Dados do Bling — somente leitura
     const [blingData, setBlingData] = useState<{
-        name: string; sku: string | null; category: string | null
-        price: number | null; cost_price: number | null
-        stock_quantity: number | null; is_active: boolean; bling_id: number | null
+        name: string
+        sku: string | null
+        category: string | null
+        sale_price: number | null
+        cost_price: number | null
+        stock_quantity: number | null
+        is_active: boolean
+        bling_id: number | null
     } | null>(null)
 
     const [form, setForm] = useState({
-        modelo: '', description: '', alca: '', cor: '',
-        is_active: true, sort_order: '0',
+        modelo: '',
+        description: '',
+        alca: '',
+        cor: '',
+        is_active: true,
+        sort_order: '0',
     })
 
     useEffect(() => {
@@ -54,13 +59,19 @@ export default function EditarProdutoPage() {
 
     async function loadProduct() {
         setLoading(true)
-        const { data } = await supabase.from('products').select('*').eq('id', id).single()
+        const { data } = await supabase
+            .schema('crm')
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single()
+
         if (data) {
             setBlingData({
                 name: data.name ?? '',
                 sku: data.sku ?? null,
                 category: data.category ?? null,
-                price: data.price ?? null,
+                sale_price: data.sale_price ?? null,
                 cost_price: data.cost_price ?? null,
                 stock_quantity: data.stock_quantity ?? null,
                 is_active: data.is_active ?? true,
@@ -78,10 +89,6 @@ export default function EditarProdutoPage() {
             setImagePreview(data.image_url)
         }
         setLoading(false)
-    }
-
-    function handleModeloChange(code: string) {
-        setForm(prev => ({ ...prev, modelo: code }))
     }
 
     function set(field: string, value: string | boolean) {
@@ -108,22 +115,26 @@ export default function EditarProdutoPage() {
 
     async function handleSave() {
         setSaving(true)
-        const { error } = await supabase.from('products').update({
-            modelo: form.modelo.trim() || null,
-            description: form.description.trim() || null,
-            image_url: imageUrl,
-            alca: form.alca.trim() || null,
-            cor: form.cor.trim() || null,
-            is_active: form.is_active,
-            sort_order: parseInt(form.sort_order) || 0,
-            updated_at: new Date().toISOString(),
-        }).eq('id', id)
+        const { error } = await supabase
+            .schema('crm')
+            .from('products')
+            .update({
+                modelo: form.modelo.trim() || null,
+                description: form.description.trim() || null,
+                image_url: imageUrl,
+                alca: form.alca.trim() || null,
+                cor: form.cor.trim() || null,
+                is_active: form.is_active,
+                sort_order: parseInt(form.sort_order) || 0,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
         setSaving(false)
         if (!error) router.push('/produtos')
         else alert('Erro ao salvar: ' + error.message)
     }
 
-    const inputClass = "w-full px-3 py-2 text-[13px] rounded-lg border outline-none transition-all"
+    const inputClass = 'w-full px-3 py-2 text-[13px] rounded-lg border outline-none transition-all'
     const inputStyle = { borderColor: 'rgba(0,0,0,0.1)' }
     const onFocus = (e: any) => e.currentTarget.style.borderColor = 'var(--brand-teal)'
     const onBlur = (e: any) => e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)'
@@ -181,13 +192,12 @@ export default function EditarProdutoPage() {
                     </div>
                 </div>
 
-                {/* Informações */}
+                {/* Informações do Bling — somente leitura */}
                 <div className="rm-card space-y-4">
                     <p className="text-[11px] font-semibold uppercase tracking-wide"
                         style={{ color: 'var(--neutral-500)' }}>Informações do Bling (somente leitura)</p>
 
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Nome — somente leitura */}
                         <div className="col-span-2">
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Nome do produto
@@ -198,7 +208,6 @@ export default function EditarProdutoPage() {
                             </div>
                         </div>
 
-                        {/* SKU — somente leitura */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Código SKU
@@ -209,7 +218,6 @@ export default function EditarProdutoPage() {
                             </div>
                         </div>
 
-                        {/* Linha de Produto — somente leitura */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Linha de Produto
@@ -220,36 +228,40 @@ export default function EditarProdutoPage() {
                             </div>
                         </div>
 
-                        {/* Preço — somente leitura */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Preço de venda
                             </label>
                             <div className="px-3 py-2 text-[13px] rounded-lg font-semibold"
                                 style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
-                                {blingData?.price ? `R$ ${blingData.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                                {blingData?.sale_price
+                                    ? `R$ ${blingData.sale_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                    : '—'}
                             </div>
                         </div>
 
-                        {/* Custo — somente leitura */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Preço de custo
                             </label>
                             <div className="px-3 py-2 text-[13px] rounded-lg"
                                 style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)', border: '1px solid var(--neutral-200)' }}>
-                                {blingData?.cost_price ? `R$ ${blingData.cost_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                                {blingData?.cost_price
+                                    ? `R$ ${blingData.cost_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                    : '—'}
                             </div>
                         </div>
 
-                        {/* Estoque — somente leitura */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-500)' }}>
                                 Estoque
                             </label>
                             <div className="px-3 py-2 text-[13px] rounded-lg font-semibold"
-                                style={{ background: 'var(--neutral-100)', border: '1px solid var(--neutral-200)',
-                                    color: (blingData?.stock_quantity ?? 0) > 0 ? 'var(--brand-teal)' : 'var(--color-danger)' }}>
+                                style={{
+                                    background: 'var(--neutral-100)',
+                                    border: '1px solid var(--neutral-200)',
+                                    color: (blingData?.stock_quantity ?? 0) > 0 ? 'var(--brand-teal)' : 'var(--color-danger)'
+                                }}>
                                 {blingData?.stock_quantity ?? 0} un
                             </div>
                         </div>
@@ -275,7 +287,6 @@ export default function EditarProdutoPage() {
                             </select>
                         </div>
 
-                        {/* Alça */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 🔧 Alça
@@ -287,7 +298,6 @@ export default function EditarProdutoPage() {
                             </select>
                         </div>
 
-                        {/* Cor */}
                         <div>
                             <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-700)' }}>
                                 🎨 Cor / Sobreamento

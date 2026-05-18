@@ -16,7 +16,7 @@ interface Product {
     name: string
     modelo: string | null
     description: string | null
-    price: number | null
+    sale_price: number | null
     image_url: string | null
     category: string | null
     alca: string | null
@@ -30,7 +30,7 @@ interface Product {
 }
 
 export default function ProdutosPage() {
-  const { can } = useUserRole()
+    const { can } = useUserRole()
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
@@ -50,6 +50,7 @@ export default function ProdutosPage() {
     async function load(q: string) {
         setLoading(true)
         let query = supabase
+            .schema('crm')
             .from('products')
             .select('*')
             .eq('org_id', ORG_ID)
@@ -69,14 +70,15 @@ export default function ProdutosPage() {
     }
 
     async function toggleActive(product: Product) {
-        await supabase.from('products').update({ is_active: !product.is_active }).eq('id', product.id)
+        await supabase.schema('crm').from('products')
+            .update({ is_active: !product.is_active }).eq('id', product.id)
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_active: !p.is_active } : p))
     }
 
     async function deleteProduct(id: string) {
         if (!confirm('Tem certeza que deseja excluir este produto?')) return
         setDeleting(id)
-        await supabase.from('products').delete().eq('id', id)
+        await supabase.schema('crm').from('products').delete().eq('id', id)
         setProducts(prev => prev.filter(p => p.id !== id))
         setDeleting(null)
     }
@@ -85,89 +87,89 @@ export default function ProdutosPage() {
 
     return (
         <div className="animate-fade-in">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
-            <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
-                {/* Input file oculto para CSV */}
-                <input type="file" accept=".csv" id="csv-import" className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    setSyncing(true)
-                    setSyncMsg('Importando CSV...')
-                    try {
-                      const text = await file.text()
-                      const res = await fetch('/api/bling/import-csv', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ csv: text }),
-                      })
-                      const data = await res.json()
-                      if (data.success) {
-                        setSyncMsg(`✓ ${data.imported} produtos importados`)
-                        setTimeout(() => { load(search); setSyncMsg('') }, 2000)
-                      } else {
-                        setSyncMsg('Erro: ' + data.error)
-                      }
-                    } finally {
-                      setSyncing(false)
-                      ;(document.getElementById('csv-import') as HTMLInputElement).value = ''
-                    }
-                  }}
-                />
-                <button onClick={() => document.getElementById('csv-import')?.click()}
-                  disabled={syncing}
-                  className="btn-remanso-outline mr-2 flex items-center gap-1.5">
-                  <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-                  {syncing ? 'Importando...' : 'Importar CSV Bling'}
-                </button>
-                <button onClick={async () => {
-                    setSyncing(true)
-                    setSyncMsg('')
-                    try {
-                      const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
-                      const data = await res.json()
-                      if (data.success) {
-                        setSyncMsg('Sincronizando... recarregando em 15s')
-                        setTimeout(() => { load(search); setSyncMsg('') }, 15000)
-                      } else {
-                        setSyncMsg('Erro: ' + data.error)
-                      }
-                    } finally {
-                      setSyncing(false)
-                    }
-                }} disabled={syncing} className="btn-remanso-outline mr-2 flex items-center gap-1.5">
-                    <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-                    {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
-                </button>
-                <Link href="/produtos/novo" className="btn-remanso">
-                    <Plus size={13} /> Novo produto
-                </Link>
-            </PageHeader>
-            {syncMsg && (
-              <div className="mb-3 px-4 py-2 rounded-lg text-[12px] font-medium"
-                style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--brand-teal)' }}>
-                ✓ {syncMsg}
-              </div>
-            )}
-
-            {/* Busca */}
-            <div className="rm-card mb-5">
-                <div className="relative max-w-sm">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
-                    <input type="text" placeholder="Buscar por nome, modelo..."
-                        value={search} onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
-                        style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
+            <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
+                <PageHeader title="Produtos" subtitle={search ? `${products.length} resultado(s) para "${search}"` : `${products.length} urnas cadastradas`}>
+                    {/* Input file oculto para CSV */}
+                    <input type="file" accept=".csv" id="csv-import" className="hidden"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            setSyncing(true)
+                            setSyncMsg('Importando CSV...')
+                            try {
+                                const text = await file.text()
+                                const res = await fetch('/api/bling/import-csv', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ csv: text }),
+                                })
+                                const data = await res.json()
+                                if (data.success) {
+                                    setSyncMsg(`✓ ${data.imported} produtos importados`)
+                                    setTimeout(() => { load(search); setSyncMsg('') }, 2000)
+                                } else {
+                                    setSyncMsg('Erro: ' + data.error)
+                                }
+                            } finally {
+                                setSyncing(false)
+                                    ; (document.getElementById('csv-import') as HTMLInputElement).value = ''
+                            }
+                        }}
                     />
+                    <button onClick={() => document.getElementById('csv-import')?.click()}
+                        disabled={syncing}
+                        className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+                        <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                        {syncing ? 'Importando...' : 'Importar CSV Bling'}
+                    </button>
+                    <button onClick={async () => {
+                        setSyncing(true)
+                        setSyncMsg('')
+                        try {
+                            const res = await fetch('/api/bling/sync/produtos', { method: 'POST' })
+                            const data = await res.json()
+                            if (data.success) {
+                                setSyncMsg('Sincronizando... recarregando em 15s')
+                                setTimeout(() => { load(search); setSyncMsg('') }, 15000)
+                            } else {
+                                setSyncMsg('Erro: ' + data.error)
+                            }
+                        } finally {
+                            setSyncing(false)
+                        }
+                    }} disabled={syncing} className="btn-remanso-outline mr-2 flex items-center gap-1.5">
+                        <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                        {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+                    </button>
+                    <Link href="/produtos/novo" className="btn-remanso">
+                        <Plus size={13} /> Novo produto
+                    </Link>
+                </PageHeader>
+                {syncMsg && (
+                    <div className="mb-3 px-4 py-2 rounded-lg text-[12px] font-medium"
+                        style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--brand-teal)' }}>
+                        ✓ {syncMsg}
+                    </div>
+                )}
+
+                {/* Busca */}
+                <div className="rm-card mb-5">
+                    <div className="relative max-w-sm">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
+                        <input type="text" placeholder="Buscar por nome, modelo..."
+                            value={search} onChange={e => setSearch(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
+                            style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
+                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
+                            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
+                        />
+                    </div>
                 </div>
+
+                {/* Grid */}
             </div>
 
-            {/* Grid */}
-            </div>
-
-      {loading ? (
+            {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="rm-card animate-pulse h-64" style={{ background: 'var(--neutral-100)' }} />
