@@ -50,7 +50,6 @@ export default function ProdutosPage() {
     async function load(q: string) {
         setLoading(true)
         let query = supabase
-            .schema('crm')
             .from('crm_products')
             .select('*')
             .eq('org_id', ORG_ID)
@@ -70,7 +69,7 @@ export default function ProdutosPage() {
     }
 
     async function toggleActive(product: Product) {
-        await supabase.schema('crm').from('crm_products')
+        await supabase.from('crm_products')
             .update({ is_active: !product.is_active }).eq('id', product.id)
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_active: !p.is_active } : p))
     }
@@ -78,7 +77,7 @@ export default function ProdutosPage() {
     async function deleteProduct(id: string) {
         if (!confirm('Tem certeza que deseja excluir este produto?')) return
         setDeleting(id)
-        await supabase.schema('crm').from('crm_products').delete().eq('id', id)
+        await supabase.from('crm_products').delete().eq('id', id)
         setProducts(prev => prev.filter(p => p.id !== id))
         setDeleting(null)
     }
