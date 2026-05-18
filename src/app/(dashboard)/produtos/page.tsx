@@ -285,10 +285,10 @@ export default function ProdutosPage() {
 
                                 {/* Preço venda e custo */}
                                 <div className="flex items-center gap-3 mt-1">
-                                    {product.price && (
+                                    {product.sale_price && (
                                         <p className="text-[14px] font-bold"
                                             style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
-                                            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            R$ {product.sale_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>
                                     )}
                                     {product.cost_price && can('view_cost_per_unit') && (
