@@ -44,7 +44,7 @@ export default function EmpresasPage() {
     const supabase = createClient()
     let query = supabase
       .from('crm_companies')
-      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, contacts(id, contact_role), sellers(name)`)
+      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, seller_id, total_orders_6m, avg_ticket_6m, last_order_at`)
       .eq('org_id', ORG_ID)
       .order('name')
     if (search) {
@@ -60,9 +60,9 @@ export default function EmpresasPage() {
       segment: d.segment,
       distance_km: d.distance_km,
       reorder_cycle_days: d.reorder_cycle_days,
-      contacts_count: d.contacts?.length ?? 0,
-      compras_count: d.contacts?.filter((c: any) => c.contact_role === 'compras').length ?? 0,
-      seller_name: d.sellers?.name ?? null,
+      contacts_count: 0,
+      compras_count: d.total_orders_6m ?? 0,
+      seller_name: null,
     })))
     setLoading(false)
   }
