@@ -7,7 +7,7 @@ interface ProductPayload {
   bling_id: number
   sku: string
   name: string
-  price: number
+  sale_price: number
   cost_price: number
   is_active: boolean
   stock_quantity: number | null
@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
         org_id: orgId,
         sku: p.sku,
         name: p.name,
-        price: p.price,
-        cost_price: p.cost_price,
-        is_active: p.is_active,
+        sale_price: p.sale_price,
+        cost_price: p.cost_price > 0 ? p.cost_price : null,
+        is_active: false, // nunca sobrescrever via import
         stock_quantity: p.stock_quantity,
         bling_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

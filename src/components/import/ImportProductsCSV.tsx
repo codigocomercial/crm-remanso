@@ -78,7 +78,7 @@ async function importProducts(rows: Record<string, string>[]): Promise<ImportRes
     bling_id: parseInt(row['ID'] ?? '0'),
     sku: (row['Código'] ?? '').trim(),
     name: row['Descrição'] ?? '',
-    price: parseBR(row['Preço'] ?? ''),
+    sale_price: parseBR(row['Preço'] ?? ''),
     cost_price: parseBR(row['Preço de custo'] ?? ''),
     is_active: (row['Situação'] ?? '').trim() === 'Ativo',
     stock_quantity: parseBR(row['Estoque'] ?? '') || null,
