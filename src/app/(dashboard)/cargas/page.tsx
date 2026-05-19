@@ -8,7 +8,7 @@ import {
   AlertCircle, Fuel, User, Clock, Edit2, Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { PageHeader } from '@/components/ui/rm-components'
+import { PageHeader, Modal } from '@/components/ui/rm-components'
 import { MarginDisplay, ProtectedContent } from '@/components/ui/MarginIndicator'
 import { useUserRole } from '@/hooks/useUserRole'
 
@@ -152,13 +152,14 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col my-auto">
+    <Modal onClose={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+        style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           <h2 className="text-[15px] font-bold" style={{ color: 'var(--neutral-900)' }}>Nova Carga</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X size={16} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">{field('Nome da Rota *', 'route_name', 'text', 'Ex: Rota Guanambi')}</div>
             {field('Cidade Destino *', 'destination_city', 'text', 'Ex: Guanambi')}
@@ -205,7 +206,7 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -261,14 +262,15 @@ function EditLoadModal({ load, onClose, onSave }: { load: FreightLoad; onClose: 
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
-        style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+    <Modal onClose={onClose}>
+      <div className="rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+        style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)', maxHeight: '90vh' }}
+        onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
           <h2 className="text-[15px] font-bold" style={{ color: 'var(--neutral-900)' }}>Editar Carga #{load.load_number}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X size={16} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">{field('Nome da Rota *', 'route_name')}</div>
             {field('Cidade Destino *', 'destination_city')}
@@ -316,12 +318,9 @@ function EditLoadModal({ load, onClose, onSave }: { load: FreightLoad; onClose: 
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
-
-
-function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [showAddOrder, setShowAddOrder] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
