@@ -160,8 +160,12 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X size={16} /></button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+          <div className="px-3 py-2 rounded-lg text-[12px] font-mono font-semibold"
+            style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
+            Código gerado automaticamente: RTA-XXX
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">{field('Nome da Rota *', 'route_name', 'text', 'Ex: Rota Guanambi')}</div>
+            <div className="col-span-2">{field('Descrição da Rota *', 'route_name', 'text', 'Ex: Rota Guanambi, Interior Sul')}</div>
             {field('Cidade Destino *', 'destination_city', 'text', 'Ex: Guanambi')}
             {field('Estado', 'destination_state', 'text', 'BA')}
             {field('Distância (km)', 'distance_km', 'number', '280')}
@@ -272,7 +276,7 @@ function EditLoadModal({ load, onClose, onSave }: { load: FreightLoad; onClose: 
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">{field('Nome da Rota *', 'route_name')}</div>
+            <div className="col-span-2">{field('Descrição da Rota *', 'route_name')}</div>
             {field('Cidade Destino *', 'destination_city')}
             {field('Estado', 'destination_state', 'text', 'BA')}
             {field('Distância (km)', 'distance_km', 'number')}
@@ -418,6 +422,12 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-[14px] font-bold" style={{ color: 'var(--neutral-900)' }}>
+                  {(load as any).route_code && (
+                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded"
+                      style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
+                      {(load as any).route_code}
+                    </span>
+                  )}
                   #{load.load_number} — {load.route_name}
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
