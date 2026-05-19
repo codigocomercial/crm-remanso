@@ -20,7 +20,7 @@ interface Contact {
   reorder_cycle_days: number | null
   next_followup_at: string | null
   average_order_value: number | null
-  companies?: { name: string; fantasia: string | null } | null
+  companies?: { corporate_name: string; fantasy_name: string | null } | null
 }
 
 export default function ContatosPage() {
@@ -33,8 +33,9 @@ export default function ContatosPage() {
       setLoading(true)
       const supabase = createClient()
       let query = supabase
+        .schema('crm')
         .from('contacts')
-        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies(name, fantasia)')
+        .select('id, full_name, phone, city, contact_role, receive_campaigns, reorder_cycle_days, next_followup_at, average_order_value, companies:crm_companies(corporate_name, fantasy_name)')
         .order('full_name', { ascending: true })
       if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
       const { data, error } = await query
@@ -125,7 +126,7 @@ export default function ContatosPage() {
                       <td className="px-6 py-4">
                         <p className="font-semibold text-foreground">{contact.full_name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {(contact.companies as any)?.fantasia || (contact.companies as any)?.name || contact.city || 'Sem empresa'}
+                          {(contact.companies as any)?.fantasy_name || (contact.companies as any)?.corporate_name || contact.city || 'Sem empresa'}
                         </p>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
