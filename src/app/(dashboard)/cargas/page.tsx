@@ -152,8 +152,8 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col my-auto">
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           <h2 className="text-[15px] font-bold" style={{ color: 'var(--neutral-900)' }}>Nova Carga</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X size={16} /></button>
