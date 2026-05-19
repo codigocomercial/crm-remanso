@@ -424,7 +424,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                   <h3 className="text-[14px] font-bold" style={{ color: 'var(--neutral-900)' }}>
                     {(load as any).route_code && (
                       <span className="text-[11px] font-mono px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
+                        style={{ backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)', border: '1px solid rgba(0,0,0,0.06)' }}>
                         {(load as any).route_code}
                       </span>
                     )}
