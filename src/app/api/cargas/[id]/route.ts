@@ -116,7 +116,7 @@ async function recalcularMargensCarga(supabase: any, loadId: string) {
     .select('id, total_value, margin, margin_pct, cost_mp, freight')
     .in('id', orderIds)
 
-  const crmMap = new Map((crmOrders || []).map((o: any) => [o.id, o]))
+  const crmMap = new Map<string, any>((crmOrders || []).map((o: any) => [o.id, o]))
 
   // Calcular custo da viagem
   const freightCost = ((loadData?.distance_km || 0) * (loadData?.cost_per_km || 0)) +
