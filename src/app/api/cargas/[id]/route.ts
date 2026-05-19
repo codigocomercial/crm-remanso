@@ -19,10 +19,9 @@ export async function GET(
       .select(`
         *,
         freight_load_orders (
-          id, units_count, order_value, cost_mp, cost_op,
+          id, order_id, bling_number, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
-          client_name, client_city, client_state, added_at,
-          order:orders ( id, bling_number, status, ordered_at )
+          client_name, client_city, client_state, added_at
         )
       `)
       .eq('id', id)
@@ -31,7 +30,16 @@ export async function GET(
 
     if (error || !load) return NextResponse.json({ error: 'Carga não encontrada' }, { status: 404 })
 
-    const orderIdsInLoad = load.freight_load_orders?.map((o: any) => o.order?.id).filter(Boolean) || []
+    // Montar estrutura compatível com o front (order.bling_number)
+    const loadFormatted = {
+      ...load,
+      freight_load_orders: (load.freight_load_orders || []).map((flo: any) => ({
+        ...flo,
+        order: { id: flo.order_id, bling_number: flo.bling_number, status: null, ordered_at: null }
+      }))
+    }
+
+    const orderIdsInLoad = (load.freight_load_orders || []).map((o: any) => o.order_id).filter(Boolean)
 
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('date_from')
@@ -65,7 +73,7 @@ export async function GET(
       .order('distance_km', { ascending: true })
       .limit(30)
 
-    return NextResponse.json({ load, suggestions: suggestions || [], nearbyContacts: nearbyContacts || [] })
+    return NextResponse.json({ load: loadFormatted, suggestions: suggestions || [], nearbyContacts: nearbyContacts || [] })
   } catch (e) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
@@ -124,6 +132,7 @@ export async function PATCH(
         .insert({
           load_id: id,
           order_id: body.order_id,
+          bling_number: order.bling_number,
           org_id: ORG_ID,
           units_count: units,
           order_value: order.total_value,
