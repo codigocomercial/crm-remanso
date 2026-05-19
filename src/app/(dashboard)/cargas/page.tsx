@@ -72,11 +72,11 @@ interface Order {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  forming:    { label: 'Em Formação',  color: '#1D6FA4', bg: '#EBF4FB' },
-  closed:     { label: 'Fechada',      color: '#2F6F5D', bg: '#EBF5F1' },
-  in_transit: { label: 'Em Trânsito',  color: '#B45309', bg: '#FEF3C7' },
-  delivered:  { label: 'Entregue',     color: '#6B7280', bg: '#F1F5F9' },
-  cancelled:  { label: 'Cancelada',    color: '#DC2626', bg: '#FEE2E2' },
+  forming: { label: 'Em Formação', color: '#1D6FA4', bg: '#EBF4FB' },
+  closed: { label: 'Fechada', color: '#2F6F5D', bg: '#EBF5F1' },
+  in_transit: { label: 'Em Trânsito', color: '#B45309', bg: '#FEF3C7' },
+  delivered: { label: 'Entregue', color: '#6B7280', bg: '#F1F5F9' },
+  cancelled: { label: 'Cancelada', color: '#DC2626', bg: '#FEE2E2' },
 }
 
 function fmt(val: number) {
@@ -161,7 +161,7 @@ function NewLoadModal({ onClose, onSave }: { onClose: () => void; onSave: () => 
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           <div className="px-3 py-2 rounded-lg text-[12px] font-mono font-semibold"
-            style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
+            style={{ backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)', border: '1px solid rgba(0,0,0,0.06)' }}>
             Código gerado automaticamente: RTA-XXX
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -396,7 +396,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
     try {
       await fetch(`/api/cargas/${load.id}`, { method: 'DELETE' })
       onRefresh()
-    } catch {}
+    } catch { }
   }
 
   const filteredOrders = availableOrders.filter(o => {
@@ -410,334 +410,336 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
 
   return (
     <>
-    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--surface-border)' }}>
-      {/* Header do card */}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--brand-teal-bg)' }}>
-              <Truck size={16} style={{ color: 'var(--brand-teal)' }} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-[14px] font-bold" style={{ color: 'var(--neutral-900)' }}>
-                  {(load as any).route_code && (
-                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded"
-                      style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
-                      {(load as any).route_code}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--surface-border)' }}>
+        {/* Header do card */}
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'var(--brand-teal-bg)' }}>
+                <Truck size={16} style={{ color: 'var(--brand-teal)' }} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[14px] font-bold" style={{ color: 'var(--neutral-900)' }}>
+                    {(load as any).route_code && (
+                      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: 'var(--brand-teal-light, #e6f7f5)', color: 'var(--brand-teal)' }}>
+                        {(load as any).route_code}
+                      </span>
+                    )}
+                    #{load.load_number} — {load.route_name}
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ color: st.color, backgroundColor: st.bg }}>
+                    {st.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--neutral-500)' }}>
+                    <MapPin size={10} /> {load.destination_city}{load.destination_state ? `/${load.destination_state}` : ''} — {load.distance_km}km
+                  </span>
+                  {load.estimated_departure && (
+                    <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--neutral-500)' }}>
+                      <Calendar size={10} /> {new Date(load.estimated_departure).toLocaleDateString('pt-BR')}
                     </span>
                   )}
-                  #{load.load_number} — {load.route_name}
-                </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ color: st.color, backgroundColor: st.bg }}>
-                  {st.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--neutral-500)' }}>
-                  <MapPin size={10} /> {load.destination_city}{load.destination_state ? `/${load.destination_state}` : ''} — {load.distance_km}km
-                </span>
-                {load.estimated_departure && (
-                  <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--neutral-500)' }}>
-                    <Calendar size={10} /> {new Date(load.estimated_departure).toLocaleDateString('pt-BR')}
-                  </span>
-                )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1">
-            {load.status === 'forming' && !confirmDelete && (
-              <button onClick={() => setShowEdit(true)}
-                title="Editar carga"
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: 'var(--neutral-400)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand-teal)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--neutral-400)')}>
-                <Edit2 size={13} />
-              </button>
-            )}
-            {load.status === 'forming' && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)}
-                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-                title="Excluir carga"
-                style={{ color: 'var(--neutral-400)' }}>
-                <Trash2 size={13} />
-              </button>
-            )}
-            {load.status === 'forming' && confirmDelete && (
-              <div className="flex items-center gap-1">
-                <span className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>Excluir?</span>
-                <button onClick={deleteLoad}
-                  className="text-[11px] font-bold px-2 py-1 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors">
-                  Sim
-                </button>
-                <button onClick={() => setConfirmDelete(false)}
-                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors"
-                  style={{ borderColor: 'rgba(128,128,128,0.3)', color: 'var(--neutral-500)' }}>
-                  Não
-                </button>
-              </div>
-            )}
-            {load.status === 'forming' && !confirmDelete && (
-              <button onClick={() => updateStatus('closed')}
-                className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-green-50"
-                style={{ borderColor: '#2F6F5D', color: '#2F6F5D' }}>
-                Fechar Carga
-              </button>
-            )}
-            {load.status === 'closed' && (
-              <button onClick={() => updateStatus('in_transit')}
-                className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-orange-50"
-                style={{ borderColor: '#B45309', color: '#B45309' }}>
-                Em Trânsito
-              </button>
-            )}
-            {load.status === 'in_transit' && (
-              <button onClick={() => updateStatus('delivered')}
-                className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-teal-50"
-                style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal)' }}>
-                Marcar Entregue
-              </button>
-            )}
-            <button onClick={() => setExpanded(!expanded)}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors">
-              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Métricas resumidas */}
-        <div className="grid grid-cols-4 gap-3 mb-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
-              Capacidade
-            </p>
-            <CapacityBar used={load.used_units || 0} max={load.max_units || 48} />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>Receita</p>
-            <p className="text-[13px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmt(load.total_revenue)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>Margem</p>
-            <MarginDisplay pct={load.total_margin_pct} value={load.total_margin} type="load" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
-              Frete {freightBalance >= 0 ? '✓' : '✗'}
-            </p>
-            <ProtectedContent permission="view_freight_cost"
-              fallback={<span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626', backgroundColor: freightBalance >= 0 ? '#EBF5F1' : '#FEE2E2' }}>{freightBalance >= 0 ? '✓ OK' : '✗ Déficit'}</span>}>
-              <p className="text-[13px] font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626' }}>
-                {fmt(freightBalance)}
-              </p>
-            </ProtectedContent>
-          </div>
-        </div>
-
-        {/* Custos da viagem */}
-        <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--neutral-500)' }}>
-          <span className="flex items-center gap-1">
-            <Fuel size={10} /> {load.transport_type === 'own' ? 'Próprio' : 'Terceirizado'} —
-            R${load.cost_per_km}/km
-          </span>
-          <span className="flex items-center gap-1">
-            <User size={10} /> R${load.driver_daily_cost}/dia × {load.trip_days}d
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock size={10} /> {load.distance_km || 0}km totais — {fmt(freightCostTotal)} custo frete
-          </span>
-        </div>
-      </div>
-
-      {/* Pedidos expandidos */}
-      {expanded && (
-        <div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-          {/* Lista de pedidos */}
-          <div className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--neutral-500)' }}>
-                Pedidos ({load.freight_load_orders?.length || 0})
-              </p>
-              {load.status === 'forming' && (
-                <button
-                  onClick={() => { setShowAddOrder(!showAddOrder); if (!showAddOrder) loadAvailableOrders() }}
-                  className="text-[11px] font-semibold flex items-center gap-1 px-2 py-1 rounded-lg transition-colors"
-                  style={{ color: 'var(--brand-teal)', backgroundColor: 'var(--brand-teal-bg)' }}>
-                  <Plus size={10} /> Adicionar Pedido
+            <div className="flex items-center gap-1">
+              {load.status === 'forming' && !confirmDelete && (
+                <button onClick={() => setShowEdit(true)}
+                  title="Editar carga"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--neutral-400)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand-teal)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--neutral-400)')}>
+                  <Edit2 size={13} />
                 </button>
               )}
+              {load.status === 'forming' && !confirmDelete && (
+                <button onClick={() => setConfirmDelete(true)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                  title="Excluir carga"
+                  style={{ color: 'var(--neutral-400)' }}>
+                  <Trash2 size={13} />
+                </button>
+              )}
+              {load.status === 'forming' && confirmDelete && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>Excluir?</span>
+                  <button onClick={deleteLoad}
+                    className="text-[11px] font-bold px-2 py-1 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors">
+                    Sim
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)}
+                    className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors"
+                    style={{ borderColor: 'rgba(128,128,128,0.3)', color: 'var(--neutral-500)' }}>
+                    Não
+                  </button>
+                </div>
+              )}
+              {load.status === 'forming' && !confirmDelete && (
+                <button onClick={() => updateStatus('closed')}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-green-50"
+                  style={{ borderColor: '#2F6F5D', color: '#2F6F5D' }}>
+                  Fechar Carga
+                </button>
+              )}
+              {load.status === 'closed' && (
+                <button onClick={() => updateStatus('in_transit')}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-orange-50"
+                  style={{ borderColor: '#B45309', color: '#B45309' }}>
+                  Em Trânsito
+                </button>
+              )}
+              {load.status === 'in_transit' && (
+                <button onClick={() => updateStatus('delivered')}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-teal-50"
+                  style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal)' }}>
+                  Marcar Entregue
+                </button>
+              )}
+              <button onClick={() => setExpanded(!expanded)}
+                className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors">
+                {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
             </div>
-
-            {load.freight_load_orders?.length === 0 ? (
-              <p className="text-[12px] text-center py-4" style={{ color: 'var(--neutral-400)' }}>
-                Nenhum pedido na carga
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {/* Header */}
-                <div className="grid gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)',
-                    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}>
-                  <div className="col-span-4">Cliente</div>
-                  <div className="col-span-2">Cidade</div>
-                  <div className="col-span-1 text-right">Urnas</div>
-                  <div className="col-span-2 text-right">Valor</div>
-                  <div className="col-span-2 text-right">Margem</div>
-                  <div className="col-span-1"></div>
-                </div>
-
-                {load.freight_load_orders.map(lo => (
-                  <div key={lo.id} className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg hover:bg-neutral-50 items-center">
-                    <div className="col-span-4">
-                      <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                        {lo.client_name}
-                      </p>
-                      <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
-                        Ped. #{lo.order?.bling_number}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-[11px] truncate" style={{ color: 'var(--neutral-600)' }}>{lo.client_city}</p>
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{lo.units_count}</p>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{fmt(lo.order_value)}</p>
-                      <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>+{fmt(lo.freight_charged)} frete</p>
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <MarginDisplay pct={lo.margin_pct} value={lo.margin} type="load" size="sm" />
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      {load.status === 'forming' && (
-                        <button onClick={() => removeOrder(lo.order_id)}
-                          disabled={removing === lo.order_id}
-                          className="p-1 rounded hover:bg-red-50 transition-colors">
-                          {removing === lo.order_id
-                            ? <RefreshCw size={11} className="animate-spin" style={{ color: '#DC2626' }} />
-                            : <X size={11} style={{ color: '#DC2626' }} />
-                          }
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Totais */}
-                <div className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg mt-1 border-t"
-                  style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-                  <div className="col-span-4">
-                    <p className="text-[11px] font-bold" style={{ color: 'var(--neutral-700)' }}>TOTAL</p>
-                  </div>
-                  <div className="col-span-2"></div>
-                  <div className="col-span-1 text-right">
-                    <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>{load.total_units}</p>
-                  </div>
-                  <div className="col-span-2 text-right">
-                    <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmt(load.total_revenue)}</p>
-                  </div>
-                  <div className="col-span-2 flex justify-end">
-                    <MarginDisplay pct={load.total_margin_pct} value={load.total_margin} type="load" size="sm" />
-                  </div>
-                  <div className="col-span-1"></div>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Painel adicionar pedido */}
-          {showAddOrder && load.status === 'forming' && (
-            <div className="border-t p-3 bg-[var(--neutral-50)]" style={{ borderColor: 'var(--surface-border)' }}>
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--neutral-500)' }}>
-                Pedidos disponíveis para adicionar
+          {/* Métricas resumidas */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
+                Capacidade
               </p>
+              <CapacityBar used={load.used_units || 0} max={load.max_units || 48} />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>Receita</p>
+              <p className="text-[13px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmt(load.total_revenue)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>Margem</p>
+              <MarginDisplay pct={load.total_margin_pct} value={load.total_margin} type="load" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--neutral-500)' }}>
+                Frete {freightBalance >= 0 ? '✓' : '✗'}
+              </p>
+              <ProtectedContent permission="view_freight_cost"
+                fallback={<span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626', backgroundColor: freightBalance >= 0 ? '#EBF5F1' : '#FEE2E2' }}>{freightBalance >= 0 ? '✓ OK' : '✗ Déficit'}</span>}>
+                <p className="text-[13px] font-bold" style={{ color: freightBalance >= 0 ? '#2F6F5D' : '#DC2626' }}>
+                  {fmt(freightBalance)}
+                </p>
+              </ProtectedContent>
+            </div>
+          </div>
 
-              {/* Filtro de período */}
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>De</span>
-                  <input type="date" value={dateFrom}
-                    onChange={e => { setDateFrom(e.target.value); loadAvailableOrders(e.target.value, dateTo) }}
-                    className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
-                    style={{ borderColor: 'var(--surface-border)' }} />
-                </div>
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>Até</span>
-                  <input type="date" value={dateTo}
-                    onChange={e => { setDateTo(e.target.value); loadAvailableOrders(dateFrom, e.target.value) }}
-                    className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
-                    style={{ borderColor: 'var(--surface-border)' }} />
-                </div>
-                {(dateFrom || dateTo) && (
-                  <button onClick={() => { setDateFrom(''); setDateTo(''); loadAvailableOrders('', '') }}
-                    className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors hover:bg-neutral-100"
-                    style={{ color: 'var(--neutral-400)' }}>
-                    Limpar
+          {/* Custos da viagem */}
+          <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--neutral-500)' }}>
+            <span className="flex items-center gap-1">
+              <Fuel size={10} /> {load.transport_type === 'own' ? 'Próprio' : 'Terceirizado'} —
+              R${load.cost_per_km}/km
+            </span>
+            <span className="flex items-center gap-1">
+              <User size={10} /> R${load.driver_daily_cost}/dia × {load.trip_days}d
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock size={10} /> {load.distance_km || 0}km totais — {fmt(freightCostTotal)} custo frete
+            </span>
+          </div>
+        </div>
+
+        {/* Pedidos expandidos */}
+        {expanded && (
+          <div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+            {/* Lista de pedidos */}
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--neutral-500)' }}>
+                  Pedidos ({load.freight_load_orders?.length || 0})
+                </p>
+                {load.status === 'forming' && (
+                  <button
+                    onClick={() => { setShowAddOrder(!showAddOrder); if (!showAddOrder) loadAvailableOrders() }}
+                    className="text-[11px] font-semibold flex items-center gap-1 px-2 py-1 rounded-lg transition-colors"
+                    style={{ color: 'var(--brand-teal)', backgroundColor: 'var(--brand-teal-bg)' }}>
+                    <Plus size={10} /> Adicionar Pedido
                   </button>
                 )}
               </div>
 
-              {/* Busca por texto */}
-              <div className="relative mb-2">
-                <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
-                <input value={searchOrder} onChange={e => setSearchOrder(e.target.value)}
-                  placeholder="Buscar por cliente, cidade ou nº pedido..."
-                  className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
-                  style={{ borderColor: 'var(--surface-border)' }} />
-              </div>
-
-              {loadingOrders ? (
-                <div className="flex items-center justify-center py-4">
-                  <RefreshCw size={14} className="animate-spin" style={{ color: 'var(--neutral-400)' }} />
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <p className="text-[12px] text-center py-3" style={{ color: 'var(--neutral-400)' }}>
-                  Nenhum pedido em aberto disponível
+              {load.freight_load_orders?.length === 0 ? (
+                <p className="text-[12px] text-center py-4" style={{ color: 'var(--neutral-400)' }}>
+                  Nenhum pedido na carga
                 </p>
               ) : (
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {filteredOrders.map(o => (
-                    <div key={o.id} className="flex items-center justify-between gap-3 px-2 py-2 rounded-lg bg-[var(--neutral-100)] border"
-                      style={{ borderColor: 'rgba(128,128,128,0.15)' }}>
-                      <div className="flex-1 min-w-0">
+                <div className="space-y-1.5">
+                  {/* Header */}
+                  <div className="grid gap-2 px-2 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide"
+                    style={{
+                      backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)',
+                      gridTemplateColumns: 'repeat(12, minmax(0, 1fr))'
+                    }}>
+                    <div className="col-span-4">Cliente</div>
+                    <div className="col-span-2">Cidade</div>
+                    <div className="col-span-1 text-right">Urnas</div>
+                    <div className="col-span-2 text-right">Valor</div>
+                    <div className="col-span-2 text-right">Margem</div>
+                    <div className="col-span-1"></div>
+                  </div>
+
+                  {load.freight_load_orders.map(lo => (
+                    <div key={lo.id} className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg hover:bg-neutral-50 items-center">
+                      <div className="col-span-4">
                         <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                          {o.company?.fantasia || o.client_name}
+                          {lo.client_name}
                         </p>
-                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
-                          📍 {o.company?.city || o.client_city}/{o.company?.state || o.client_state}
-                        </p>
-                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--neutral-400)' }}>
-                          Ped. #{o.bling_number} · {o.units_count} urnas
+                        <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
+                          Ped. #{lo.order?.bling_number}
                         </p>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>
-                          {fmt(o.total_value)}
-                        </p>
-                        <button onClick={() => addOrder(o.id)} disabled={adding === o.id}
-                          className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-lg text-white"
-                          style={{ backgroundColor: 'var(--brand-teal)' }}>
-                          {adding === o.id ? '...' : '+ Adicionar'}
-                        </button>
+                      <div className="col-span-2">
+                        <p className="text-[11px] truncate" style={{ color: 'var(--neutral-600)' }}>{lo.client_city}</p>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{lo.units_count}</p>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-900)' }}>{fmt(lo.order_value)}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>+{fmt(lo.freight_charged)} frete</p>
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <MarginDisplay pct={lo.margin_pct} value={lo.margin} type="load" size="sm" />
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        {load.status === 'forming' && (
+                          <button onClick={() => removeOrder(lo.order_id)}
+                            disabled={removing === lo.order_id}
+                            className="p-1 rounded hover:bg-red-50 transition-colors">
+                            {removing === lo.order_id
+                              ? <RefreshCw size={11} className="animate-spin" style={{ color: '#DC2626' }} />
+                              : <X size={11} style={{ color: '#DC2626' }} />
+                            }
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
+
+                  {/* Totais */}
+                  <div className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg mt-1 border-t"
+                    style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                    <div className="col-span-4">
+                      <p className="text-[11px] font-bold" style={{ color: 'var(--neutral-700)' }}>TOTAL</p>
+                    </div>
+                    <div className="col-span-2"></div>
+                    <div className="col-span-1 text-right">
+                      <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>{load.total_units}</p>
+                    </div>
+                    <div className="col-span-2 text-right">
+                      <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>{fmt(load.total_revenue)}</p>
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      <MarginDisplay pct={load.total_margin_pct} value={load.total_margin} type="load" size="sm" />
+                    </div>
+                    <div className="col-span-1"></div>
+                  </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Painel adicionar pedido */}
+            {showAddOrder && load.status === 'forming' && (
+              <div className="border-t p-3 bg-[var(--neutral-50)]" style={{ borderColor: 'var(--surface-border)' }}>
+                <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--neutral-500)' }}>
+                  Pedidos disponíveis para adicionar
+                </p>
+
+                {/* Filtro de período */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>De</span>
+                    <input type="date" value={dateFrom}
+                      onChange={e => { setDateFrom(e.target.value); loadAvailableOrders(e.target.value, dateTo) }}
+                      className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                      style={{ borderColor: 'var(--surface-border)' }} />
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <span className="text-[10px] font-semibold shrink-0" style={{ color: 'var(--neutral-500)' }}>Até</span>
+                    <input type="date" value={dateTo}
+                      onChange={e => { setDateTo(e.target.value); loadAvailableOrders(dateFrom, e.target.value) }}
+                      className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                      style={{ borderColor: 'var(--surface-border)' }} />
+                  </div>
+                  {(dateFrom || dateTo) && (
+                    <button onClick={() => { setDateFrom(''); setDateTo(''); loadAvailableOrders('', '') }}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors hover:bg-neutral-100"
+                      style={{ color: 'var(--neutral-400)' }}>
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                {/* Busca por texto */}
+                <div className="relative mb-2">
+                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
+                  <input value={searchOrder} onChange={e => setSearchOrder(e.target.value)}
+                    placeholder="Buscar por cliente, cidade ou nº pedido..."
+                    className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border outline-none bg-[var(--neutral-100)] text-[var(--neutral-900)]"
+                    style={{ borderColor: 'var(--surface-border)' }} />
+                </div>
+
+                {loadingOrders ? (
+                  <div className="flex items-center justify-center py-4">
+                    <RefreshCw size={14} className="animate-spin" style={{ color: 'var(--neutral-400)' }} />
+                  </div>
+                ) : filteredOrders.length === 0 ? (
+                  <p className="text-[12px] text-center py-3" style={{ color: 'var(--neutral-400)' }}>
+                    Nenhum pedido em aberto disponível
+                  </p>
+                ) : (
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {filteredOrders.map(o => (
+                      <div key={o.id} className="flex items-center justify-between gap-3 px-2 py-2 rounded-lg bg-[var(--neutral-100)] border"
+                        style={{ borderColor: 'rgba(128,128,128,0.15)' }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
+                            {o.company?.fantasia || o.client_name}
+                          </p>
+                          <p className="text-[11px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
+                            📍 {o.company?.city || o.client_city}/{o.company?.state || o.client_state}
+                          </p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--neutral-400)' }}>
+                            Ped. #{o.bling_number} · {o.units_count} urnas
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-[12px] font-bold" style={{ color: 'var(--neutral-900)' }}>
+                            {fmt(o.total_value)}
+                          </p>
+                          <button onClick={() => addOrder(o.id)} disabled={adding === o.id}
+                            className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded-lg text-white"
+                            style={{ backgroundColor: 'var(--brand-teal)' }}>
+                            {adding === o.id ? '...' : '+ Adicionar'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {showEdit && (
+        <EditLoadModal load={load} onClose={() => setShowEdit(false)} onSave={() => { onRefresh(); setShowEdit(false) }} />
       )}
-    </div>
-    {showEdit && (
-      <EditLoadModal load={load} onClose={() => setShowEdit(false)} onSave={() => { onRefresh(); setShowEdit(false) }} />
-    )}
-  </>
+    </>
   )
 }
 export default function CargasPage() {
