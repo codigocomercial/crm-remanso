@@ -699,7 +699,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                   </div>
                 ) : filteredOrders.length === 0 ? (
                   <p className="text-[12px] text-center py-3" style={{ color: 'var(--neutral-400)' }}>
-                    Nenhum pedido em aberto disponível
+                    Nenhum pedido  disponível
                   </p>
                 ) : (
                   <div className="space-y-1 max-h-48 overflow-y-auto">

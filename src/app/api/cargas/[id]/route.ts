@@ -57,7 +57,7 @@ export async function GET(
       .in('status', ['em_aberto', 'em_andamento'])
       .not('id', 'in', `(${['00000000-0000-0000-0000-000000000000', ...orderIdsInLoad].join(',')})`)
       .order('ordered_at', { ascending: false })
-      .limit(50)
+      .limit(200)
 
     if (dateFrom) suggestionsQuery = suggestionsQuery.gte('ordered_at', dateFrom)
     if (dateTo) suggestionsQuery = suggestionsQuery.lte('ordered_at', dateTo + 'T23:59:59')
