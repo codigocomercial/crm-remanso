@@ -321,6 +321,8 @@ function EditLoadModal({ load, onClose, onSave }: { load: FreightLoad; onClose: 
     </Modal>
   )
 }
+
+function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [showAddOrder, setShowAddOrder] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
