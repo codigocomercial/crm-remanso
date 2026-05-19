@@ -32,17 +32,33 @@ function parseCSV(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter(l => l.trim())
   if (lines.length < 2) return []
 
-  // Detectar separador
   const sep = lines[0].includes(';') ? ';' : ','
 
-  // Parse header — remover BOM, aspas, espaços
-  const headers = lines[0].split(sep).map(h =>
-    h.replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim()
-  )
+  function parseLine(line: string): string[] {
+    const fields: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
+        else inQuotes = !inQuotes
+      } else if (ch === sep && !inQuotes) {
+        fields.push(current.trim())
+        current = ''
+      } else {
+        current += ch
+      }
+    }
+    fields.push(current.trim())
+    return fields
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim())
 
   const rows: Record<string, string>[] = []
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(sep).map(v => v.replace(/^"|"$/g, '').trim())
+    const values = parseLine(lines[i])
     if (values.length < 2) continue
     const row: Record<string, string> = {}
     headers.forEach((h, idx) => { row[h] = values[idx] ?? '' })
@@ -51,14 +67,10 @@ function parseCSV(text: string): Record<string, string>[] {
   return rows
 }
 
-function cleanCNPJ(val: string): string {
-  return val.replace(/\D/g, '')
-}
-
 function cleanDate(val: string): string | null {
   if (!val) return null
   const parts = val.split('/')
-  if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
+  if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
   return null
 }
 
