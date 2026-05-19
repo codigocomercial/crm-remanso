@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
-// GET — detalhes da carga + sugestões de clientes
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,7 +22,7 @@ export async function GET(
           id, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
           client_name, client_city, client_state, added_at,
-          order:crm_orders ( id, bling_number, status, ordered_at )
+          order:orders ( id, bling_number, status, ordered_at )
         )
       `)
       .eq('id', id)
@@ -32,13 +31,13 @@ export async function GET(
 
     if (error || !load) return NextResponse.json({ error: 'Carga não encontrada' }, { status: 404 })
 
-    // Sugestões: pedidos em aberto não vinculados a cargas
     const orderIdsInLoad = load.freight_load_orders?.map((o: any) => o.order?.id).filter(Boolean) || []
 
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('date_from')
     const dateTo = searchParams.get('date_to')
 
+    // Sugestões — lê de crm_orders (view com dados reais)
     let suggestionsQuery = supabase
       .from('crm_orders')
       .select(`
@@ -57,7 +56,6 @@ export async function GET(
 
     const { data: suggestions } = await suggestionsQuery
 
-    // Clientes próximos da recompra
     const { data: nearbyContacts } = await supabase
       .from('crm_companies')
       .select('id, fantasia, name, city, state, distance_km, reorder_cycle_days, last_order_at, average_order_value')
@@ -73,7 +71,6 @@ export async function GET(
   }
 }
 
-// PATCH — atualizar carga ou adicionar/remover pedido
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -88,7 +85,7 @@ export async function PATCH(
     const { action } = body
 
     if (action === 'add_order') {
-      // Busca dados do pedido via view crm_orders
+      // Busca pedido via crm_orders (view com dados reais)
       const { data: order } = await supabase
         .from('crm_orders')
         .select('id, bling_number, total_value, freight, margin, margin_pct, total_cost, units_count, client_name, client_city, client_state, ordered_at')
@@ -97,31 +94,26 @@ export async function PATCH(
 
       if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
 
-      // Busca dados da carga
       const { data: load } = await supabase
         .from('freight_loads')
         .select('distance_km, cost_per_km, driver_daily_cost, trip_days, max_units')
         .eq('id', id)
         .single()
 
-      // Total de urnas já na carga
       const { data: loadOrders } = await supabase
         .from('freight_load_orders')
         .select('units_count')
         .eq('load_id', id)
+
       const unitsInLoad = (loadOrders || []).reduce((s: number, o: any) => s + (o.units_count || 0), 0)
       const totalUnits = unitsInLoad + (order.units_count || 0)
 
-      // Custo total do frete da carga
       const freightCostTotal = load
         ? (load.distance_km || 0) * (load.cost_per_km || 0) + (load.driver_daily_cost || 0) * (load.trip_days || 1)
         : 0
 
-      // Frete proporcional deste pedido
       const units = order.units_count || 0
       const freightProportional = totalUnits > 0 ? freightCostTotal * (units / totalUnits) : 0
-
-      // Margem na carga = margem do pedido − frete proporcional da carga
       const freightCharged = Number(order.freight) || 0
       const marginOnLoad = (order.margin || 0) - freightProportional
       const marginOnLoadPct = (order.total_value + freightCharged) > 0
@@ -163,7 +155,6 @@ export async function PATCH(
         .eq('org_id', ORG_ID)
 
     } else {
-      // Atualiza campos da carga
       const allowed = ['route_name', 'destination_city', 'destination_state', 'distance_km',
         'max_units', 'transport_type', 'cost_per_km', 'driver_daily_cost', 'trip_days',
         'freight_per_unit', 'estimated_departure', 'observations', 'route_notes']
@@ -222,7 +213,6 @@ export async function PATCH(
   }
 }
 
-// DELETE — excluir carga
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
