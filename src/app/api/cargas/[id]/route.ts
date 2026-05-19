@@ -23,7 +23,7 @@ export async function GET(
           id, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
           client_name, client_city, client_state, added_at,
-          order:orders ( id, bling_number, status, ordered_at, company_id )
+          order:crm_orders ( id, bling_number, status, ordered_at )
         )
       `)
       .eq('id', id)
@@ -40,11 +40,11 @@ export async function GET(
     const dateTo = searchParams.get('date_to')
 
     let suggestionsQuery = supabase
-      .from('orders')
+      .from('crm_orders')
       .select(`
         id, bling_number, client_name, client_city, client_state,
         total_value, units_count, margin_pct, ordered_at,
-        company:companies ( id, fantasia, city, state, distance_km, reorder_cycle_days, last_order_at )
+        company:crm_companies ( id, fantasia, city, state, distance_km, reorder_cycle_days, last_order_at )
       `)
       .eq('org_id', ORG_ID)
       .in('status', ['em_aberto', 'em_andamento'])
@@ -57,9 +57,9 @@ export async function GET(
 
     const { data: suggestions } = await suggestionsQuery
 
-    // Clientes próximos da recompra na mesma direção
+    // Clientes próximos da recompra
     const { data: nearbyContacts } = await supabase
-      .from('companies')
+      .from('crm_companies')
       .select('id, fantasia, name, city, state, distance_km, reorder_cycle_days, last_order_at, average_order_value')
       .eq('org_id', ORG_ID)
       .eq('is_active', true)
@@ -88,23 +88,23 @@ export async function PATCH(
     const { action } = body
 
     if (action === 'add_order') {
-      // Busca dados do pedido — margin já calculada corretamente pelo sync
+      // Busca dados do pedido via view crm_orders
       const { data: order } = await supabase
-        .from('orders')
+        .from('crm_orders')
         .select('id, bling_number, total_value, freight, margin, margin_pct, total_cost, units_count, client_name, client_city, client_state, ordered_at')
         .eq('id', body.order_id)
         .single()
 
       if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
 
-      // Busca dados da carga para calcular frete proporcional
+      // Busca dados da carga
       const { data: load } = await supabase
         .from('freight_loads')
         .select('distance_km, cost_per_km, driver_daily_cost, trip_days, max_units')
         .eq('id', id)
         .single()
 
-      // Total de urnas já na carga (para ratear frete)
+      // Total de urnas já na carga
       const { data: loadOrders } = await supabase
         .from('freight_load_orders')
         .select('units_count')
@@ -117,11 +117,11 @@ export async function PATCH(
         ? (load.distance_km || 0) * (load.cost_per_km || 0) + (load.driver_daily_cost || 0) * (load.trip_days || 1)
         : 0
 
-      // Frete proporcional deste pedido = frete_carga × (urnas_pedido / total_urnas)
+      // Frete proporcional deste pedido
       const units = order.units_count || 0
       const freightProportional = totalUnits > 0 ? freightCostTotal * (units / totalUnits) : 0
 
-      // Margem na carga = margem do pedido (já calculada) − frete proporcional da carga
+      // Margem na carga = margem do pedido − frete proporcional da carga
       const freightCharged = Number(order.freight) || 0
       const marginOnLoad = (order.margin || 0) - freightProportional
       const marginOnLoadPct = (order.total_value + freightCharged) > 0
@@ -135,7 +135,7 @@ export async function PATCH(
           org_id: ORG_ID,
           units_count: units,
           order_value: order.total_value,
-          cost_mp: order.total_cost,   // referência apenas
+          cost_mp: order.total_cost,
           cost_op: 0,
           freight_charged: freightCharged,
           margin: marginOnLoad,
@@ -239,7 +239,7 @@ export async function DELETE(
       .delete()
       .eq('id', id)
       .eq('org_id', ORG_ID)
-      .eq('status', 'forming') // Só pode deletar se ainda em formação
+      .eq('status', 'forming')
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })

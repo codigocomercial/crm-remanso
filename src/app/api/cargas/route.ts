@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
           freight_charged, margin, margin_pct,
           client_name, client_city, client_state,
           added_at,
-          order:orders ( id, bling_number, status, ordered_at )
+          order:crm_orders ( id, bling_number, status, ordered_at )
         )
       `)
       .eq('org_id', ORG_ID)
@@ -48,10 +48,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Busca defaults de custo dos custos operacionais
+    // Busca defaults de custo dos custos operacionais — schema crm
     const { data: opCost } = await supabase
+      .schema('crm')
       .from('operational_costs')
-      .select('default_cost_per_km, default_driver_daily')
+      .select('*')
       .eq('org_id', ORG_ID)
       .order('year', { ascending: false })
       .order('month', { ascending: false })
@@ -68,8 +69,8 @@ export async function POST(request: NextRequest) {
         distance_km: body.distance_km,
         max_units: body.max_units || 48,
         transport_type: body.transport_type || 'own',
-        cost_per_km: body.cost_per_km || opCost?.default_cost_per_km,
-        driver_daily_cost: body.driver_daily_cost || opCost?.default_driver_daily,
+        cost_per_km: body.cost_per_km,
+        driver_daily_cost: body.driver_daily_cost,
         trip_days: body.trip_days || 1,
         freight_per_unit: body.freight_per_unit || 30,
         estimated_departure: body.estimated_departure,
