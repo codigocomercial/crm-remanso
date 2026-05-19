@@ -34,7 +34,7 @@ export async function POST() {
   }
 
   try {
-    // Buscar IDs do Bling — desde nov/2025 (marco inicial)
+    // Buscar IDs do Bling — desde jan/2026
     const dataInicio = '2026-01-01'
     let blingIds: number[] = []
     let page = 1
@@ -59,21 +59,65 @@ export async function POST() {
       (existingOrders ?? []).filter((o: any) => idsWithItems.has(o.id)).map((o: any) => o.bling_id)
     )
 
+    // Pedidos novos (sem itens) — processamento completo
     const toProcess = blingIds.filter(id => !blingIdsWithItems.has(id))
 
-    if (toProcess.length === 0)
-      return NextResponse.json({ success: true, message: 'Tudo atualizado', processed: 0 })
+    // Pedidos existentes (com itens) — só atualiza vendedor e status
+    const toUpdateSeller = blingIds.filter(id => blingIdsWithItems.has(id))
 
     // Buscar tax_rate
-    const { data: org } = await supabase.from('organizations').select('tax_rate').eq('id', ORG_ID).single()
+    const { data: org } = await supabase.schema('crm').from('organizations').select('tax_rate').eq('id', ORG_ID).single()
     const taxRate = Number(org?.tax_rate ?? 4.5) / 100
 
-    // Buscar custos operacionais
-    const { data: opCosts } = await supabase.from('operational_costs').select('year, month, cost_per_unit').eq('org_id', ORG_ID)
+    // Buscar custos operacionais — schema crm
+    const { data: opCosts } = await supabase
+      .schema('crm')
+      .from('operational_costs')
+      .select('year, month, cost_per_unit')
+      .eq('org_id', ORG_ID)
     const opCostMap = new Map((opCosts ?? []).map((c: any) => [`${c.year}-${c.month}`, Number(c.cost_per_unit ?? 0)]))
 
-    let processed = 0, errors = 0
+    let processed = 0, sellerUpdated = 0, errors = 0
 
+    // ─── Helper: resolve vendedor pelo nome ───────────────────────────────────
+    async function resolveSeller(vendorName: string | null): Promise<string | null> {
+      if (!vendorName) return null
+      const { data: seller } = await supabase
+        .schema('crm').from('sellers').select('id')
+        .eq('org_id', ORG_ID).ilike('name', vendorName).maybeSingle()
+      if (seller) return seller.id
+      // Cria se não existir
+      const { data: ns } = await supabase
+        .schema('crm').from('sellers')
+        .insert({ org_id: ORG_ID, name: vendorName.toUpperCase(), is_active: true })
+        .select('id').single()
+      return ns?.id ?? null
+    }
+
+    // ─── 1. Atualizar vendedor e status nos pedidos existentes ────────────────
+    for (const blingId of toUpdateSeller) {
+      try {
+        const detail = await blingGet(`/pedidos/vendas/${blingId}`)
+        const p = detail?.data
+        if (!p) continue
+
+        const vendorName = p.vendedor?.nome?.trim() ?? null
+        const sellerId = await resolveSeller(vendorName)
+        const status = STATUS_MAP[Number(p.situacao?.id)] ?? 'em_aberto'
+
+        await supabase.schema('crm').from('orders')
+          .update({ seller_id: sellerId, status, updated_at: new Date().toISOString() })
+          .eq('org_id', ORG_ID)
+          .eq('bling_id', blingId)
+
+        sellerUpdated++
+      } catch (err: any) {
+        console.error(`[sync/pedidos] erro vendedor ${blingId}:`, err.message)
+        errors++
+      }
+    }
+
+    // ─── 2. Processar pedidos novos completos ─────────────────────────────────
     for (const blingId of toProcess) {
       try {
         const detail = await blingGet(`/pedidos/vendas/${blingId}`)
@@ -114,19 +158,7 @@ export async function POST() {
         }
 
         // Vendedor
-        let sellerId = null
-        const vendorName = p.vendedor?.nome?.trim() ?? null
-        if (vendorName) {
-          const { data: seller } = await supabase.from('crm_sellers').select('id')
-            .eq('org_id', ORG_ID).ilike('name', vendorName).maybeSingle()
-          if (seller) {
-            sellerId = seller.id
-          } else {
-            const { data: ns } = await supabase.schema('crm').from('sellers')
-              .insert({ org_id: ORG_ID, name: vendorName, is_active: true }).select('id').single()
-            sellerId = ns?.id ?? null
-          }
-        }
+        const sellerId = await resolveSeller(p.vendedor?.nome?.trim() ?? null)
 
         await supabase.rpc('upsert_crm_order_full', {
           p_org_id: ORG_ID, p_bling_id: p.id,
@@ -157,9 +189,9 @@ export async function POST() {
     await supabase.rpc('update_company_metrics', { p_org_id: ORG_ID })
 
     return NextResponse.json({
-      success: true, processed, errors,
+      success: true, processed, sellerUpdated, errors,
       total_bling: blingIds.length,
-      message: `${processed} pedidos sincronizados${errors > 0 ? `, ${errors} erros` : ''}`
+      message: `${processed} pedidos novos, ${sellerUpdated} vendedores atualizados${errors > 0 ? `, ${errors} erros` : ''}`
     })
 
   } catch (err: any) {
