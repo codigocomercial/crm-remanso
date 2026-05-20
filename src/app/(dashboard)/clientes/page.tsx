@@ -26,7 +26,7 @@ export default function ContatosPage() {
       let query = supabase
         .schema('crm')
         .from('contacts')
-        .select('id, full_name, whatsapp, company:crm_companies(corporate_name, fantasy_name)')
+        .select('id, full_name, whatsapp, company:companies(corporate_name, fantasy_name)')
         .order('full_name', { ascending: true })
       if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
       const { data } = await query
