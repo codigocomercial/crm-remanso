@@ -70,24 +70,34 @@ export default function ClienteDetailPage() {
   const loadContact = async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data: contactData } = await supabase.from('contacts').select('*').eq('id', id).single()
-    const { data: interactionsData } = await supabase.from('interactions').select('*').eq('contact_id', id).order('created_at', { ascending: false }).limit(20)
+    const { data: contactData } = await supabase
+      .schema('crm')
+      .from('contacts')
+      .select('*')
+      .eq('id', id)
+      .single()
+    const { data: interactionsData } = await supabase
+      .from('interactions')
+      .select('*')
+      .eq('contact_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20)
     if (contactData) {
-      setContact(contactData)
+      setContact(contactData as any)
       setForm({
         full_name: contactData.full_name || '',
-        email: contactData.email || '',
-        phone: contactData.phone || '',
-        whatsapp: contactData.whatsapp || '',
-        job_title: contactData.job_title || '',
-        city: contactData.city || '',
-        state: contactData.state || 'BA',
-        notes: contactData.notes || '',
-        reorder_cycle_days: contactData.reorder_cycle_days?.toString() || '',
-        average_order_value: contactData.average_order_value?.toString() || '',
-        customer_type: contactData.customer_type || '',
-        distance_km: contactData.distance_km?.toString() || '',
-        status: contactData.status || 'active',
+        email: (contactData as any).email || '',
+        phone: (contactData as any).phone || '',
+        whatsapp: (contactData as any).whatsapp || '',
+        job_title: (contactData as any).job_title || '',
+        city: (contactData as any).city || '',
+        state: (contactData as any).state || 'BA',
+        notes: (contactData as any).notes || '',
+        reorder_cycle_days: (contactData as any).reorder_cycle_days?.toString() || '',
+        average_order_value: (contactData as any).average_order_value?.toString() || '',
+        customer_type: (contactData as any).customer_type || '',
+        distance_km: (contactData as any).distance_km?.toString() || '',
+        status: (contactData as any).status || 'active',
       })
     }
     if (interactionsData) setInteractions(interactionsData)
@@ -97,22 +107,26 @@ export default function ClienteDetailPage() {
   const handleSave = async () => {
     setSaving(true)
     const supabase = createClient()
-    await supabase.from('contacts').update({
-      full_name: form.full_name,
-      email: form.email || null,
-      phone: form.phone || null,
-      whatsapp: form.whatsapp || null,
-      job_title: form.job_title || null,
-      city: form.city || null,
-      state: form.state || null,
-      notes: form.notes || null,
-      reorder_cycle_days: form.reorder_cycle_days ? parseInt(form.reorder_cycle_days) : null,
-      average_order_value: form.average_order_value ? parseFloat(form.average_order_value) : null,
-      customer_type: form.customer_type || null,
-      distance_km: form.distance_km ? parseInt(form.distance_km) : null,
-      status: form.status,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id)
+    await supabase
+      .schema('crm')
+      .from('contacts')
+      .update({
+        full_name: form.full_name,
+        email: form.email || null,
+        phone: form.phone || null,
+        whatsapp: form.whatsapp || null,
+        job_title: form.job_title || null,
+        city: form.city || null,
+        state: form.state || null,
+        notes: form.notes || null,
+        reorder_cycle_days: form.reorder_cycle_days ? parseInt(form.reorder_cycle_days) : null,
+        average_order_value: form.average_order_value ? parseFloat(form.average_order_value) : null,
+        customer_type: form.customer_type || null,
+        distance_km: form.distance_km ? parseInt(form.distance_km) : null,
+        status: form.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
     setSaving(false)
     setShowEdit(false)
     loadContact()
@@ -178,13 +192,10 @@ export default function ClienteDetailPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted"
-          >
+          <button onClick={() => router.back()}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
@@ -196,11 +207,7 @@ export default function ClienteDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {contact.whatsapp && (
-            <a
-              href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-2">
                 <MessageCircle className="w-4 h-4 text-emerald-500" />
                 WhatsApp
@@ -214,9 +221,7 @@ export default function ClienteDetailPage() {
         </div>
       </div>
 
-      {/* Cards principais */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Info básica */}
         <div className="md:col-span-2 bg-card border border-border rounded-2xl p-5 space-y-4">
           <h2 className="font-semibold text-foreground flex items-center gap-2 text-sm">
             <Building2 className="w-4 h-4 text-primary" />
@@ -267,7 +272,6 @@ export default function ClienteDetailPage() {
           )}
         </div>
 
-        {/* Inteligência comercial */}
         <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
           <h2 className="font-semibold text-foreground flex items-center gap-2 text-sm">
             <DollarSign className="w-4 h-4 text-primary" />
@@ -306,39 +310,26 @@ export default function ClienteDetailPage() {
         </div>
       </div>
 
-      {/* Histórico de interações */}
       <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
         <h2 className="font-semibold text-foreground flex items-center gap-2 text-sm">
           <Calendar className="w-4 h-4 text-primary" />
           Histórico de Interações
         </h2>
-
-        {/* Nova interação */}
         <div className="flex gap-2">
-          <select
-            value={noteType}
-            onChange={e => setNoteType(e.target.value)}
-            className="text-sm bg-background border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
+          <select value={noteType} onChange={e => setNoteType(e.target.value)}
+            className="text-sm bg-background border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
             <option value="note">Nota</option>
             <option value="call">Ligação</option>
             <option value="whatsapp">WhatsApp</option>
             <option value="email">Email</option>
             <option value="visit">Visita</option>
           </select>
-          <Input
-            placeholder="Registrar interação..."
-            value={newNote}
+          <Input placeholder="Registrar interação..." value={newNote}
             onChange={e => setNewNote(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAddNote()}
-            className="flex-1 text-sm"
-          />
-          <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
-            Registrar
-          </Button>
+            className="flex-1 text-sm" />
+          <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>Registrar</Button>
         </div>
-
-        {/* Lista */}
         <div className="space-y-2 max-h-72 overflow-y-auto">
           {interactions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Nenhuma interação registrada.</p>
@@ -358,13 +349,11 @@ export default function ClienteDetailPage() {
         </div>
       </div>
 
-      {/* Dialog de edição */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="sm:col-span-2">
               <Label>Nome completo *</Label>
@@ -372,15 +361,12 @@ export default function ClienteDetailPage() {
             </div>
             <div>
               <Label>Cargo / Função</Label>
-              <Input className="mt-1.5" placeholder="Ex: Proprietário" value={form.job_title} onChange={e => setForm(f => ({ ...f, job_title: e.target.value }))} />
+              <Input className="mt-1.5" value={form.job_title} onChange={e => setForm(f => ({ ...f, job_title: e.target.value }))} />
             </div>
             <div>
               <Label>Status</Label>
-              <select
-                value={form.status}
-                onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                className="mt-1.5 w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
+              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                className="mt-1.5 w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
                 <option value="active">Ativo</option>
                 <option value="inactive">Inativo</option>
                 <option value="prospect">Prospect</option>
@@ -396,7 +382,7 @@ export default function ClienteDetailPage() {
             </div>
             <div>
               <Label>WhatsApp</Label>
-              <Input className="mt-1.5" placeholder="5577999991234" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} />
+              <Input className="mt-1.5" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} />
             </div>
             <div>
               <Label>Cidade</Label>
@@ -406,44 +392,12 @@ export default function ClienteDetailPage() {
               <Label>Estado</Label>
               <Input className="mt-1.5" maxLength={2} value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value.toUpperCase() }))} />
             </div>
-            <div>
-              <Label>Distância da sede (km)</Label>
-              <Input className="mt-1.5" type="number" value={form.distance_km} onChange={e => setForm(f => ({ ...f, distance_km: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Tipo de cliente</Label>
-              <select
-                value={form.customer_type}
-                onChange={e => setForm(f => ({ ...f, customer_type: e.target.value }))}
-                className="mt-1.5 w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Selecione</option>
-                <option value="funeraria">Funerária</option>
-                <option value="plano">Plano Funerário</option>
-                <option value="hospital">Hospital</option>
-                <option value="outros">Outros</option>
-              </select>
-            </div>
-            <div>
-              <Label>Ciclo de recompra (dias)</Label>
-              <Input className="mt-1.5" type="number" value={form.reorder_cycle_days} onChange={e => setForm(f => ({ ...f, reorder_cycle_days: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Ticket médio (R$)</Label>
-              <Input className="mt-1.5" type="number" value={form.average_order_value} onChange={e => setForm(f => ({ ...f, average_order_value: e.target.value }))} />
-            </div>
             <div className="sm:col-span-2">
               <Label>Observações</Label>
-              <textarea
-                rows={3}
-                value={form.notes}
-                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Informações adicionais..."
-                className="mt-1.5 w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-              />
+              <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                className="mt-1.5 w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving} className="gap-2">
