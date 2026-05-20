@@ -11,6 +11,8 @@ interface Contact {
   id: string
   full_name: string
   whatsapp: string | null
+  city: string | null
+  state: string | null
   company: { corporate_name: string; fantasy_name: string | null } | null
 }
 
@@ -26,7 +28,7 @@ export default function ContatosPage() {
       let query = supabase
         .schema('crm')
         .from('contacts')
-        .select('id, full_name, whatsapp, company:companies(corporate_name, fantasy_name)')
+        .select('id, full_name, whatsapp, city, state, company:companies(corporate_name, fantasy_name)')
         .order('full_name', { ascending: true })
       if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
       const { data } = await query
@@ -98,9 +100,14 @@ export default function ContatosPage() {
                     <p className="font-semibold text-foreground">{contact.full_name}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-foreground">
+                    <p className="font-medium text-foreground">
                       {(contact.company as any)?.fantasy_name || (contact.company as any)?.corporate_name || '—'}
                     </p>
+                    {contact.city && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        📍 {contact.city}{contact.state ? `/${contact.state}` : ''}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {contact.whatsapp ? (
