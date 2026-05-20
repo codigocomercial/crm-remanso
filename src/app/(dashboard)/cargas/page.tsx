@@ -489,10 +489,24 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
               </button>
             )}
             {load.status === 'closed' && (
-              <button onClick={() => updateStatus('in_transit')}
-                className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-orange-50"
-                style={{ borderColor: '#B45309', color: '#B45309' }}>
-                Em Trânsito
+              <>
+                <button onClick={() => updateStatus('forming')}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-blue-50"
+                  style={{ borderColor: '#1D6FA4', color: '#1D6FA4' }}>
+                  ↩ Reabrir
+                </button>
+                <button onClick={() => updateStatus('in_transit')}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-orange-50"
+                  style={{ borderColor: '#B45309', color: '#B45309' }}>
+                  Em Trânsito
+                </button>
+              </>
+            )}
+            {load.status === 'in_transit' && (
+              <button onClick={() => updateStatus('forming')}
+                className="text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors hover:bg-blue-50"
+                style={{ borderColor: '#1D6FA4', color: '#1D6FA4' }}>
+                ↩ Reabrir
               </button>
             )}
             {load.status === 'in_transit' && (
