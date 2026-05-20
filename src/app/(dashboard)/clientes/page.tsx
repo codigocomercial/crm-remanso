@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Search, Loader2, Plus, ArrowRight, User, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -45,11 +44,9 @@ export default function ContatosPage() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{contacts.length} contato(s) cadastrado(s)</p>
           </div>
-          <Button asChild>
-            <Link href="/clientes/novo" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Novo contato
-            </Link>
+          <Button onClick={() => window.location.href = '/clientes/novo'} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Novo contato
           </Button>
         </div>
 
@@ -119,11 +116,9 @@ export default function ContatosPage() {
                     ) : '—'}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/clientes/${contact.id}`} className="flex items-center gap-1">
-                        Ver detalhes
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
+                    <Button variant="ghost" size="sm" onClick={() => window.location.href = `/clientes/${contact.id}`} className="flex items-center gap-1">
+                      Ver detalhes
+                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   </td>
                 </tr>
