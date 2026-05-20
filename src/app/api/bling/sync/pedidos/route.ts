@@ -41,7 +41,6 @@ export async function POST() {
       .schema('crm').from('sellers').select('id')
       .eq('org_id', ORG_ID).ilike('name', name).maybeSingle()
     if (seller) return seller.id
-    // Cria se não existir
     const { data: ns } = await supabase
       .schema('crm').from('sellers')
       .insert({ org_id: ORG_ID, name: name.toUpperCase(), is_active: true })
@@ -75,7 +74,13 @@ export async function POST() {
       (existingOrders ?? []).filter((o: any) => idsWithItems.has(o.id)).map((o: any) => o.bling_id)
     )
 
+    // Mapa bling_id → crm order id
+    const blingIdToOrderId = new Map(
+      (existingOrders ?? []).map((o: any) => [o.bling_id, o.id])
+    )
+
     const toProcess = blingIds.filter(id => !blingIdsWithItems.has(id))
+    const toUpdate = blingIds.filter(id => blingIdsWithItems.has(id))
 
     // ─── 3. Buscar configurações ──────────────────────────────────────────
     const { data: org } = await supabase.schema('crm').from('organizations').select('tax_rate').eq('id', ORG_ID).single()
@@ -86,7 +91,7 @@ export async function POST() {
       .select('year, month, cost_per_unit').eq('org_id', ORG_ID)
     const opCostMap = new Map((opCosts ?? []).map((c: any) => [`${c.year}-${c.month}`, Number(c.cost_per_unit ?? 0)]))
 
-    let processed = 0, sellerUpdated = 0, errors = 0
+    let processed = 0, updated = 0, sellerUpdated = 0, errors = 0
 
     // ─── 4. Processar pedidos novos (sem itens) ───────────────────────────
     for (const blingId of toProcess) {
@@ -155,7 +160,73 @@ export async function POST() {
       }
     }
 
-    // ─── 5. Atualizar vendedor nos pedidos sem seller_id ──────────────────
+    // ─── 5. Atualizar valores financeiros e status de pedidos existentes ──
+    for (const blingId of toUpdate) {
+      try {
+        const detail = await blingGet(`/pedidos/vendas/${blingId}`)
+        const p = detail?.data
+        if (!p) continue
+
+        const orderId = blingIdToOrderId.get(blingId)
+        if (!orderId) continue
+
+        const totalBruto = Number(p.totalProdutos ?? 0)
+        const desconto = Number(p.desconto?.valor ?? 0)
+        const totalVenda = totalBruto - desconto
+        const frete = Number(p.transporte?.frete ?? 0)
+        const status = STATUS_MAP[Number(p.situacao?.id)] ?? 'em_aberto'
+
+        // Recalcular CML com novos valores
+        const itens = p.itens ?? []
+        const unitsCount = itens.reduce((s: number, i: any) => s + Number(i.quantidade ?? 1), 0)
+
+        let costMp = 0
+        for (const item of itens) {
+          const { data: prod } = await supabase.from('crm_products').select('cost_price')
+            .eq('sku', item.codigo?.trim()).eq('org_id', ORG_ID).maybeSingle()
+          costMp += Number(prod?.cost_price ?? 0) * Number(item.quantidade ?? 1)
+        }
+
+        const orderedAt = p.data ? new Date(p.data) : new Date()
+        const costOp = (opCostMap.get(`${orderedAt.getFullYear()}-${orderedAt.getMonth() + 1}`) ?? 0) * unitsCount
+        const taxAmount = totalVenda * taxRate
+        const margin = totalVenda - costMp - costOp - taxAmount
+        const marginPct = totalVenda > 0 ? (margin / totalVenda) * 100 : 0
+
+        // Vendedor
+        const sellerId = await resolveSeller(p.vendedor?.nome ?? null)
+
+        const updatePayload: any = {
+          status,
+          total_value: totalVenda,
+          freight: frete,
+          discount: desconto,
+          grand_total: totalVenda + frete,
+          units_count: unitsCount,
+          cost_mp: costMp,
+          cost_op: costOp,
+          tax_amount: taxAmount,
+          total_cost: costMp + costOp,
+          margin,
+          margin_pct: marginPct,
+          bling_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+
+        if (sellerId) updatePayload.seller_id = sellerId
+
+        await supabase.schema('crm').from('orders')
+          .update(updatePayload)
+          .eq('id', orderId)
+
+        updated++
+      } catch (err: any) {
+        console.error(`[sync/update] erro ${blingId}:`, err.message)
+        errors++
+      }
+    }
+
+    // ─── 6. Atualizar vendedor nos pedidos sem seller_id ──────────────────
     const { data: semVendedor } = await supabase
       .schema('crm').from('orders')
       .select('id, bling_id, bling_number')
@@ -185,13 +256,13 @@ export async function POST() {
       }
     }
 
-    // ─── 6. Atualizar métricas das empresas ───────────────────────────────
+    // ─── 7. Atualizar métricas das empresas ───────────────────────────────
     await supabase.rpc('update_company_metrics', { p_org_id: ORG_ID })
 
     return NextResponse.json({
-      success: true, processed, sellerUpdated, errors,
+      success: true, processed, updated, sellerUpdated, errors,
       total_bling: blingIds.length,
-      message: `${processed} pedidos novos, ${sellerUpdated} vendedores vinculados${errors > 0 ? `, ${errors} erros` : ''}`
+      message: `${processed} pedidos novos, ${updated} atualizados, ${sellerUpdated} vendedores vinculados${errors > 0 ? `, ${errors} erros` : ''}`
     })
 
   } catch (err: any) {
