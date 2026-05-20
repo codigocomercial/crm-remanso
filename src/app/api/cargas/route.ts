@@ -17,11 +17,9 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         freight_load_orders (
-          id, order_id, units_count, order_value, cost_mp, cost_op,
+          id, order_id, bling_number, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
-          client_name, client_city, client_state,
-          added_at,
-          order:crm_orders ( id, bling_number, status, ordered_at )
+          client_name, client_city, client_state, added_at
         )
       `)
       .eq('org_id', ORG_ID)
@@ -34,7 +32,16 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    return NextResponse.json({ loads: data || [] })
+    // Montar estrutura compatível com o front (order.bling_number)
+    const loads = (data || []).map((load: any) => ({
+      ...load,
+      freight_load_orders: (load.freight_load_orders || []).map((flo: any) => ({
+        ...flo,
+        order: { id: flo.order_id, bling_number: flo.bling_number, status: null, ordered_at: null }
+      }))
+    }))
+
+    return NextResponse.json({ loads })
   } catch (e) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
@@ -47,17 +54,6 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const body = await request.json()
-
-    // Busca defaults de custo dos custos operacionais — schema crm
-    const { data: opCost } = await supabase
-      .schema('crm')
-      .from('operational_costs')
-      .select('*')
-      .eq('org_id', ORG_ID)
-      .order('year', { ascending: false })
-      .order('month', { ascending: false })
-      .limit(1)
-      .single()
 
     const { data, error } = await supabase
       .from('freight_loads')

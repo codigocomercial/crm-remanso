@@ -32,17 +32,33 @@ function parseCSV(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter(l => l.trim())
   if (lines.length < 2) return []
 
-  // Detectar separador
   const sep = lines[0].includes(';') ? ';' : ','
 
-  // Parse header — remover BOM, aspas, espaços
-  const headers = lines[0].split(sep).map(h =>
-    h.replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim()
-  )
+  function parseLine(line: string): string[] {
+    const fields: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
+        else inQuotes = !inQuotes
+      } else if (ch === sep && !inQuotes) {
+        fields.push(current.trim())
+        current = ''
+      } else {
+        current += ch
+      }
+    }
+    fields.push(current.trim())
+    return fields
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim())
 
   const rows: Record<string, string>[] = []
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(sep).map(v => v.replace(/^"|"$/g, '').trim())
+    const values = parseLine(lines[i])
     if (values.length < 2) continue
     const row: Record<string, string> = {}
     headers.forEach((h, idx) => { row[h] = values[idx] ?? '' })
@@ -58,7 +74,7 @@ function cleanCNPJ(val: string): string {
 function cleanDate(val: string): string | null {
   if (!val) return null
   const parts = val.split('/')
-  if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
+  if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
   return null
 }
 
@@ -264,7 +280,6 @@ export function SectionImportCSV() {
 
   return (
     <section className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
           <Building2 className="w-4 h-4 text-orange-600" />
@@ -278,7 +293,6 @@ export function SectionImportCSV() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        {/* Instrução */}
         <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 border border-orange-200 text-orange-800">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-orange-500" />
           <p className="text-xs leading-relaxed">
@@ -287,15 +301,12 @@ export function SectionImportCSV() {
           </p>
         </div>
 
-        {/* Drop zone ou arquivo carregado */}
         {step === 'idle' && (
           <DropZone onFile={handleFile} />
         )}
 
-        {/* Preview */}
         {(step === 'preview' || step === 'importing') && file && (
           <div className="space-y-4">
-            {/* Arquivo selecionado */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted border border-border">
               <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -307,7 +318,6 @@ export function SectionImportCSV() {
               </button>
             </div>
 
-            {/* Preview table */}
             {preview.length > 0 ? (
               <PreviewTable rows={preview} total={preview.length} />
             ) : (
@@ -317,14 +327,9 @@ export function SectionImportCSV() {
               </div>
             )}
 
-            {/* Botões */}
             {preview.length > 0 && (
               <div className="flex items-center gap-2 pt-1">
-                <Button
-                  onClick={handleImport}
-                  disabled={step === 'importing'}
-                  className="flex-1 sm:flex-none"
-                >
+                <Button onClick={handleImport} disabled={step === 'importing'} className="flex-1 sm:flex-none">
                   {step === 'importing'
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</>
                     : `Importar ${preview.length} clientes`
@@ -338,7 +343,6 @@ export function SectionImportCSV() {
           </div>
         )}
 
-        {/* Resultado sucesso */}
         {step === 'done' && result && (
           <div className="space-y-3">
             <div className="flex items-start gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
@@ -370,7 +374,6 @@ export function SectionImportCSV() {
           </div>
         )}
 
-        {/* Erro */}
         {step === 'error' && (
           <div className="space-y-3">
             <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 border border-red-200">

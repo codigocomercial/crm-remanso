@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
-// GET — detalhes da carga + sugestões de clientes
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,10 +19,9 @@ export async function GET(
       .select(`
         *,
         freight_load_orders (
-          id, units_count, order_value, cost_mp, cost_op,
+          id, order_id, bling_number, units_count, order_value, cost_mp, cost_op,
           freight_charged, margin, margin_pct,
-          client_name, client_city, client_state, added_at,
-          order:crm_orders ( id, bling_number, status, ordered_at )
+          client_name, client_city, client_state, added_at
         )
       `)
       .eq('id', id)
@@ -32,8 +30,15 @@ export async function GET(
 
     if (error || !load) return NextResponse.json({ error: 'Carga não encontrada' }, { status: 404 })
 
-    // Sugestões: pedidos em aberto não vinculados a cargas
-    const orderIdsInLoad = load.freight_load_orders?.map((o: any) => o.order?.id).filter(Boolean) || []
+    const loadFormatted = {
+      ...load,
+      freight_load_orders: (load.freight_load_orders || []).map((flo: any) => ({
+        ...flo,
+        order: { id: flo.order_id, bling_number: flo.bling_number, status: null, ordered_at: null }
+      }))
+    }
+
+    const orderIdsInLoad = (load.freight_load_orders || []).map((o: any) => o.order_id).filter(Boolean)
 
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('date_from')
@@ -50,14 +55,13 @@ export async function GET(
       .in('status', ['em_aberto', 'em_andamento'])
       .not('id', 'in', `(${['00000000-0000-0000-0000-000000000000', ...orderIdsInLoad].join(',')})`)
       .order('ordered_at', { ascending: false })
-      .limit(50)
+      .limit(200)
 
     if (dateFrom) suggestionsQuery = suggestionsQuery.gte('ordered_at', dateFrom)
     if (dateTo) suggestionsQuery = suggestionsQuery.lte('ordered_at', dateTo + 'T23:59:59')
 
     const { data: suggestions } = await suggestionsQuery
 
-    // Clientes próximos da recompra
     const { data: nearbyContacts } = await supabase
       .from('crm_companies')
       .select('id, fantasia, name, city, state, distance_km, reorder_cycle_days, last_order_at, average_order_value')
@@ -67,13 +71,106 @@ export async function GET(
       .order('distance_km', { ascending: true })
       .limit(30)
 
-    return NextResponse.json({ load, suggestions: suggestions || [], nearbyContacts: nearbyContacts || [] })
+    return NextResponse.json({ load: loadFormatted, suggestions: suggestions || [], nearbyContacts: nearbyContacts || [] })
   } catch (e) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
 
-// PATCH — atualizar carga ou adicionar/remover pedido
+// ── Helper: recalcula margem de todos os pedidos da carga ─────────────────
+// Lógica:
+//   custo_viagem = distance_km × cost_per_km + driver_daily × trip_days
+//   frete_cobrado = soma dos freight_charged de todos os pedidos
+//   deficit_frete = custo_viagem - frete_cobrado  (pode ser negativo = sobra)
+//   deficit_por_urna = deficit_frete / total_urnas
+//   margem_na_carga = margem_crm - (deficit_por_urna × urnas_do_pedido)
+async function recalcularMargensCarga(supabase: any, loadId: string) {
+  // Buscar dados da carga
+  const { data: loadData } = await supabase
+    .from('freight_loads')
+    .select('distance_km, cost_per_km, driver_daily_cost, trip_days')
+    .eq('id', loadId)
+    .single()
+
+  // Buscar todos os pedidos da carga com margem real do crm
+  const { data: loadOrders } = await supabase
+    .from('freight_load_orders')
+    .select('id, order_id, units_count, freight_charged')
+    .eq('load_id', loadId)
+
+  if (!loadOrders || loadOrders.length === 0) {
+    // Zerar totais se não há pedidos
+    await supabase.from('freight_loads').update({
+      used_units: 0, total_units: 0, total_revenue: 0,
+      total_cost_mp: 0, total_cost_op: 0,
+      total_freight_cost: 0, total_freight_charged: 0,
+      total_margin: 0, total_margin_pct: 0,
+    }).eq('id', loadId)
+    return
+  }
+
+  // Buscar margem real de cada pedido no crm
+  const orderIds = loadOrders.map((o: any) => o.order_id)
+  const { data: crmOrders } = await supabase
+    .from('crm_orders')
+    .select('id, total_value, margin, margin_pct, cost_mp, freight')
+    .in('id', orderIds)
+
+  const crmMap = new Map<string, any>((crmOrders || []).map((o: any) => [o.id, o]))
+
+  // Calcular custo da viagem
+  const freightCost = ((loadData?.distance_km || 0) * (loadData?.cost_per_km || 0)) +
+    ((loadData?.driver_daily_cost || 0) * (loadData?.trip_days || 1))
+
+  // Totais da carga
+  const totalUnits = loadOrders.reduce((s: number, o: any) => s + (o.units_count || 0), 0)
+  const totalFreightCharged = loadOrders.reduce((s: number, o: any) => s + Number(o.freight_charged || 0), 0)
+
+  // Déficit de frete rateado por urna
+  const deficitFrete = freightCost - totalFreightCharged
+  const deficitPorUrna = totalUnits > 0 ? deficitFrete / totalUnits : 0
+
+  // Recalcular margem de cada pedido na carga
+  let totalRevenue = 0, totalCostMp = 0, totalMargin = 0
+
+  for (const flo of loadOrders) {
+    const crm = crmMap.get(flo.order_id)
+    if (!crm) continue
+
+    const margemCrm = Number(crm.margin || 0)
+    const margemNaCarga = margemCrm - (deficitPorUrna * (flo.units_count || 0))
+    const totalValue = Number(crm.total_value || 0)
+    const margemPctNaCarga = totalValue > 0 ? (margemNaCarga / totalValue) * 100 : 0
+
+    await supabase.from('freight_load_orders')
+      .update({
+        margin: margemNaCarga,
+        margin_pct: margemPctNaCarga,
+        cost_mp: Number(crm.cost_mp || 0),
+        order_value: totalValue,
+      })
+      .eq('id', flo.id)
+
+    totalRevenue += totalValue
+    totalCostMp += Number(crm.cost_mp || 0)
+    totalMargin += margemNaCarga
+  }
+
+  const totalMarginPct = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0
+
+  // Atualizar totais da carga
+  await supabase.from('freight_loads').update({
+    used_units: totalUnits,
+    total_units: totalUnits,
+    total_revenue: totalRevenue,
+    total_cost_mp: totalCostMp,
+    total_freight_cost: freightCost,
+    total_freight_charged: totalFreightCharged,
+    total_margin: totalMargin,
+    total_margin_pct: totalMarginPct,
+  }).eq('id', loadId)
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -88,58 +185,29 @@ export async function PATCH(
     const { action } = body
 
     if (action === 'add_order') {
-      // Busca dados do pedido via view crm_orders
       const { data: order } = await supabase
         .from('crm_orders')
-        .select('id, bling_number, total_value, freight, margin, margin_pct, total_cost, units_count, client_name, client_city, client_state, ordered_at')
+        .select('id, bling_number, total_value, freight, margin, margin_pct, total_cost, cost_mp, units_count, client_name, client_city, client_state, ordered_at')
         .eq('id', body.order_id)
         .single()
 
       if (!order) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
 
-      // Busca dados da carga
-      const { data: load } = await supabase
-        .from('freight_loads')
-        .select('distance_km, cost_per_km, driver_daily_cost, trip_days, max_units')
-        .eq('id', id)
-        .single()
-
-      // Total de urnas já na carga
-      const { data: loadOrders } = await supabase
-        .from('freight_load_orders')
-        .select('units_count')
-        .eq('load_id', id)
-      const unitsInLoad = (loadOrders || []).reduce((s: number, o: any) => s + (o.units_count || 0), 0)
-      const totalUnits = unitsInLoad + (order.units_count || 0)
-
-      // Custo total do frete da carga
-      const freightCostTotal = load
-        ? (load.distance_km || 0) * (load.cost_per_km || 0) + (load.driver_daily_cost || 0) * (load.trip_days || 1)
-        : 0
-
-      // Frete proporcional deste pedido
-      const units = order.units_count || 0
-      const freightProportional = totalUnits > 0 ? freightCostTotal * (units / totalUnits) : 0
-
-      // Margem na carga = margem do pedido − frete proporcional da carga
-      const freightCharged = Number(order.freight) || 0
-      const marginOnLoad = (order.margin || 0) - freightProportional
-      const marginOnLoadPct = (order.total_value + freightCharged) > 0
-        ? (marginOnLoad / (order.total_value + freightCharged)) * 100 : 0
-
+      // Inserir com margem temporária — será recalculada logo abaixo
       const { error: insertError } = await supabase
         .from('freight_load_orders')
         .insert({
           load_id: id,
           order_id: body.order_id,
+          bling_number: order.bling_number,
           org_id: ORG_ID,
-          units_count: units,
-          order_value: order.total_value,
-          cost_mp: order.total_cost,
+          units_count: order.units_count || 0,
+          order_value: order.total_value || 0,
+          cost_mp: order.cost_mp || 0,
           cost_op: 0,
-          freight_charged: freightCharged,
-          margin: marginOnLoad,
-          margin_pct: marginOnLoadPct,
+          freight_charged: Number(order.freight) || 0,
+          margin: order.margin || 0,
+          margin_pct: order.margin_pct || 0,
           client_name: order.client_name,
           client_city: order.client_city,
           client_state: order.client_state,
@@ -163,58 +231,16 @@ export async function PATCH(
         .eq('org_id', ORG_ID)
 
     } else {
-      // Atualiza campos da carga
       const allowed = ['route_name', 'destination_city', 'destination_state', 'distance_km',
         'max_units', 'transport_type', 'cost_per_km', 'driver_daily_cost', 'trip_days',
         'freight_per_unit', 'estimated_departure', 'observations', 'route_notes']
       const updates: any = {}
       allowed.forEach(k => { if (body[k] !== undefined) updates[k] = body[k] })
-
-      await supabase
-        .from('freight_loads')
-        .update(updates)
-        .eq('id', id)
-        .eq('org_id', ORG_ID)
+      await supabase.from('freight_loads').update(updates).eq('id', id).eq('org_id', ORG_ID)
     }
 
-    // Recalcula totais da carga
-    const { data: loadOrders } = await supabase
-      .from('freight_load_orders')
-      .select('units_count, order_value, cost_mp, cost_op, freight_charged, margin')
-      .eq('load_id', id)
-
-    const { data: loadData } = await supabase
-      .from('freight_loads')
-      .select('distance_km, cost_per_km, driver_daily_cost, trip_days')
-      .eq('id', id)
-      .single()
-
-    const totalUnits = loadOrders?.reduce((s, o) => s + (o.units_count || 0), 0) || 0
-    const totalRevenue = loadOrders?.reduce((s, o) => s + (o.order_value || 0), 0) || 0
-    const totalCostMp = loadOrders?.reduce((s, o) => s + (o.cost_mp || 0), 0) || 0
-    const totalCostOp = loadOrders?.reduce((s, o) => s + (o.cost_op || 0), 0) || 0
-    const totalFreightCharged = loadOrders?.reduce((s, o) => s + (o.freight_charged || 0), 0) || 0
-
-    const freightCost = ((loadData?.distance_km || 0) * (loadData?.cost_per_km || 0)) +
-      ((loadData?.driver_daily_cost || 0) * (loadData?.trip_days || 1))
-
-    const totalMargin = totalRevenue - totalCostMp - totalCostOp - freightCost + totalFreightCharged
-    const totalMarginPct = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0
-
-    await supabase
-      .from('freight_loads')
-      .update({
-        used_units: totalUnits,
-        total_units: totalUnits,
-        total_revenue: totalRevenue,
-        total_cost_mp: totalCostMp,
-        total_cost_op: totalCostOp,
-        total_freight_cost: freightCost,
-        total_freight_charged: totalFreightCharged,
-        total_margin: totalMargin,
-        total_margin_pct: totalMarginPct,
-      })
-      .eq('id', id)
+    // Recalcular margens de todos os pedidos da carga
+    await recalcularMargensCarga(supabase, id)
 
     return NextResponse.json({ success: true })
   } catch (e) {
@@ -222,7 +248,6 @@ export async function PATCH(
   }
 }
 
-// DELETE — excluir carga
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
