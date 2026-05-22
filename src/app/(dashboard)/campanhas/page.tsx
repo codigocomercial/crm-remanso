@@ -170,7 +170,7 @@ function NewCampaignDialog({
         const fetchCount = async () => {
             const supabase = createClient()
             const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
-            let query = supabase.from('contacts').select('id', { count: 'exact', head: true })
+            let query = supabase.from('crm_contacts').select('id', { count: 'exact', head: true })
                 .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true)
 
             if (cityList.length > 0) query = query.in('city', cityList)
@@ -213,7 +213,7 @@ function NewCampaignDialog({
         const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
 
         // Buscar contatos filtrados
-        let contactQuery = supabase.from('contacts').select('id')
+        let contactQuery = supabase.from('crm_contacts').select('id')
             .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true).not('whatsapp', 'is', null)
 
         if (cityList.length > 0) contactQuery = contactQuery.in('city', cityList)
