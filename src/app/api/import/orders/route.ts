@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 function parseNum(val: string): number {
   if (!val) return 0
@@ -9,10 +10,17 @@ function parseNum(val: string): number {
 }
 
 function parseDate(val: string): string {
-  // DD/MM/YYYY → YYYY-MM-DD
-  if (!val) return new Date().toISOString().split('T')[0]
+  // DD/MM/YYYY → YYYY-MM-DDT12:00:00Z
+  // Fixar meio-dia UTC evita que a data "volte" um dia ao ser convertida para UTC-3 (Brasil)
+  if (!val) {
+    const today = new Date().toISOString().split('T')[0]
+    return `${today}T12:00:00Z`
+  }
   const parts = val.trim().split('/')
-  if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+  if (parts.length === 3) {
+    const iso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+    return `${iso}T12:00:00Z`
+  }
   return val
 }
 
@@ -110,9 +118,9 @@ export async function POST(req: NextRequest) {
           costMp += cost * qty
         }
 
-        // Custo operacional
-        const d = new Date(orderedAt)
-        const opKey = `${d.getFullYear()}-${d.getMonth() + 1}`
+        // Custo operacional — extrai ano/mês da string ISO, sem conversão de fuso
+        const [yyyy, mm] = orderedAt.split('T')[0].split('-')
+        const opKey = `${parseInt(yyyy)}-${parseInt(mm)}`
         const costOp = (opCostMap.get(opKey) ?? 0) * unitsCount
 
         // CML
