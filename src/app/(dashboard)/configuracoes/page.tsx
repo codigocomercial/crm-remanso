@@ -481,8 +481,7 @@ function TabGrupos() {
     const supabase = createClient()
     // Busca grupos + quantidade de contatos em cada um
     const { data: groupsData } = await supabase
-      .schema('crm')
-      .from('contact_groups')
+      .from('crm_contact_groups')
       .select('id, name, color, sort_order')
       .eq('org_id', ORG_ID)
       .order('sort_order', { ascending: true })
@@ -491,8 +490,7 @@ function TabGrupos() {
 
     // Conta contatos por grupo
     const { data: counts } = await supabase
-      .schema('crm')
-      .from('contacts')
+      .from('crm_contacts')
       .select('group_id')
       .eq('org_id', ORG_ID)
       .not('group_id', 'is', null)
@@ -530,16 +528,14 @@ function TabGrupos() {
 
     if (editingGroup) {
       const { error: err } = await supabase
-        .schema('crm')
-        .from('contact_groups')
+        .from('crm_contact_groups')
         .update({ name: form.name.trim(), color: form.color })
         .eq('id', editingGroup.id)
       if (err) { setError(err.message); setSaving(false); return }
     } else {
       const nextOrder = groups.length
       const { error: err } = await supabase
-        .schema('crm')
-        .from('contact_groups')
+        .from('crm_contact_groups')
         .insert({ org_id: ORG_ID, name: form.name.trim(), color: form.color, sort_order: nextOrder })
       if (err) { setError(err.message); setSaving(false); return }
     }
@@ -553,7 +549,7 @@ function TabGrupos() {
     if (!confirm(`Excluir o grupo "${group.name}"?\n\nOs ${group.contact_count ?? 0} clientes nesse grupo ficarão sem grupo — não serão excluídos.`)) return
     setDeleting(group.id)
     const supabase = createClient()
-    await supabase.schema('crm').from('contact_groups').delete().eq('id', group.id)
+    await supabase.from('crm_contact_groups').delete().eq('id', group.id)
     setDeleting(null)
     load()
   }
