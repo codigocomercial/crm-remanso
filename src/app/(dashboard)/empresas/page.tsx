@@ -9,6 +9,29 @@ import Link from 'next/link'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
+// ─── Paleta de cores dos grupos (igual ao configuracoes/page.tsx) ─────────────
+const GROUP_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
+  emerald: { bg: '#D1FAE5', text: '#065F46', hex: '#10b981' },
+  blue:    { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
+  yellow:  { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
+  orange:  { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
+  red:     { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
+  purple:  { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
+  gray:    { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
+}
+
+function GroupBadge({ name, color }: { name: string; color: string }) {
+  const c = GROUP_COLORS[color] ?? GROUP_COLORS.gray
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+      style={{ backgroundColor: c.bg, color: c.text }}
+    >
+      {name}
+    </span>
+  )
+}
+
 interface Company {
   id: string
   name: string
@@ -21,6 +44,9 @@ interface Company {
   contacts_count: number
   compras_count: number
   seller_name: string | null
+  group_id: string | null
+  group_name: string | null
+  group_color: string | null
 }
 
 function initials(name: string) {
@@ -44,7 +70,7 @@ export default function EmpresasPage() {
     const supabase = createClient()
     let query = supabase
       .from('crm_companies')
-      .select(`id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, seller_id, total_orders_6m, avg_ticket_6m, last_order_at`)
+      .select('id, name, fantasia, city, state, segment, distance_km, reorder_cycle_days, seller_id, total_orders_6m, avg_ticket_6m, last_order_at, group_id, group_name, group_color')
       .eq('org_id', ORG_ID)
       .order('name')
     if (search) {
@@ -63,6 +89,9 @@ export default function EmpresasPage() {
       contacts_count: 0,
       compras_count: d.total_orders_6m ?? 0,
       seller_name: null,
+      group_id: d.group_id ?? null,
+      group_name: d.group_name ?? null,
+      group_color: d.group_color ?? null,
     })))
     setLoading(false)
   }
@@ -87,90 +116,96 @@ export default function EmpresasPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: "blur(8px)" }}>
-      <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
-        {/* Input CSV oculto */}
-        <input type="file" accept=".csv" id="csv-empresas" className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            setSyncing(true)
-            setSyncResult(null)
-            try {
-              const text = await file.text()
-              const res = await fetch('/api/bling/import-empresas-csv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ csv: text }),
-              })
-              const data = await res.json()
-              if (data.success) {
-                setSyncResult(`✓ ${data.imported} empresas importadas`)
-                setTimeout(() => { load(); setSyncResult(null) }, 1500)
-              } else {
-                setSyncResult(`Erro: ${data.error}`)
+      <div className="sticky top-0 z-20 pb-2" style={{ backdropFilter: 'blur(8px)' }}>
+        <PageHeader title="Empresas" subtitle={`${companies.length} funerárias cadastradas`}>
+          {/* Input CSV oculto */}
+          <input type="file" accept=".csv" id="csv-empresas" className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              setSyncing(true)
+              setSyncResult(null)
+              try {
+                const text = await file.text()
+                const res = await fetch('/api/bling/import-empresas-csv', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ csv: text }),
+                })
+                const data = await res.json()
+                if (data.success) {
+                  setSyncResult(`✓ ${data.imported} empresas importadas`)
+                  setTimeout(() => { load(); setSyncResult(null) }, 1500)
+                } else {
+                  setSyncResult(`Erro: ${data.error}`)
+                }
+              } finally {
+                setSyncing(false)
+                ;(document.getElementById('csv-empresas') as HTMLInputElement).value = ''
               }
-            } finally {
-              setSyncing(false)
-              ;(document.getElementById('csv-empresas') as HTMLInputElement).value = ''
-            }
-          }}
-        />
-        <button onClick={() => document.getElementById('csv-empresas')?.click()}
-          disabled={syncing}
-          className="btn-remanso-outline mr-2 flex items-center gap-1.5">
-          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Importando...' : 'Importar CSV Bling'}
-        </button>
-        <button onClick={async () => {
-            setSyncing(true)
-            setSyncResult('Calculando distâncias...')
-            try {
-              const res = await fetch('/api/util/calcular-distancias', { method: 'POST' })
-              const data = await res.json()
-              if (data.success) {
-                setSyncResult(`✓ ${data.updated} distâncias calculadas`)
-                setTimeout(() => { load(); setSyncResult(null) }, 2000)
-              } else setSyncResult(`Erro: ${data.error}`)
-            } finally { setSyncing(false) }
-          }}
-          disabled={syncing}
-          className="btn-remanso-outline mr-2 flex items-center gap-1.5">
-          <RefreshCw size={13} />
-          Calcular Distâncias
-        </button>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="btn-remanso-outline mr-2 flex items-center gap-1.5"
-        >
-          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
-        </button>
-        <Link href="/empresas/nova" className="btn-remanso">
-          <Plus size={13} /> Nova empresa
-        </Link>
-      </PageHeader>
-
-      {syncResult && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${syncResult.startsWith('Erro') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-          {syncResult}
-        </div>
-      )}
-
-      <div className="rm-card mb-5">
-        <div className="relative max-w-sm">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
-          <input type="text" placeholder="Buscar empresa..." value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
-            style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
+            }}
           />
-        </div>
-      </div>
+          <button
+            onClick={() => document.getElementById('csv-empresas')?.click()}
+            disabled={syncing}
+            className="btn-remanso-outline mr-2 flex items-center gap-1.5"
+          >
+            <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Importando...' : 'Importar CSV Bling'}
+          </button>
+          <button
+            onClick={async () => {
+              setSyncing(true)
+              setSyncResult('Calculando distâncias...')
+              try {
+                const res = await fetch('/api/util/calcular-distancias', { method: 'POST' })
+                const data = await res.json()
+                if (data.success) {
+                  setSyncResult(`✓ ${data.updated} distâncias calculadas`)
+                  setTimeout(() => { load(); setSyncResult(null) }, 2000)
+                } else setSyncResult(`Erro: ${data.error}`)
+              } finally { setSyncing(false) }
+            }}
+            disabled={syncing}
+            className="btn-remanso-outline mr-2 flex items-center gap-1.5"
+          >
+            <RefreshCw size={13} />
+            Calcular Distâncias
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="btn-remanso-outline mr-2 flex items-center gap-1.5"
+          >
+            <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+          </button>
+          <Link href="/empresas/nova" className="btn-remanso">
+            <Plus size={13} /> Nova empresa
+          </Link>
+        </PageHeader>
 
+        {syncResult && (
+          <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${syncResult.startsWith('Erro') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+            {syncResult}
+          </div>
+        )}
+
+        <div className="rm-card mb-5">
+          <div className="relative max-w-sm">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--neutral-300)' }} />
+            <input
+              type="text"
+              placeholder="Buscar empresa..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-[13px] rounded-lg border outline-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-teal)'; e.currentTarget.style.backgroundColor = 'white' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
+            />
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -195,13 +230,21 @@ export default function EmpresasPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {companies.map(company => (
-            <Link key={company.id} href={`/empresas/${company.id}`}
-              className="rm-card block hover:-translate-y-0.5 transition-all group cursor-pointer">
+            <Link
+              key={company.id}
+              href={`/empresas/${company.id}`}
+              className="rm-card block hover:-translate-y-0.5 transition-all group cursor-pointer"
+            >
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                  style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}>
+                {/* Avatar */}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                  style={{ background: 'var(--brand-teal-soft)', color: 'var(--brand-teal-dark)' }}
+                >
                   {initials(company.fantasia || company.name)}
                 </div>
+
+                {/* Nome + localização + grupo */}
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
                     {company.fantasia || company.name}
@@ -209,15 +252,29 @@ export default function EmpresasPage() {
                   <p className="text-[11px]" style={{ color: 'var(--neutral-500)' }}>
                     {[company.city, company.state].filter(Boolean).join(', ') || 'Sem localização'}
                   </p>
+
+                  {/* Badge de grupo — aparece só se tiver grupo atribuído */}
+                  {company.group_name && company.group_color && (
+                    <div className="mt-1">
+                      <GroupBadge name={company.group_name} color={company.group_color} />
+                    </div>
+                  )}
+
                   {company.seller_name && (
                     <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--brand-teal)' }}>
                       👤 {company.seller_name}
                     </p>
                   )}
                 </div>
-                <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0 mt-1"
-                  style={{ color: 'var(--neutral-500)' }} />
+
+                <ArrowRight
+                  size={14}
+                  className="opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0 mt-1"
+                  style={{ color: 'var(--neutral-500)' }}
+                />
               </div>
+
+              {/* Stats */}
               <div className="grid grid-cols-3 gap-2 pt-3 border-t" style={{ borderColor: 'var(--neutral-200)' }}>
                 <div className="text-center">
                   <p className="text-[18px] font-bold" style={{ color: 'var(--neutral-900)', letterSpacing: '-0.5px' }}>
