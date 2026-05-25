@@ -1,986 +1,505 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import {
-  Settings, User, Building2, KanbanSquare, Users,
-  GripVertical, Pencil, Check, X, Loader2,
-  Lock, Mail, AlertCircle, Plus, Trash2, ShieldCheck, TrendingUp,
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useUserRole } from '@/hooks/useUserRole'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import {
+    Megaphone, Plus, Send, Clock, CheckCircle2,
+    XCircle, FileImage, Users, BarChart2, Loader2,
+    ChevronRight, Calendar, ImageIcon
+} from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface PipelineStage {
-  id: string
-  name: string
-  order_index: number
-  color?: string | null
+interface Campaign {
+    id: string
+    name: string
+    message_template: string
+    media_url: string | null
+    status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
+    scheduled_at: string | null
+    sent_count: number
+    total_contacts: number
+    failed_count: number
+    filter_cities: string[] | null
+    created_at: string
 }
 
-interface AppUser {
-  id: string
-  email: string
-  full_name?: string | null
-  role?: string | null
-  created_at: string
+const STATUS_CONFIG = {
+    draft: { label: 'Rascunho', color: 'bg-zinc-500/15 text-zinc-400', icon: FileImage },
+    scheduled: { label: 'Agendada', color: 'bg-blue-500/15 text-blue-400', icon: Clock },
+    sending: { label: 'Enviando', color: 'bg-yellow-500/15 text-yellow-400', icon: Loader2 },
+    sent: { label: 'Enviada', color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
+    cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400', icon: XCircle },
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function initials(name: string) {
-  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-}
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+function CampaignCard({ campaign, onSelect, onDisparar }: { campaign: Campaign; onSelect: () => void; onDisparar: (id: string) => void }) {
+    const cfg = STATUS_CONFIG[campaign.status]
+    const Icon = cfg.icon
+    const progress = campaign.total_contacts > 0
+        ? Math.round((campaign.sent_count / campaign.total_contacts) * 100)
+        : 0
 
-// ─── Sortable Stage Row ────────────────────────────────────────────────────────
-function SortableStageRow({
-  stage,
-  onSave,
-  onDelete,
-}: {
-  stage: PipelineStage
-  onSave: (id: string, name: string) => Promise<void>
-  onDelete: (id: string) => Promise<void>
-}) {
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(stage.name)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: stage.id })
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 999 : undefined,
-  }
-
-  async function handleSave() {
-    setSaving(true)
-    await onSave(stage.id, value)
-    setSaving(false)
-    setEditing(false)
-  }
-
-  async function handleDelete() {
-    setDeleting(true)
-    await onDelete(stage.id)
-    setDeleting(false)
-  }
-
-  function handleKey(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') handleSave()
-    if (e.key === 'Escape') { setValue(stage.name); setEditing(false) }
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}
-      className={cn(
-        'flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl mb-2 group transition-shadow',
-        isDragging && 'shadow-lg ring-2 ring-primary/20'
-      )}
-    >
-      {/* Drag Handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
-
-      {/* Order badge */}
-      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-bold flex-shrink-0">
-        {stage.order_index + 1}
-      </span>
-
-      {/* Name field */}
-      {editing ? (
-        <Input
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={handleKey}
-          autoFocus
-          className="flex-1 h-8 text-sm"
-        />
-      ) : (
-        <span className="flex-1 text-sm font-medium text-foreground">{stage.name}</span>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {editing ? (
-          <>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-              onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground"
-              onClick={() => { setValue(stage.name); setEditing(false) }}>
-              <X className="w-3.5 h-3.5" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              onClick={() => setEditing(true)}>
-              <Pencil className="w-3.5 h-3.5" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={handleDelete} disabled={deleting}>
-              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── Tab: Perfil ──────────────────────────────────────────────────────────────
-function TabPerfil() {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [savingPwd, setSavingPwd] = useState(false)
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [pwdMsg, setPwdMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setEmail(user.email ?? '')
-        setName(user.user_metadata?.full_name ?? '')
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  async function handleSaveProfile() {
-    setSaving(true)
-    setMsg(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({
-      ...(email ? { email } : {}),
-      data: { full_name: name },
-    })
-    setSaving(false)
-    setMsg(error
-      ? { type: 'error', text: error.message }
-      : { type: 'success', text: 'Perfil atualizado com sucesso!' }
-    )
-  }
-
-  async function handleChangePassword() {
-    if (newPassword !== confirmPassword) {
-      setPwdMsg({ type: 'error', text: 'As senhas não coincidem.' })
-      return
-    }
-    setSavingPwd(true)
-    setPwdMsg(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    setSavingPwd(false)
-    if (error) {
-      setPwdMsg({ type: 'error', text: error.message })
-    } else {
-      setPwdMsg({ type: 'success', text: 'Senha alterada com sucesso!' })
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
-    }
-  }
-
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>
-
-  return (
-    <div className="space-y-6 max-w-xl">
-      {/* Avatar */}
-      <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16">
-          <AvatarFallback className="text-xl bg-primary/10 text-primary font-semibold">
-            {name ? initials(name) : <User className="w-6 h-6" />}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-semibold text-foreground">{name || 'Usuário'}</p>
-          <p className="text-sm text-muted-foreground">{email}</p>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Dados pessoais */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-          <User className="w-4 h-4 text-primary" /> Dados do perfil
-        </h3>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: João Silva" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="email" value={email} onChange={e => setEmail(e.target.value)} className="pl-9" placeholder="email@exemplo.com" />
-            </div>
-          </div>
-        </div>
-        {msg && (
-          <div className={cn('flex items-center gap-2 text-sm px-3 py-2 rounded-lg', msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            {msg.text}
-          </div>
-        )}
-        <Button onClick={handleSaveProfile} disabled={saving} className="w-full sm:w-auto">
-          {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Salvar perfil
-        </Button>
-      </div>
-
-      <Separator />
-
-      {/* Senha */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-          <Lock className="w-4 h-4 text-primary" /> Alterar senha
-        </h3>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="cur-pwd">Senha atual</Label>
-            <Input id="cur-pwd" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-pwd">Nova senha</Label>
-            <Input id="new-pwd" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-pwd">Confirmar nova senha</Label>
-            <Input id="confirm-pwd" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
-          </div>
-        </div>
-        {pwdMsg && (
-          <div className={cn('flex items-center gap-2 text-sm px-3 py-2 rounded-lg', pwdMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            {pwdMsg.text}
-          </div>
-        )}
-        <Button onClick={handleChangePassword} disabled={savingPwd || !newPassword} variant="outline" className="w-full sm:w-auto">
-          {savingPwd && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Alterar senha
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Tab: Organização ─────────────────────────────────────────────────────────
-function TabOrganizacao() {
-  const [companyName, setCompanyName] = useState('Urnas Remanso')
-  const [segment, setSegment] = useState('Funerária')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  async function handleSave() {
-    setSaving(true)
-    // Persist to Supabase settings table if available, else just simulate
-    await new Promise(r => setTimeout(r, 800))
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-  }
-
-  return (
-    <div className="space-y-6 max-w-xl">
-      <div className="p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
-          <Building2 className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <p className="font-semibold text-foreground">{companyName}</p>
-          <p className="text-sm text-muted-foreground">{segment}</p>
-        </div>
-      </div>
-
-      <Separator />
-
-      <div className="space-y-4">
-        <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-primary" /> Informações da empresa
-        </h3>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="company-name">Nome da empresa</Label>
-            <Input id="company-name" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Ex: Urnas Remanso" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="segment">Segmento de atuação</Label>
-            <Input id="segment" value={segment} onChange={e => setSegment(e.target.value)} placeholder="Ex: Funerária, Saúde, Varejo..." />
-          </div>
-        </div>
-        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-          {saving
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
-            : saved
-              ? <><Check className="w-4 h-4 mr-2" />Salvo!</>
-              : 'Salvar organização'
-          }
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Tab: Pipeline ────────────────────────────────────────────────────────────
-function TabPipeline() {
-  const [stages, setStages] = useState<PipelineStage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [newStageName, setNewStageName] = useState('')
-  const [adding, setAdding] = useState(false)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('pipeline_stages')
-      .select('*')
-      .order('order_index', { ascending: true })
-    setStages(data ?? [])
-    setLoading(false)
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = stages.findIndex(s => s.id === active.id)
-    const newIndex = stages.findIndex(s => s.id === over.id)
-    const reordered = arrayMove(stages, oldIndex, newIndex).map((s, i) => ({ ...s, order_index: i }))
-    setStages(reordered)
-
-    // Persist order
-    const supabase = createClient()
-    await Promise.all(
-      reordered.map(s =>
-        supabase.from('pipeline_stages').update({ order_index: s.order_index }).eq('id', s.id)
-      )
-    )
-  }
-
-  async function handleSaveName(id: string, name: string) {
-    const supabase = createClient()
-    await supabase.from('pipeline_stages').update({ name }).eq('id', id)
-    setStages(prev => prev.map(s => s.id === id ? { ...s, name } : s))
-  }
-
-  async function handleDelete(id: string) {
-    const supabase = createClient()
-    await supabase.from('pipeline_stages').delete().eq('id', id)
-    setStages(prev => {
-      const filtered = prev.filter(s => s.id !== id)
-      return filtered.map((s, i) => ({ ...s, order_index: i }))
-    })
-  }
-
-  async function handleAddStage() {
-    if (!newStageName.trim()) return
-    setAdding(true)
-    const supabase = createClient()
-    const order = stages.length
-    const { data, error } = await supabase
-      .from('pipeline_stages')
-      .insert({ name: newStageName.trim(), order_index: order })
-      .select()
-      .single()
-    if (!error && data) {
-      setStages(prev => [...prev, data])
-      setNewStageName('')
-    }
-    setAdding(false)
-  }
-
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>
-
-  return (
-    <div className="space-y-5 max-w-xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-            <KanbanSquare className="w-4 h-4 text-primary" /> Etapas do pipeline
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Arraste para reordenar. Clique no lápis para renomear.</p>
-        </div>
-        <Badge variant="secondary">{stages.length} etapas</Badge>
-      </div>
-
-      {stages.length === 0 ? (
-        <div className="border border-dashed border-border rounded-xl p-10 text-center">
-          <KanbanSquare className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhuma etapa encontrada. Adicione a primeira!</p>
-        </div>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={stages.map(s => s.id)} strategy={verticalListSortingStrategy}>
-            {stages.map(stage => (
-              <SortableStageRow key={stage.id} stage={stage} onSave={handleSaveName} onDelete={handleDelete} />
-            ))}
-          </SortableContext>
-        </DndContext>
-      )}
-
-      {/* Add new stage */}
-      <div className="flex gap-2 pt-2">
-        <Input
-          value={newStageName}
-          onChange={e => setNewStageName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAddStage()}
-          placeholder="Nova etapa..."
-          className="flex-1"
-        />
-        <Button onClick={handleAddStage} disabled={adding || !newStageName.trim()}>
-          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          <span className="ml-1.5 hidden sm:inline">Adicionar</span>
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Tab: Usuários ────────────────────────────────────────────────────────────
-function TabUsuarios() {
-  const [users, setUsers] = useState<AppUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [editingRole, setEditingRole] = useState<string | null>(null)
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'seller' })
-  const [error, setError] = useState('')
-
-  async function load() {
-    setLoading(true)
-    const res = await fetch('/api/usuarios')
-    const data = await res.json()
-    setUsers(data.users || [])
-    setLoading(false)
-  }
-
-  useEffect(() => { load() }, [])
-
-  async function invite() {
-    if (!form.full_name || !form.email || !form.password) {
-      setError('Preencha todos os campos')
-      return
-    }
-    setSaving(true)
-    setError('')
-    const res = await fetch('/api/usuarios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error || 'Erro ao criar usuário')
-    } else {
-      setShowModal(false)
-      setForm({ full_name: '', email: '', password: '', role: 'seller' })
-      load()
-    }
-    setSaving(false)
-  }
-
-  async function changeRole(user_id: string, role: string) {
-    setEditingRole(user_id)
-    await fetch('/api/usuarios', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id, role }),
-    })
-    setEditingRole(null)
-    load()
-  }
-
-  async function deleteUser(user_id: string, name: string) {
-    if (!confirm(`Excluir o usuário "${name}"? Esta ação não pode ser desfeita.`)) return
-    await fetch(`/api/usuarios?user_id=${user_id}`, { method: 'DELETE' })
-    load()
-  }
-
-  const ROLES = [
-    { value: 'admin',   label: 'Administrador', color: '#1D6FA4', bg: '#EBF4FB' },
-    { value: 'manager', label: 'Gerente',        color: '#2F6F5D', bg: '#EBF5F1' },
-    { value: 'seller',  label: 'Vendedor',       color: '#B45309', bg: '#FEF3C7' },
-  ]
-
-  const getRoleConfig = (role: string) => ROLES.find(r => r.value === role) || ROLES[2]
-
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>
-
-  return (
-    <div className="space-y-4 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-[15px] flex items-center gap-2" style={{ color: 'var(--neutral-900)' }}>
-            <Users className="w-4 h-4" style={{ color: 'var(--brand-teal)' }} />
-            Usuários do sistema
-          </h3>
-          <p className="text-[12px] mt-0.5" style={{ color: 'var(--neutral-500)' }}>
-            Somente admins podem criar e alterar usuários
-          </p>
-        </div>
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-semibold text-white"
-          style={{ backgroundColor: 'var(--brand-teal)' }}>
-          <Plus size={13} /> Novo usuário
-        </button>
-      </div>
-
-      <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
-        {users.map((u, i) => {
-          const rc = getRoleConfig(u.role || 'seller')
-          return (
-            <div key={u.id}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors"
-              style={{ borderBottom: i < users.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
-                style={{ backgroundColor: 'var(--brand-teal)' }}>
-                {(u.full_name || u.email).slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                  {u.full_name || 'Sem nome'}
-                </p>
-                <p className="text-[11px] truncate" style={{ color: 'var(--neutral-500)' }}>{u.email}</p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {editingRole === u.id ? (
-                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--neutral-400)' }} />
-                ) : (
-                  <select
-                    value={u.role || 'seller'}
-                    onChange={e => changeRole(u.id, e.target.value)}
-                    className="text-[11px] font-bold px-2 py-1 rounded-full border-0 outline-none cursor-pointer"
-                    style={{ color: rc.color, backgroundColor: rc.bg }}>
-                    {ROLES.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                )}
-                <button onClick={() => deleteUser(u.id, u.full_name || u.email)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                  <Trash2 size={13} style={{ color: '#EF4444' }} />
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Modal novo usuário */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col"
-            style={{ maxHeight: '90vh' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-              <h2 className="text-[16px] font-bold" style={{ color: 'var(--neutral-900)' }}>
-                Novo Usuário
-              </h2>
-              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-neutral-100">
-                <X size={16} style={{ color: 'var(--neutral-400)' }} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {error && (
-                <div className="px-3 py-2 rounded-lg text-[12px] font-semibold"
-                  style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
-                  {error}
-                </div>
-              )}
-              <div>
-                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                  Nome completo *
-                </label>
-                <input type="text" value={form.full_name}
-                  onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                  placeholder="Ex: Tadeu Dias Rocha"
-                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                  E-mail *
-                </label>
-                <input type="email" value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="vendedor@urnasremanso.com.br"
-                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                  Senha inicial *
-                </label>
-                <input type="password" value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.12)' }} />
-                <p className="text-[10px] mt-1" style={{ color: 'var(--neutral-400)' }}>
-                  O usuário pode trocar a senha depois em Configurações → Perfil
-                </p>
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold mb-1.5" style={{ color: 'var(--neutral-600)' }}>
-                  Perfil de acesso *
-                </label>
-                <select value={form.role}
-                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-                  className="w-full px-3 py-2 text-[13px] rounded-lg border outline-none"
-                  style={{ borderColor: 'rgba(0,0,0,0.12)' }}>
-                  <option value="seller">Vendedor — acesso básico, sem dados financeiros</option>
-                  <option value="manager">Gerente — acesso completo, sem configurações</option>
-                  <option value="admin">Administrador — acesso total</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 flex-shrink-0"
-              style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-              <button onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-[13px] font-semibold rounded-xl border"
-                style={{ borderColor: 'rgba(0,0,0,0.1)', color: 'var(--neutral-600)' }}>
-                Cancelar
-              </button>
-              <button onClick={invite} disabled={saving}
-                className="px-4 py-2 text-[13px] font-semibold rounded-xl text-white disabled:opacity-50"
-                style={{ backgroundColor: 'var(--brand-teal)' }}>
-                {saving ? 'Criando...' : 'Criar usuário'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-// ─── Tab: Margens ─────────────────────────────────────────────────────────────
-function TabMargens() {
-  const supabase = createClient()
-  const [form, setForm] = useState({
-    margin_order_good: 30,
-    margin_order_low: 15,
-    margin_load_good: 20,
-    margin_load_low: 8,
-    active_client_days: 180,
-    tax_rate: 4.5,
-  })
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    supabase.from('organizations')
-      .select('margin_order_good,margin_order_low,margin_load_good,margin_load_low,active_client_days,tax_rate')
-      .eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
-      .single()
-      .then(({ data }) => {
-        if (data) setForm({
-          margin_order_good: data.margin_order_good ?? 30,
-          margin_order_low:  data.margin_order_low  ?? 15,
-          margin_load_good:  data.margin_load_good  ?? 20,
-          margin_load_low:   data.margin_load_low   ?? 8,
-          active_client_days: data.active_client_days ?? 180,
-          tax_rate: data.tax_rate ?? 4.5,
-        })
-      })
-  }, [])
-
-  async function save() {
-    setSaving(true)
-    const { error } = await supabase
-      .from('organizations')
-      .update(form)
-      .eq('id', '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2')
-    if (error) {
-      console.error('Erro ao salvar margens:', error)
-      setSaving(false)
-      return
-    }
-    // Atualiza status ativo/inativo de todos os clientes
-    await supabase.rpc('update_companies_active_status', { p_org_id: '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2' })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-  }
-
-  function field(label: string, key: keyof typeof form, help: string) {
     return (
-      <div className="rm-card p-4">
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>{label}</label>
-          <div className="flex items-center gap-2">
-            <input type="number" min="0" max="100" step="1"
-              value={form[key]}
-              onChange={e => setForm(f => ({ ...f, [key]: Number(e.target.value) }))}
-              className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
-              style={{ borderColor: "rgba(0,0,0,0.12)" }} />
-            <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>%</span>
-          </div>
+        <div
+            onClick={onSelect}
+            className="bg-card border border-border rounded-2xl p-5 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group"
+        >
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                        {campaign.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDistanceToNow(new Date(campaign.created_at), { addSuffix: true, locale: ptBR })}
+                    </p>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.color}`}>
+                    <Icon className="w-3 h-3" />
+                    {cfg.label}
+                </span>
+            </div>
+
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                {campaign.message_template}
+            </p>
+
+            {campaign.filter_cities && campaign.filter_cities.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                    {campaign.filter_cities.slice(0, 3).map(city => (
+                        <span key={city} className="text-[11px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            📍 {city}
+                        </span>
+                    ))}
+                    {campaign.filter_cities.length > 3 && (
+                        <span className="text-[11px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            +{campaign.filter_cities.length - 3}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {campaign.total_contacts} contatos
+                    </span>
+                    <span className="flex items-center gap-1 text-emerald-500">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {campaign.sent_count} enviados
+                    </span>
+                </div>
+                {campaign.status === 'sent' && (
+                    <span className="font-semibold text-emerald-500">{progress}%</span>
+                )}
+                <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+
+            {campaign.status === 'sending' && (
+                <div className="mt-3">
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {campaign.status === 'draft' && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDisparar(campaign.id) }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                    <Send className="w-3.5 h-3.5" />
+                    Disparar Campanha
+                </button>
+            )}
         </div>
-        <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>{help}</p>
-      </div>
     )
-  }
-
-  return (
-    <div className="space-y-5 max-w-xl">
-      <div>
-        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
-          Metas de Margem — Pedidos
-        </h3>
-        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
-          Define os indicadores 🟢🟡🔴 exibidos para o vendedor nos pedidos de venda
-        </p>
-        <div className="space-y-2">
-          {field("🟢 Boa margem — acima de", "margin_order_good", "Pedidos acima desse % aparecem com indicador verde")}
-          {field("🟡 Margem baixa — acima de", "margin_order_low", "Pedidos entre esse % e o anterior aparecem em amarelo. Abaixo = vermelho")}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
-          Metas de Margem — Cargas
-        </h3>
-        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
-          Define os indicadores exibidos para o vendedor nas cargas (considera custo de frete)
-        </p>
-        <div className="space-y-2">
-          {field("🟢 Carga viável — acima de", "margin_load_good", "Cargas acima desse % aparecem com indicador verde")}
-          {field("🟡 Carga apertada — acima de", "margin_load_low", "Cargas entre esse % e o anterior aparecem em amarelo. Abaixo = vermelho")}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
-          Impostos sobre Venda
-        </h3>
-        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
-          Alíquota aplicada sobre o valor total de cada pedido no cálculo da CML
-        </p>
-        <div className="rm-card p-4">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>
-              Alíquota de imposto
-            </label>
-            <div className="flex items-center gap-2">
-              <input type="number" min="0" max="100" step="0.1"
-                value={form.tax_rate}
-                onChange={e => setForm(f => ({ ...f, tax_rate: Number(e.target.value) }))}
-                className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
-                style={{ borderColor: "rgba(0,0,0,0.12)" }} />
-              <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>%</span>
-            </div>
-          </div>
-          <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>
-            CML = Total Venda − Custo MP − Custo Operacional − (Total Venda × {form.tax_rate}%)
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
-          Clientes sem compra há mais de esse período são marcados como inativos e não aparecem no painel de recompra
-        </p>
-        <div className="rm-card p-4">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[13px] font-semibold" style={{ color: "var(--neutral-800)" }}>
-              Considerar inativo após
-            </label>
-            <div className="flex items-center gap-2">
-              <input type="number" min="30" max="365" step="30"
-                value={form.active_client_days}
-                onChange={e => setForm(f => ({ ...f, active_client_days: Number(e.target.value) }))}
-                className="w-20 px-3 py-1.5 text-[13px] rounded-lg border outline-none text-right font-bold"
-                style={{ borderColor: "rgba(0,0,0,0.12)" }} />
-              <span className="text-[13px] font-semibold" style={{ color: "var(--neutral-500)" }}>dias sem compra</span>
-            </div>
-          </div>
-          <p className="text-[11px]" style={{ color: "var(--neutral-400)" }}>
-            Padrão: 180 dias (6 meses). Ao salvar, atualiza o status de todos os clientes automaticamente.
-          </p>
-        </div>
-      </div>
-
-      <div className="rm-card p-4" style={{ backgroundColor: "var(--neutral-50)" }}>
-        <p className="text-[12px] font-semibold mb-2" style={{ color: "var(--neutral-700)" }}>
-          Preview dos indicadores com os valores atuais:
-        </p>
-        <div className="flex gap-4 text-[12px]">
-          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#2F6F5D", backgroundColor: "#EBF5F1" }}>
-            🟢 Acima de {form.margin_order_good}%
-          </span>
-          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#B45309", backgroundColor: "#FEF3C7" }}>
-            🟡 Entre {form.margin_order_low}% e {form.margin_order_good}%
-          </span>
-          <span className="px-2 py-1 rounded-full font-bold" style={{ color: "#DC2626", backgroundColor: "#FEE2E2" }}>
-            🔴 Abaixo de {form.margin_order_low}%
-          </span>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-[15px] font-bold mb-1" style={{ color: "var(--neutral-900)" }}>
-          Tabela de Frete Padrão
-        </h3>
-        <p className="text-[12px] mb-3" style={{ color: "var(--neutral-500)" }}>
-          Referência para o vendedor na hora de negociar. Não é obrigatório — cada pedido pode ter valor diferente.
-        </p>
-        <div className="rm-card p-4 space-y-2">
-          <div className="grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-wide pb-2"
-            style={{ color: "var(--neutral-500)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-            <span>Faixa de distância</span>
-            <span className="text-center">Frete padrão</span>
-            <span className="text-right">por urna</span>
-          </div>
-          {[
-            { label: "Até 80km", value: "R$ 0", note: "Cliente retira ou desconto embutido" },
-            { label: "80 a 150km", value: "R$ 20", note: "" },
-            { label: "150 a 250km", value: "R$ 25", note: "" },
-            { label: "Acima de 250km", value: "R$ 30", note: "" },
-          ].map((tier, i) => (
-            <div key={i} className="grid grid-cols-3 gap-2 items-center py-1.5"
-              style={{ borderBottom: i < 3 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
-              <span className="text-[13px]" style={{ color: "var(--neutral-700)" }}>{tier.label}</span>
-              <span className="text-[13px] font-bold text-center" style={{ color: "var(--brand-teal)" }}>{tier.value}</span>
-              <span className="text-[11px] text-right" style={{ color: "var(--neutral-400)" }}>
-                {tier.note || "por urna"}
-              </span>
-            </div>
-          ))}
-          <p className="text-[11px] pt-2" style={{ color: "var(--neutral-400)" }}>
-            💡 Em breve: edição dos valores por faixa diretamente nesta tela
-          </p>
-        </div>
-      </div>
-
-      <button onClick={save} disabled={saving}
-        className="btn-remanso flex items-center gap-2">
-        <TrendingUp size={13} />
-        {saving ? "Salvando..." : saved ? "✓ Salvo!" : "Salvar metas"}
-      </button>
-    </div>
-  )
 }
 
-export default function ConfiguracoesPage() {
-  const { can } = useUserRole()
+function NewCampaignDialog({
+    open,
+    onClose,
+    onCreated,
+}: {
+    open: boolean
+    onClose: () => void
+    onCreated: () => void
+}) {
+    const [name, setName] = useState('')
+    const [message, setMessage] = useState('')
+    const [cities, setCities] = useState('')
+    const [distanceMax, setDistanceMax] = useState<string>('')
+    const [mediaFile, setMediaFile] = useState<File | null>(null)
+    const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+    const [loading, setLoading] = useState(false)
+    const [contactCount, setContactCount] = useState<number | null>(null)
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Settings className="w-5 h-5 text-primary" />
+    useEffect(() => {
+        const fetchCount = async () => {
+            const supabase = createClient()
+            const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
+            let query = supabase.from('crm_contacts').select('id', { count: 'exact', head: true })
+                .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true)
+
+            if (cityList.length > 0) query = query.in('city', cityList)
+            if (distanceMax) query = (query as any).lte('distance_km', parseInt(distanceMax))
+
+            const { count } = await query
+            setContactCount(count ?? 0)
+        }
+        fetchCount()
+    }, [cities, distanceMax])
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setMediaFile(file)
+        setMediaPreview(URL.createObjectURL(file))
+    }
+
+    const handleSubmit = async () => {
+        if (!name || !message) return
+        setLoading(true)
+        const supabase = createClient()
+
+        let media_url: string | null = null
+
+        if (mediaFile) {
+            const ext = mediaFile.name.split('.').pop()
+            const path = `${Date.now()}.${ext}`
+            const { data: upload, error: uploadErr } = await supabase.storage
+                .from('campanhas')
+                .upload(path, mediaFile, { upsert: true })
+
+            if (!uploadErr && upload) {
+                const { data: { publicUrl } } = supabase.storage.from('campanhas').getPublicUrl(upload.path)
+                media_url = publicUrl
+            }
+        }
+
+        const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
+
+        // Buscar contatos filtrados — lê de crm_contacts (219 reais, não os 3 do public antigo)
+        let contactQuery = supabase.from('crm_contacts').select('id')
+            .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true).not('whatsapp', 'is', null)
+
+        if (cityList.length > 0) contactQuery = contactQuery.in('city', cityList)
+        if (distanceMax) contactQuery = (contactQuery as any).lte('distance_km', parseInt(distanceMax))
+        const { data: contactsData } = await contactQuery
+
+        const { data: campaign, error } = await supabase.from('campaigns').insert({
+            org_id: ORG_ID,
+            name,
+            message_template: message,
+            media_url,
+            status: 'draft',
+            filter_cities: cityList.length > 0 ? cityList : null,
+            filter_distance_max: distanceMax ? parseInt(distanceMax) : null,
+            total_contacts: contactsData?.length ?? 0,
+        }).select('id').single()
+
+        if (!error && campaign && contactsData) {
+            const rows = contactsData.map(c => ({
+                campaign_id: campaign.id,
+                contact_id: c.id,
+                status: 'pending',
+            }))
+            if (rows.length > 0) {
+                await supabase.from('campaign_contacts').insert(rows)
+            }
+        }
+
+        setLoading(false)
+        onCreated()
+        onClose()
+        setName('')
+        setMessage('')
+        setCities('')
+        setDistanceMax('')
+        setMediaFile(null)
+        setMediaPreview(null)
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onClose}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Megaphone className="w-5 h-5 text-primary" />
+                        Nova Campanha
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                    <div>
+                        <Label>Nome da campanha</Label>
+                        <Input
+                            placeholder="Ex: Promoção Quinzenal — Kit Bronze"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="mt-1.5"
+                        />
+                    </div>
+
+                    <div>
+                        <Label>Mensagem</Label>
+                        <p className="text-xs text-muted-foreground mb-1.5">
+                            Use <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>, <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>, <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
+                        </p>
+                        <Textarea
+                            placeholder="Bom dia {{nome}}! Estamos com uma promoção especial..."
+                            value={message}
+                            onChange={e => setMessage(e.target.value)}
+                            rows={5}
+                            className="mt-1.5 resize-none"
+                        />
+                    </div>
+
+                    <div>
+                        <Label>Banner / Foto (opcional)</Label>
+                        <div className="mt-1.5">
+                            {mediaPreview ? (
+                                <div className="relative rounded-xl overflow-hidden border border-border">
+                                    <img src={mediaPreview} alt="preview" className="w-full max-h-48 object-cover" />
+                                    <button
+                                        onClick={() => { setMediaFile(null); setMediaPreview(null) }}
+                                        className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-6 cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                                    <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                                    <span className="text-sm text-muted-foreground">Clique para enviar imagem</span>
+                                    <span className="text-xs text-muted-foreground/60 mt-1">JPG, PNG, WEBP até 10MB</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                                </label>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Segmentação (opcional)
+                        </p>
+
+                        <div>
+                            <Label className="flex items-center gap-1.5">
+                                <span>📍</span> Distância máxima da fábrica (km)
+                            </Label>
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <Input
+                                    type="number"
+                                    placeholder="Ex: 300"
+                                    value={distanceMax}
+                                    onChange={e => setDistanceMax(e.target.value)}
+                                    className="w-32"
+                                    min={0}
+                                    max={1000}
+                                />
+                                <span className="text-sm text-muted-foreground">km a partir de Vitória da Conquista</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Deixe em branco para incluir todos os raios.
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label>Filtrar por cidades</Label>
+                            <Input
+                                placeholder="Ex: Salvador, Feira de Santana, Jequié"
+                                value={cities}
+                                onChange={e => setCities(e.target.value)}
+                                className="mt-1.5"
+                            />
+                        </div>
+
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1 border-t border-border">
+                            <Users className="w-3.5 h-3.5" />
+                            {contactCount !== null ? (
+                                <span><strong className="text-foreground">{contactCount}</strong> contatos serão alcançados com esses filtros</span>
+                            ) : 'Calculando...'}
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                    <Button onClick={handleSubmit} disabled={loading || !name || !message}>
+                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                        Criar Campanha
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+export default function CampanhasPage() {
+    const [campaigns, setCampaigns] = useState<Campaign[]>([])
+    const [loading, setLoading] = useState(true)
+    const [showNew, setShowNew] = useState(false)
+    const [filter, setFilter] = useState<string>('all')
+
+    const loadCampaigns = async () => {
+        setLoading(true)
+        const supabase = createClient()
+        const { data } = await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('org_id', ORG_ID)
+            .order('created_at', { ascending: false })
+
+        if (data) setCampaigns(data)
+        setLoading(false)
+    }
+
+    const handleDisparar = async (campaignId: string) => {
+        if (!confirm('Confirma o disparo desta campanha para todos os contatos?')) return
+
+        try {
+            const supabase = createClient()
+            await supabase.from('campaigns').update({ status: 'sending' }).eq('id', campaignId)
+
+            const response = await fetch('https://n8n.promptcomercial.com.br/webhook/disparar-campanha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campaign_id: campaignId })
+            })
+
+            if (response.ok) {
+                alert('Campanha disparada com sucesso!')
+                loadCampaigns()
+            } else {
+                alert('Erro ao disparar campanha. Tente novamente.')
+            }
+        } catch {
+            alert('Erro ao disparar campanha.')
+        }
+    }
+
+    useEffect(() => { loadCampaigns() }, [])
+
+    const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter)
+
+    const stats = {
+        total: campaigns.length,
+        sent: campaigns.filter(c => c.status === 'sent').length,
+        totalReach: campaigns.reduce((a, c) => a + (c.sent_count || 0), 0),
+        draft: campaigns.filter(c => c.status === 'draft').length,
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                        <Megaphone className="w-6 h-6 text-primary" />
+                        Campanhas
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Disparos em massa personalizados via WhatsApp
+                    </p>
+                </div>
+                <Button onClick={() => setShowNew(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Campanha
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                    { label: 'Total', value: stats.total, icon: Megaphone, color: 'text-primary' },
+                    { label: 'Enviadas', value: stats.sent, icon: CheckCircle2, color: 'text-emerald-500' },
+                    { label: 'Mensagens', value: stats.totalReach.toLocaleString('pt-BR'), icon: Send, color: 'text-blue-500' },
+                    { label: 'Rascunhos', value: stats.draft, icon: FileImage, color: 'text-zinc-400' },
+                ].map(s => (
+                    <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                            <s.icon className={`w-4 h-4 ${s.color}`} />
+                            <span className="text-xs text-muted-foreground">{s.label}</span>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+                {[
+                    { value: 'all', label: 'Todas' },
+                    { value: 'draft', label: 'Rascunhos' },
+                    { value: 'scheduled', label: 'Agendadas' },
+                    { value: 'sending', label: 'Enviando' },
+                    { value: 'sent', label: 'Enviadas' },
+                ].map(f => (
+                    <button
+                        key={f.value}
+                        onClick={() => setFilter(f.value)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === f.value
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-16 bg-card/50">
+                    <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                    <h2 className="text-lg font-semibold text-foreground">Nenhuma campanha ainda</h2>
+                    <p className="text-muted-foreground text-sm mt-2 max-w-sm">
+                        Crie sua primeira campanha para disparar mensagens personalizadas via WhatsApp.
+                    </p>
+                    <Button className="mt-6" onClick={() => setShowNew(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar primeira campanha
+                    </Button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filtered.map(c => (
+                        <CampaignCard key={c.id} campaign={c} onSelect={() => { }} onDisparar={handleDisparar} />
+                    ))}
+                </div>
+            )}
+
+            <NewCampaignDialog
+                open={showNew}
+                onClose={() => setShowNew(false)}
+                onCreated={loadCampaigns}
+            />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
-          <p className="text-sm text-muted-foreground">Gerencie seu perfil, organização e pipeline</p>
-        </div>
-      </div>
-
-      <Tabs defaultValue="perfil" className="space-y-6">
-        <TabsList className="h-10 p-1 flex gap-0.5 bg-muted rounded-xl w-full sm:w-auto sm:inline-flex">
-          <TabsTrigger value="perfil" id="tab-perfil" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-            <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Perfil</span>
-          </TabsTrigger>
-          <TabsTrigger value="organizacao" id="tab-organizacao" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-            <Building2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Organização</span>
-          </TabsTrigger>
-          <TabsTrigger value="pipeline" id="tab-pipeline" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-            <KanbanSquare className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Pipeline</span>
-          </TabsTrigger>
-          {can('manage_users') && (
-            <TabsTrigger value="usuarios" id="tab-usuarios" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-              <Users className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Usuários</span>
-            </TabsTrigger>
-          )}
-          {can('manage_margin_targets') && (
-            <TabsTrigger value="margens" id="tab-margens" className="flex items-center gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Margens</span>
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="perfil">
-          <TabPerfil />
-        </TabsContent>
-        <TabsContent value="organizacao">
-          <TabOrganizacao />
-        </TabsContent>
-        <TabsContent value="pipeline">
-          <TabPipeline />
-        </TabsContent>
-        <TabsContent value="usuarios">
-          <TabUsuarios />
-        </TabsContent>
-        <TabsContent value="margens">
-          <TabMargens />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
+    )
 }
