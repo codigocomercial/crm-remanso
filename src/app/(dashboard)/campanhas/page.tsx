@@ -30,8 +30,6 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 interface Campaign {
     id: string
     name: string
@@ -55,8 +53,6 @@ const STATUS_CONFIG = {
 }
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
-
-// ─── Campaign Card ────────────────────────────────────────────────────────────
 
 function CampaignCard({ campaign, onSelect, onDisparar }: { campaign: Campaign; onSelect: () => void; onDisparar: (id: string) => void }) {
     const cfg = STATUS_CONFIG[campaign.status]
@@ -145,8 +141,6 @@ function CampaignCard({ campaign, onSelect, onDisparar }: { campaign: Campaign; 
     )
 }
 
-// ─── New Campaign Dialog ──────────────────────────────────────────────────────
-
 function NewCampaignDialog({
     open,
     onClose,
@@ -165,7 +159,6 @@ function NewCampaignDialog({
     const [loading, setLoading] = useState(false)
     const [contactCount, setContactCount] = useState<number | null>(null)
 
-    // Preview de contatos ao digitar cidades
     useEffect(() => {
         const fetchCount = async () => {
             const supabase = createClient()
@@ -196,7 +189,6 @@ function NewCampaignDialog({
 
         let media_url: string | null = null
 
-        // Upload da imagem se houver
         if (mediaFile) {
             const ext = mediaFile.name.split('.').pop()
             const path = `${Date.now()}.${ext}`
@@ -212,7 +204,7 @@ function NewCampaignDialog({
 
         const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
 
-        // Buscar contatos filtrados
+        // Buscar contatos filtrados — lê de crm_contacts (219 reais, não os 3 do public antigo)
         let contactQuery = supabase.from('crm_contacts').select('id')
             .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true).not('whatsapp', 'is', null)
 
@@ -220,7 +212,6 @@ function NewCampaignDialog({
         if (distanceMax) contactQuery = (contactQuery as any).lte('distance_km', parseInt(distanceMax))
         const { data: contactsData } = await contactQuery
 
-        // Criar campanha
         const { data: campaign, error } = await supabase.from('campaigns').insert({
             org_id: ORG_ID,
             name,
@@ -233,7 +224,6 @@ function NewCampaignDialog({
         }).select('id').single()
 
         if (!error && campaign && contactsData) {
-            // Inserir campaign_contacts
             const rows = contactsData.map(c => ({
                 campaign_id: campaign.id,
                 contact_id: c.id,
@@ -282,7 +272,7 @@ function NewCampaignDialog({
                             Use <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>, <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>, <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
                         </p>
                         <Textarea
-                            placeholder="Bom dia {{nome}}! Estamos com uma promoção especial de Kit Bronze..."
+                            placeholder="Bom dia {{nome}}! Estamos com uma promoção especial..."
                             value={message}
                             onChange={e => setMessage(e.target.value)}
                             rows={5}
@@ -314,13 +304,11 @@ function NewCampaignDialog({
                         </div>
                     </div>
 
-                    {/* Filtros de segmentação */}
                     <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             Segmentação (opcional)
                         </p>
 
-                        {/* Filtro por distância */}
                         <div>
                             <Label className="flex items-center gap-1.5">
                                 <span>📍</span> Distância máxima da fábrica (km)
@@ -338,11 +326,10 @@ function NewCampaignDialog({
                                 <span className="text-sm text-muted-foreground">km a partir de Vitória da Conquista</span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Deixe em branco para incluir todos os raios. Clientes sem distância cadastrada serão ignorados se este filtro for usado.
+                                Deixe em branco para incluir todos os raios.
                             </p>
                         </div>
 
-                        {/* Filtro por cidades */}
                         <div>
                             <Label>Filtrar por cidades</Label>
                             <Input
@@ -353,7 +340,6 @@ function NewCampaignDialog({
                             />
                         </div>
 
-                        {/* Contador de contatos */}
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1 border-t border-border">
                             <Users className="w-3.5 h-3.5" />
                             {contactCount !== null ? (
@@ -374,8 +360,6 @@ function NewCampaignDialog({
         </Dialog>
     )
 }
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CampanhasPage() {
     const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -400,11 +384,9 @@ export default function CampanhasPage() {
         if (!confirm('Confirma o disparo desta campanha para todos os contatos?')) return
 
         try {
-            // Atualizar status para 'sending'
             const supabase = createClient()
             await supabase.from('campaigns').update({ status: 'sending' }).eq('id', campaignId)
 
-            // Chamar webhook n8n
             const response = await fetch('https://n8n.promptcomercial.com.br/webhook/disparar-campanha', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -435,7 +417,6 @@ export default function CampanhasPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -452,7 +433,6 @@ export default function CampanhasPage() {
                 </Button>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                     { label: 'Total', value: stats.total, icon: Megaphone, color: 'text-primary' },
@@ -470,7 +450,6 @@ export default function CampanhasPage() {
                 ))}
             </div>
 
-            {/* Filter */}
             <div className="flex gap-2 flex-wrap">
                 {[
                     { value: 'all', label: 'Todas' },
@@ -492,7 +471,6 @@ export default function CampanhasPage() {
                 ))}
             </div>
 
-            {/* List */}
             {loading ? (
                 <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
@@ -502,7 +480,7 @@ export default function CampanhasPage() {
                     <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-4" />
                     <h2 className="text-lg font-semibold text-foreground">Nenhuma campanha ainda</h2>
                     <p className="text-muted-foreground text-sm mt-2 max-w-sm">
-                        Crie sua primeira campanha para disparar mensagens personalizadas com banner via WhatsApp.
+                        Crie sua primeira campanha para disparar mensagens personalizadas via WhatsApp.
                     </p>
                     <Button className="mt-6" onClick={() => setShowNew(true)}>
                         <Plus className="w-4 h-4 mr-2" />
