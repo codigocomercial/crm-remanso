@@ -9,12 +9,43 @@ import { ArrowLeft, Plus, Trash2, MapPin, RefreshCw, MessageSquare } from 'lucid
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
+
 const ROLE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   compras:     { label: 'Compras',     color: '#2F6F5D', bg: '#EBF5F1' },
   financeiro:  { label: 'Financeiro',  color: '#9E7F2E', bg: '#FAF3E0' },
   diretor:     { label: 'Diretor',     color: '#5B5BD6', bg: '#EFEFFF' },
   operacional: { label: 'Operacional', color: '#6B7280', bg: '#F9FAFB' },
   outro:       { label: 'Outro',       color: '#6B7280', bg: '#F9FAFB' },
+}
+
+// ─── Paleta de cores dos grupos ───────────────────────────────────────────────
+const GROUP_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
+  emerald: { bg: '#D1FAE5', text: '#065F46', hex: '#10b981' },
+  blue:    { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
+  yellow:  { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
+  orange:  { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
+  red:     { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
+  purple:  { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
+  gray:    { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
+}
+
+function GroupBadge({ name, color }: { name: string; color: string }) {
+  const c = GROUP_COLORS[color] ?? GROUP_COLORS.gray
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
+      style={{ backgroundColor: c.bg, color: c.text }}
+    >
+      {name}
+    </span>
+  )
+}
+
+interface ContactGroup {
+  id: string
+  name: string
+  color: string
 }
 
 interface Company {
@@ -34,6 +65,9 @@ interface Company {
   sellers: { name: string } | null
   segment: string | null
   notes: string | null
+  group_id: string | null
+  group_name: string | null
+  group_color: string | null
 }
 
 interface Contact {
@@ -66,6 +100,12 @@ export default function EmpresaDetailPage() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [savingContact, setSavingContact] = useState(false)
 
+  // ─── Estado do grupo ────────────────────────────────────────────────────────
+  const [groups, setGroups] = useState<ContactGroup[]>([])
+  const [editingGroup, setEditingGroup] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
+  const [savingGroup, setSavingGroup] = useState(false)
+
   const [newContact, setNewContact] = useState({
     full_name: '', phone: '', whatsapp: '', contact_role: 'compras', job_title: '',
   })
@@ -74,17 +114,18 @@ export default function EmpresaDetailPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: comp, error: compError }, { data: conts }, { data: sellersData }] = await Promise.all([
+    const [{ data: comp }, { data: conts }, { data: sellersData }, { data: groupsData }] = await Promise.all([
       supabase.from('crm_companies').select('*').eq('id', id).single(),
       supabase.from('contacts')
         .select('id,full_name,phone,whatsapp,contact_role,receive_campaigns,job_title')
         .eq('company_id', id).order('contact_role').order('full_name'),
       supabase.from('crm_sellers').select('id,name').eq('is_active', true).order('name'),
+      supabase.from('crm_contact_groups').select('id,name,color').eq('org_id', ORG_ID).order('sort_order'),
     ])
-    if (compError) console.error('[empresa/detalhe] erro:', compError)
     setCompany(comp)
     setContacts(conts ?? [])
     setSellers(sellersData ?? [])
+    setGroups(groupsData ?? [])
     setLoading(false)
   }
 
@@ -106,15 +147,34 @@ export default function EmpresaDetailPage() {
   async function saveEdit() {
     if (!editing || !company) return
     setSavingEdit(true)
-
     const updates: Partial<Company> = {}
     if (editing === 'km') updates.distance_km = parseInt(editVal) || null
     if (editing === 'ciclo') updates.reorder_cycle_days = parseInt(editVal) || null
-
     await supabase.from('companies').update(updates).eq('id', id)
     setCompany(prev => prev ? { ...prev, ...updates } : prev)
     setEditing(null)
     setSavingEdit(false)
+  }
+
+  // ─── Salvar grupo via API route (usa service client no servidor) ─────────────
+  async function saveGroup() {
+    setSavingGroup(true)
+    const res = await fetch(`/api/companies/${id}/group`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: selectedGroup || null }),
+    })
+    if (res.ok) {
+      const group = groups.find(g => g.id === selectedGroup) ?? null
+      setCompany(prev => prev ? {
+        ...prev,
+        group_id: group?.id ?? null,
+        group_name: group?.name ?? null,
+        group_color: group?.color ?? null,
+      } : prev)
+    }
+    setEditingGroup(false)
+    setSavingGroup(false)
   }
 
   async function saveContact() {
@@ -248,8 +308,7 @@ export default function EmpresaDetailPage() {
           style={{ color: 'var(--neutral-500)' }}>
           <ArrowLeft size={13} /> Voltar
         </Link>
-        <Link href={`/empresas/${id}/editar`}
-          className="btn-remanso inline-flex items-center gap-1.5">
+        <Link href={`/empresas/${id}/editar`} className="btn-remanso inline-flex items-center gap-1.5">
           ✏️ Editar
         </Link>
       </PageHeader>
@@ -373,7 +432,55 @@ export default function EmpresaDetailPage() {
               </div>
             </div>
 
-            {/* Última compra — calculado dos pedidos */}
+            {/* ─── GRUPO ─────────────────────────────────────────────────────── */}
+            <div className="flex items-start gap-2">
+              <span className="text-[14px] mt-0.5">🏷️</span>
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'var(--neutral-400)' }}>
+                  Grupo
+                </p>
+                {editingGroup ? (
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedGroup}
+                      onChange={e => setSelectedGroup(e.target.value)}
+                      className="px-2 py-1 text-[13px] rounded border outline-none bg-white"
+                      style={{ borderColor: 'var(--brand-teal)', minWidth: '160px' }}
+                      autoFocus
+                    >
+                      <option value="">— Sem grupo —</option>
+                      {groups.map(g => {
+                        const c = GROUP_COLORS[g.color] ?? GROUP_COLORS.gray
+                        return (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        )
+                      })}
+                    </select>
+                    <button onClick={saveGroup} disabled={savingGroup}
+                      className="text-[11px] font-semibold px-2 py-1 rounded"
+                      style={{ background: 'var(--brand-teal)', color: 'white' }}>
+                      {savingGroup ? '...' : 'OK'}
+                    </button>
+                    <button onClick={() => setEditingGroup(false)}
+                      className="text-[11px] px-1.5 py-1 rounded hover:bg-gray-100"
+                      style={{ color: 'var(--neutral-400)' }}>✕</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 group">
+                    {company.group_name && company.group_color
+                      ? <GroupBadge name={company.group_name} color={company.group_color} />
+                      : <span className="text-[13px]" style={{ color: 'var(--neutral-300)' }}>Sem grupo</span>
+                    }
+                    <button
+                      onClick={() => { setEditingGroup(true); setSelectedGroup(company.group_id ?? '') }}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] transition-opacity"
+                      style={{ color: 'var(--brand-teal)' }}>✏️</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Última compra */}
             <div className="flex items-start gap-2">
               <span className="text-[14px] mt-0.5">🗓️</span>
               <div>
@@ -386,7 +493,7 @@ export default function EmpresaDetailPage() {
               </div>
             </div>
 
-            {/* Ticket médio — calculado dos pedidos */}
+            {/* Ticket médio */}
             <div className="flex items-start gap-2">
               <span className="text-[14px] mt-0.5">💰</span>
               <div>
@@ -483,7 +590,6 @@ export default function EmpresaDetailPage() {
               </div>
             )}
 
-            {/* Modal edição de contato */}
             {editingContact && (
               <div className="mb-4 p-4 rounded-xl space-y-3" style={{ background: 'var(--neutral-100)', border: '1px solid var(--brand-teal)' }}>
                 <p className="text-[12px] font-semibold" style={{ color: 'var(--neutral-700)' }}>Editar contato</p>
