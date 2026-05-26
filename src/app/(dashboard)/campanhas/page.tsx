@@ -345,6 +345,21 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     if (tab === 'contatos') loadContacts()
   }, [tab, loadContacts])
 
+  // Contador de pendentes — carregado independente da aba ativa
+  const [totalPending, setTotalPending] = useState<number>(0)
+
+  // Carregar contador de pendentes (sempre, não depende da aba)
+  const loadPendingCount = useCallback(async () => {
+    const { count } = await supabase
+      .from('campaign_contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('campaign_id', campaign.id)
+      .eq('status', 'pending')
+    setTotalPending(count ?? 0)
+  }, [campaign.id])
+
+  useEffect(() => { loadPendingCount() }, [loadPendingCount])
+
   // Fila da campanha
   const [queue, setQueue] = useState<Array<{
     id: string; contact_id: string; status: string; sent_at: string | null; error_msg: string | null;
@@ -426,6 +441,7 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     setSelected(new Set())
     setAdding(false)
     loadContacts()
+    loadPendingCount()
     onRefresh()
   }
 
@@ -468,13 +484,14 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     if (response.ok) {
       onRefresh()
       loadQueue()
+      loadPendingCount()
     } else {
       alert('Erro ao acionar o disparo. Verifique o n8n.')
       await supabase.from('campaigns').update({ status: 'draft' }).eq('id', campaign.id)
     }
   }
 
-  const pendingCount = queue.filter(q => q.status === 'pending').length
+  const pendingCount = totalPending  // usa contador independente de aba
   const sentCount = queue.filter(q => q.status === 'sent').length
   const failedCount = queue.filter(q => q.status === 'failed').length
 
@@ -512,30 +529,39 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
         )}
       </div>
 
-      {/* Mensagem da campanha */}
-      <div className="bg-muted/40 rounded-xl p-4 border border-border">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Mensagem</p>
-        <p className="text-sm text-foreground whitespace-pre-wrap">{campaign.message_template}</p>
-        {campaign.media_url && (
-          <div className="mt-3">
-            <img src={campaign.media_url} alt="banner" className="rounded-lg max-h-32 object-cover" />
-          </div>
-        )}
-      </div>
+      {/* Layout duas colunas */}
+      <div className="grid lg:grid-cols-5 gap-6">
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Na fila', value: queue.length, color: 'text-foreground' },
-          { label: 'Enviados', value: sentCount, color: 'text-emerald-500' },
-          { label: 'Falhou', value: failedCount, color: 'text-red-500' },
-        ].map(s => (
-          <div key={s.label} className="bg-card border border-border rounded-xl p-4 text-center">
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+        {/* Coluna esquerda — mensagem + stats (2/5) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Mensagem */}
+          <div className="bg-muted/40 rounded-xl p-4 border border-border">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Mensagem</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{campaign.message_template}</p>
+            {campaign.media_url && (
+              <div className="mt-3">
+                <img src={campaign.media_url} alt="banner" className="rounded-lg max-h-32 object-cover" />
+              </div>
+            )}
           </div>
-        ))}
-      </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Na fila', value: queue.length, color: 'text-foreground' },
+              { label: 'Enviados', value: sentCount, color: 'text-emerald-500' },
+              { label: 'Falhou', value: failedCount, color: 'text-red-500' },
+            ].map(s => (
+              <div key={s.label} className="bg-card border border-border rounded-xl p-3 text-center">
+                <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coluna direita — fila + contatos (3/5) */}
+        <div className="lg:col-span-3 space-y-4">
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
@@ -722,6 +748,8 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
           )}
         </div>
       )}
+        </div> {/* fim coluna direita */}
+      </div> {/* fim grid duas colunas */}
     </div>
   )
 }
