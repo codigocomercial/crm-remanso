@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { group_id } = await req.json()
     const supabase = createServiceClient()
 
@@ -15,7 +16,7 @@ export async function PATCH(
       .schema('crm')
       .from('companies')
       .update({ group_id: group_id ?? null })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
