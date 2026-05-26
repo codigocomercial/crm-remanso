@@ -202,8 +202,8 @@ function NewCampaignDialog({ open, onClose, onCreated }: { open: boolean; onClos
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={() => {}}>  {/* fechamento só pelos botões */}
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-primary" /> Nova Campanha
