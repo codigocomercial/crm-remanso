@@ -11,22 +11,47 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Megaphone, Plus, Send, Clock, CheckCircle2, XCircle, FileImage,
   Users, Loader2, ChevronRight, ImageIcon, ArrowLeft, Search,
-  Filter, CheckSquare, Square, UserCheck, AlertCircle, Pencil, RotateCcw,
+  CheckSquare, Square, UserCheck, AlertCircle, Pencil, RotateCcw,
+  Image, AlignLeft, Layers,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
+// ─── Send mode config ─────────────────────────────────────────────────────────
+const SEND_MODES = [
+  {
+    value: 'image_only',
+    label: 'Só banner',
+    description: 'Envia apenas a imagem',
+    icon: Image,
+  },
+  {
+    value: 'image_caption',
+    label: 'Banner + legenda',
+    description: 'Texto junto à imagem (caption)',
+    icon: Layers,
+  },
+  {
+    value: 'image_then_text',
+    label: 'Banner e texto separados',
+    description: 'Imagem primeiro, texto depois',
+    icon: AlignLeft,
+  },
+] as const
+
+type SendMode = typeof SEND_MODES[number]['value']
+
 // ─── Paleta de cores dos grupos ───────────────────────────────────────────────
 const GROUP_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
   emerald: { bg: '#D1FAE5', text: '#065F46', hex: '#10b981' },
-  blue: { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
-  yellow: { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
-  orange: { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
-  red: { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
-  purple: { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
-  gray: { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
+  blue:    { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
+  yellow:  { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
+  orange:  { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
+  red:     { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
+  purple:  { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
+  gray:    { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
 }
 
 function GroupBadge({ name, color }: { name: string; color: string }) {
@@ -41,23 +66,23 @@ function GroupBadge({ name, color }: { name: string; color: string }) {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  draft: { label: 'Rascunho', color: 'bg-zinc-500/15 text-zinc-400', icon: FileImage },
-  scheduled: { label: 'Agendada', color: 'bg-blue-500/15 text-blue-400', icon: Clock },
-  sending: { label: 'Enviando', color: 'bg-yellow-500/15 text-yellow-400', icon: Loader2 },
-  sent: { label: 'Enviada', color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400', icon: XCircle },
+  draft:     { label: 'Rascunho',  color: 'bg-zinc-500/15 text-zinc-400',       icon: FileImage },
+  scheduled: { label: 'Agendada',  color: 'bg-blue-500/15 text-blue-400',       icon: Clock },
+  sending:   { label: 'Enviando',  color: 'bg-yellow-500/15 text-yellow-400',   icon: Loader2 },
+  sent:      { label: 'Enviada',   color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
+  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400',         icon: XCircle },
 } as const
 
 const CONTACT_STATUS_CONFIG = {
-  pending: { label: 'Pendente', color: 'text-zinc-400' },
-  queued: { label: 'Na fila', color: 'text-blue-400' },
-  sending: { label: 'Enviando', color: 'text-yellow-400' },
-  sent: { label: 'Enviado', color: 'text-emerald-500' },
-  failed: { label: 'Falhou', color: 'text-red-500' },
-  read: { label: 'Lido', color: 'text-emerald-400' },
-  replied: { label: 'Respondeu', color: 'text-primary' },
-  paused: { label: 'Pausado', color: 'text-zinc-400' },
-  cancelled: { label: 'Cancelado', color: 'text-zinc-400' },
+  pending:   { label: 'Pendente',   color: 'text-zinc-400' },
+  queued:    { label: 'Na fila',    color: 'text-blue-400' },
+  sending:   { label: 'Enviando',   color: 'text-yellow-400' },
+  sent:      { label: 'Enviado',    color: 'text-emerald-500' },
+  failed:    { label: 'Falhou',     color: 'text-red-500' },
+  read:      { label: 'Lido',       color: 'text-emerald-400' },
+  replied:   { label: 'Respondeu',  color: 'text-primary' },
+  paused:    { label: 'Pausado',    color: 'text-zinc-400' },
+  cancelled: { label: 'Cancelado',  color: 'text-zinc-400' },
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -66,6 +91,7 @@ interface Campaign {
   name: string
   message_template: string
   media_url: string | null
+  send_mode: SendMode
   status: keyof typeof STATUS_CONFIG
   scheduled_at: string | null
   sent_count: number
@@ -95,12 +121,49 @@ interface ContactGroup {
   color: string
 }
 
+// ─── SendMode Selector ────────────────────────────────────────────────────────
+function SendModeSelector({ value, onChange }: { value: SendMode; onChange: (v: SendMode) => void }) {
+  return (
+    <div className="space-y-2">
+      {SEND_MODES.map(mode => {
+        const Icon = mode.icon
+        const selected = value === mode.value
+        return (
+          <button key={mode.value} type="button"
+            onClick={() => onChange(mode.value)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+              selected
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-border hover:border-primary/30 bg-card'
+            }`}>
+            <div className={`p-1.5 rounded-lg ${selected ? 'bg-primary/10' : 'bg-muted'}`}>
+              <Icon className={`w-4 h-4 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${selected ? 'text-primary' : 'text-foreground'}`}>
+                {mode.label}
+              </p>
+              <p className="text-xs text-muted-foreground">{mode.description}</p>
+            </div>
+            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+              selected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+            }`}>
+              {selected && <div className="w-full h-full rounded-full bg-white scale-50" />}
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Campaign Card ────────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onOpen }: { campaign: Campaign; onOpen: () => void }) {
   const cfg = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.draft
   const Icon = cfg.icon
   const progress = campaign.total_contacts > 0
     ? Math.round((campaign.sent_count / campaign.total_contacts) * 100) : 0
+  const modeLabel = SEND_MODES.find(m => m.value === campaign.send_mode)?.label ?? 'Só banner'
 
   return (
     <div onClick={onOpen}
@@ -120,7 +183,14 @@ function CampaignCard({ campaign, onOpen }: { campaign: Campaign; onOpen: () => 
         </span>
       </div>
 
-      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{campaign.message_template}</p>
+      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{campaign.message_template}</p>
+
+      {/* Badge do modo de envio */}
+      <div className="mb-3">
+        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+          {modeLabel}
+        </span>
+      </div>
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-3">
@@ -165,12 +235,16 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
 }) {
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
+  const [sendMode, setSendMode] = useState<SendMode>('image_only')
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const precisaMensagem = sendMode !== 'image_only'
+
   async function handleSubmit() {
-    if (!name.trim() || !message.trim()) return
+    if (!name.trim()) return
+    if (precisaMensagem && !message.trim()) return
     setLoading(true)
     const supabase = createClient()
 
@@ -191,6 +265,7 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
       name: name.trim(),
       message_template: message.trim(),
       media_url,
+      send_mode: sendMode,
       status: 'draft',
       total_contacts: 0,
       sent_count: 0,
@@ -201,12 +276,12 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
     if (!error && campaign) {
       onCreated(campaign.id)
       onClose()
-      setName(''); setMessage(''); setMediaFile(null); setMediaPreview(null)
+      setName(''); setMessage(''); setMediaFile(null); setMediaPreview(null); setSendMode('image_only')
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => { }}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -221,18 +296,27 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
               value={name} onChange={e => setName(e.target.value)} className="mt-1.5" />
           </div>
 
+          {/* Modo de envio */}
           <div>
-            <Label>Mensagem</Label>
-            <p className="text-xs text-muted-foreground mb-1.5">
-              Use{' '}
-              <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>,{' '}
-              <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>,{' '}
-              <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
-            </p>
-            <Textarea placeholder="Bom dia {{nome}}! Gostaríamos de informar..."
-              value={message} onChange={e => setMessage(e.target.value)}
-              rows={5} className="mt-1.5 resize-none" />
+            <Label className="mb-2 block">Modo de envio</Label>
+            <SendModeSelector value={sendMode} onChange={setSendMode} />
           </div>
+
+          {/* Mensagem — oculta se só banner */}
+          {precisaMensagem && (
+            <div>
+              <Label>Mensagem</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">
+                Use{' '}
+                <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>,{' '}
+                <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>,{' '}
+                <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
+              </p>
+              <Textarea placeholder="Bom dia {{nome}}! Gostaríamos de informar..."
+                value={message} onChange={e => setMessage(e.target.value)}
+                rows={5} className="mt-1.5 resize-none" />
+            </div>
+          )}
 
           <div>
             <Label>Banner / Foto (opcional)</Label>
@@ -270,7 +354,8 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={loading || !name.trim() || !message.trim()}>
+          <Button onClick={handleSubmit}
+            disabled={loading || !name.trim() || (precisaMensagem && !message.trim())}>
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
             Criar rascunho
           </Button>
@@ -289,6 +374,7 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
 }) {
   const [name, setName] = useState(campaign.name)
   const [message, setMessage] = useState(campaign.message_template)
+  const [sendMode, setSendMode] = useState<SendMode>(campaign.send_mode ?? 'image_only')
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [mediaPreview, setMediaPreview] = useState<string | null>(campaign.media_url)
   const [removeImage, setRemoveImage] = useState(false)
@@ -297,13 +383,17 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
   useEffect(() => {
     setName(campaign.name)
     setMessage(campaign.message_template)
+    setSendMode(campaign.send_mode ?? 'image_only')
     setMediaPreview(campaign.media_url)
     setMediaFile(null)
     setRemoveImage(false)
   }, [campaign.id])
 
+  const precisaMensagem = sendMode !== 'image_only'
+
   async function handleSave() {
-    if (!name.trim() || !message.trim()) return
+    if (!name.trim()) return
+    if (precisaMensagem && !message.trim()) return
     setLoading(true)
     const supabase = createClient()
 
@@ -326,24 +416,20 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
       name: name.trim(),
       message_template: message.trim(),
       media_url,
+      send_mode: sendMode,
       status: 'draft',
     }).eq('id', campaign.id)
 
     setLoading(false)
-    if (!error) {
-      onSaved()
-      onClose()
-    }
+    if (!error) { onSaved(); onClose() }
   }
 
   function handleRemoveImage() {
-    setMediaFile(null)
-    setMediaPreview(null)
-    setRemoveImage(true)
+    setMediaFile(null); setMediaPreview(null); setRemoveImage(true)
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => { }}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -367,18 +453,27 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
               value={name} onChange={e => setName(e.target.value)} className="mt-1.5" />
           </div>
 
+          {/* Modo de envio */}
           <div>
-            <Label>Mensagem</Label>
-            <p className="text-xs text-muted-foreground mb-1.5">
-              Use{' '}
-              <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>,{' '}
-              <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>,{' '}
-              <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
-            </p>
-            <Textarea placeholder="Bom dia {{nome}}! Gostaríamos de informar..."
-              value={message} onChange={e => setMessage(e.target.value)}
-              rows={5} className="mt-1.5 resize-none" />
+            <Label className="mb-2 block">Modo de envio</Label>
+            <SendModeSelector value={sendMode} onChange={setSendMode} />
           </div>
+
+          {/* Mensagem — oculta se só banner */}
+          {precisaMensagem && (
+            <div>
+              <Label>Mensagem</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">
+                Use{' '}
+                <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>,{' '}
+                <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>,{' '}
+                <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
+              </p>
+              <Textarea placeholder="Bom dia {{nome}}! Gostaríamos de informar..."
+                value={message} onChange={e => setMessage(e.target.value)}
+                rows={5} className="mt-1.5 resize-none" />
+            </div>
+          )}
 
           <div>
             <Label>Banner / Foto</Label>
@@ -417,7 +512,8 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={loading || !name.trim() || !message.trim()}>
+          <Button onClick={handleSave}
+            disabled={loading || !name.trim() || (precisaMensagem && !message.trim())}>
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Pencil className="w-4 h-4 mr-2" />}
             Salvar alterações
           </Button>
@@ -450,6 +546,7 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   const supabase = createClient()
   const cfg = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.draft
   const Icon = cfg.icon
+  const modeLabel = SEND_MODES.find(m => m.value === campaign.send_mode)?.label ?? 'Só banner'
 
   useEffect(() => {
     supabase.from('crm_contact_groups').select('id,name,color')
@@ -459,15 +556,11 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
   const loadContacts = useCallback(async () => {
     setLoadingContacts(true)
-
     let query = supabase
       .from('crm_contacts_with_company')
       .select('id, name, company_name, city, state, whatsapp, group_id, group_name, group_color')
-      .eq('org_id', ORG_ID)
-      .eq('status', 'active')
-      .eq('receive_campaigns', true)
-      .not('whatsapp', 'is', null)
-      .order('name')
+      .eq('org_id', ORG_ID).eq('status', 'active').eq('receive_campaigns', true)
+      .not('whatsapp', 'is', null).order('name')
 
     if (search) query = query.or(`name.ilike.%${search}%,company_name.ilike.%${search}%`)
     if (filterCity) query = query.ilike('city', `%${filterCity}%`)
@@ -475,38 +568,25 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     else if (filterGroup !== 'all') query = query.eq('group_id', filterGroup)
 
     const { data: contactsData } = await query
-
     const { data: queueData } = await supabase
-      .from('campaign_contacts')
-      .select('contact_id, status')
-      .eq('campaign_id', campaign.id)
+      .from('campaign_contacts').select('contact_id, status').eq('campaign_id', campaign.id)
 
     const queueMap = new Map((queueData ?? []).map(q => [q.contact_id, q.status]))
-
     setContacts((contactsData ?? []).map(c => ({
-      ...c,
-      in_queue: queueMap.has(c.id),
-      queue_status: queueMap.get(c.id) ?? null,
+      ...c, in_queue: queueMap.has(c.id), queue_status: queueMap.get(c.id) ?? null,
     })))
-
     setLoadingContacts(false)
   }, [campaign.id, search, filterGroup, filterCity])
 
-  useEffect(() => {
-    if (tab === 'contatos') loadContacts()
-  }, [tab, loadContacts])
+  useEffect(() => { if (tab === 'contatos') loadContacts() }, [tab, loadContacts])
 
   const [totalPending, setTotalPending] = useState<number>(0)
-
   const loadPendingCount = useCallback(async () => {
-    const { count } = await supabase
-      .from('campaign_contacts')
+    const { count } = await supabase.from('campaign_contacts')
       .select('id', { count: 'exact', head: true })
-      .eq('campaign_id', campaign.id)
-      .eq('status', 'pending')
+      .eq('campaign_id', campaign.id).eq('status', 'pending')
     setTotalPending(count ?? 0)
   }, [campaign.id])
-
   useEffect(() => { loadPendingCount() }, [loadPendingCount])
 
   const [queue, setQueue] = useState<Array<{
@@ -517,22 +597,17 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
   const loadQueue = useCallback(async () => {
     setLoadingQueue(true)
-    const { data } = await supabase
-      .from('campaign_contacts')
+    const { data } = await supabase.from('campaign_contacts')
       .select('id, contact_id, status, sent_at, error_msg')
-      .eq('campaign_id', campaign.id)
-      .order('created_at', { ascending: true })
+      .eq('campaign_id', campaign.id).order('created_at', { ascending: true })
 
     if (!data) { setLoadingQueue(false); return }
 
     const ids = data.map(d => d.contact_id)
-    const { data: contactsInfo } = await supabase
-      .from('crm_contacts_with_company')
-      .select('id, name, company_name, whatsapp')
-      .in('id', ids)
+    const { data: contactsInfo } = await supabase.from('crm_contacts_with_company')
+      .select('id, name, company_name, whatsapp').in('id', ids)
 
     const infoMap = new Map((contactsInfo ?? []).map(c => [c.id, c]))
-
     setQueue(data.map(d => ({
       ...d,
       name: infoMap.get(d.contact_id)?.name ?? '—',
@@ -542,116 +617,60 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     setLoadingQueue(false)
   }, [campaign.id])
 
-  useEffect(() => {
-    if (tab === 'fila') loadQueue()
-  }, [tab, loadQueue])
+  useEffect(() => { if (tab === 'fila') loadQueue() }, [tab, loadQueue])
 
   function toggleSelect(id: string) {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
   }
-
-  function selectAll() {
-    const notInQueue = contacts.filter(c => !c.in_queue).map(c => c.id)
-    setSelected(new Set(notInQueue))
-  }
-
+  function selectAll() { setSelected(new Set(contacts.filter(c => !c.in_queue).map(c => c.id))) }
   function clearSelection() { setSelected(new Set()) }
 
   async function addToQueue() {
     if (selected.size === 0) return
     setAdding(true)
-
-    const rows = Array.from(selected).map(contact_id => ({
-      campaign_id: campaign.id,
-      contact_id,
-      status: 'pending',
-    }))
-
+    const rows = Array.from(selected).map(contact_id => ({ campaign_id: campaign.id, contact_id, status: 'pending' }))
     await supabase.from('campaign_contacts').upsert(rows, { onConflict: 'campaign_id,contact_id' })
-
-    const { count } = await supabase
-      .from('campaign_contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('campaign_id', campaign.id)
-
-    await supabase.from('campaigns')
-      .update({ total_contacts: count ?? 0 })
-      .eq('id', campaign.id)
-
-    setSelected(new Set())
-    setAdding(false)
-    loadContacts()
-    loadPendingCount()
-    onRefresh()
+    const { count } = await supabase.from('campaign_contacts')
+      .select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id)
+    await supabase.from('campaigns').update({ total_contacts: count ?? 0 }).eq('id', campaign.id)
+    setSelected(new Set()); setAdding(false); loadContacts(); loadPendingCount(); onRefresh()
   }
 
   async function removeFromQueue(contact_id: string) {
-    await supabase.from('campaign_contacts')
-      .delete()
-      .eq('campaign_id', campaign.id)
-      .eq('contact_id', contact_id)
-
-    const { count } = await supabase
-      .from('campaign_contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('campaign_id', campaign.id)
-
-    await supabase.from('campaigns')
-      .update({ total_contacts: count ?? 0 })
-      .eq('id', campaign.id)
-
-    loadQueue()
-    onRefresh()
+    await supabase.from('campaign_contacts').delete().eq('campaign_id', campaign.id).eq('contact_id', contact_id)
+    const { count } = await supabase.from('campaign_contacts')
+      .select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id)
+    await supabase.from('campaigns').update({ total_contacts: count ?? 0 }).eq('id', campaign.id)
+    loadQueue(); onRefresh()
   }
 
   async function reenviarContato(queueItemId: string) {
     setReenviadoId(queueItemId)
-    await supabase
-      .from('campaign_contacts')
-      .update({ status: 'pending', sent_at: null, error_msg: null })
-      .eq('id', queueItemId)
-
-    await loadQueue()
-    await loadPendingCount()
-    setReenviadoId(null)
+    await supabase.from('campaign_contacts')
+      .update({ status: 'pending', sent_at: null, error_msg: null }).eq('id', queueItemId)
+    await loadQueue(); await loadPendingCount(); setReenviadoId(null)
   }
 
-  // ── Disparar campanha ──────────────────────────────────────────────────────
-  // Funciona para qualquer status — muda para sending e aciona o webhook
   async function disparar() {
     if (totalPending === 0) { alert('Nenhum contato pendente na fila.'); return }
     if (!confirm(`Confirma o disparo para ${totalPending} contato(s)?\n\nOs envios serão feitos 1 por minuto.`)) return
-
     setDisparando(true)
     await supabase.from('campaigns').update({ status: 'sending' }).eq('id', campaign.id)
-
     const response = await fetch('https://n8n.promptcomercial.com.br/webhook/disparar-campanha', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ campaign_id: campaign.id }),
     })
-
     setDisparando(false)
-    if (response.ok) {
-      onRefresh()
-      loadQueue()
-      loadPendingCount()
-    } else {
+    if (response.ok) { onRefresh(); loadQueue(); loadPendingCount() }
+    else {
       alert('Erro ao acionar o disparo. Verifique o n8n.')
       await supabase.from('campaigns').update({ status: 'draft' }).eq('id', campaign.id)
     }
   }
 
-  const pendingCount = totalPending
   const sentCount = queue.filter(q => q.status === 'sent').length
   const failedCount = queue.filter(q => q.status === 'failed').length
-
-  // ── Botão disparar aparece sempre que há pendentes, independente do status ──
-  const mostrarDisparar = pendingCount > 0 && campaign.status !== 'cancelled'
+  const mostrarDisparar = totalPending > 0 && campaign.status !== 'cancelled'
 
   return (
     <div className="space-y-6">
@@ -668,6 +687,9 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.color}`}>
                 <Icon className="w-3 h-3" />{cfg.label}
               </span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {modeLabel}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(campaign.created_at), { addSuffix: true, locale: ptBR })}
               </span>
@@ -675,18 +697,15 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
           </div>
         </div>
 
-        {/* Botões de ação */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="gap-1.5">
             <Pencil className="w-3.5 h-3.5" /> Editar
           </Button>
-
-          {/* ── Disparar aparece sempre que há pendentes ── */}
           {mostrarDisparar && (
             <Button onClick={disparar} disabled={disparando} className="gap-2">
               {disparando
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Disparando...</>
-                : <><Send className="w-4 h-4" /> Disparar ({pendingCount})</>
+                : <><Send className="w-4 h-4" /> Disparar ({totalPending})</>
               }
             </Button>
           )}
@@ -695,12 +714,13 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
       {/* Layout duas colunas */}
       <div className="grid lg:grid-cols-5 gap-6">
-
-        {/* Coluna esquerda — mensagem + stats (2/5) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-muted/40 rounded-xl p-4 border border-border">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Mensagem</p>
-            <p className="text-sm text-foreground whitespace-pre-wrap">{campaign.message_template}</p>
+            {campaign.send_mode === 'image_only'
+              ? <p className="text-xs text-muted-foreground italic">Somente banner — sem texto</p>
+              : <p className="text-sm text-foreground whitespace-pre-wrap">{campaign.message_template}</p>
+            }
             {campaign.media_url && (
               <div className="mt-3">
                 <img src={campaign.media_url} alt="banner" className="rounded-lg max-h-32 object-cover" />
@@ -722,36 +742,27 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
           </div>
         </div>
 
-        {/* Coluna direita — fila + contatos (3/5) */}
         <div className="lg:col-span-3 space-y-4">
-
           <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
-            {[
-              { value: 'fila', label: 'Fila de envio' },
-              { value: 'contatos', label: 'Adicionar contatos' },
-            ].map(t => (
+            {[{ value: 'fila', label: 'Fila de envio' }, { value: 'contatos', label: 'Adicionar contatos' }].map(t => (
               <button key={t.value} onClick={() => setTab(t.value as any)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}>
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}>
                 {t.label}
               </button>
             ))}
           </div>
 
-          {/* ─── TAB: FILA ─────────────────────────────────────────────────────── */}
           {tab === 'fila' && (
             <div className="space-y-3">
               {loadingQueue ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-                </div>
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary/50" /></div>
               ) : queue.length === 0 ? (
                 <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-12 bg-card/50">
                   <Users className="w-10 h-10 text-muted-foreground/30 mb-3" />
                   <p className="text-sm font-semibold text-foreground">Fila vazia</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vá em "Adicionar contatos" para selecionar quem vai receber esta campanha.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Vá em "Adicionar contatos" para selecionar quem vai receber esta campanha.</p>
                   <Button variant="outline" size="sm" className="mt-4" onClick={() => setTab('contatos')}>
                     <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar contatos
                   </Button>
@@ -759,22 +770,16 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
               ) : (
                 <>
                   <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                    <span>{queue.length} contato(s) na fila · {pendingCount} pendente(s)</span>
-                    <button onClick={() => setTab('contatos')}
-                      className="text-primary hover:underline font-medium">
-                      + Adicionar mais
-                    </button>
+                    <span>{queue.length} contato(s) na fila · {totalPending} pendente(s)</span>
+                    <button onClick={() => setTab('contatos')} className="text-primary hover:underline font-medium">+ Adicionar mais</button>
                   </div>
                   <div className="space-y-2">
                     {queue.map(q => {
-                      const sc = CONTACT_STATUS_CONFIG[q.status as keyof typeof CONTACT_STATUS_CONFIG]
-                        ?? CONTACT_STATUS_CONFIG.pending
+                      const sc = CONTACT_STATUS_CONFIG[q.status as keyof typeof CONTACT_STATUS_CONFIG] ?? CONTACT_STATUS_CONFIG.pending
                       const podeReenviar = q.status === 'sent' || q.status === 'failed'
                       const estaRenviando = reenviadoId === q.id
-
                       return (
-                        <div key={q.id}
-                          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl">
+                        <div key={q.id} className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">{q.company_name || q.name}</p>
                             <p className="text-xs text-muted-foreground truncate">
@@ -782,21 +787,13 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
                             </p>
                           </div>
                           <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
-
                           {podeReenviar && (
-                            <button
-                              onClick={() => reenviarContato(q.id)}
-                              disabled={estaRenviando}
+                            <button onClick={() => reenviarContato(q.id)} disabled={estaRenviando}
                               title="Voltar para pendente"
-                              className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                            >
-                              {estaRenviando
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <RotateCcw className="w-3.5 h-3.5" />
-                              }
+                              className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
+                              {estaRenviando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                             </button>
                           )}
-
                           {q.status === 'pending' && (
                             <button onClick={() => removeFromQueue(q.contact_id)}
                               className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors">
@@ -812,43 +809,32 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
             </div>
           )}
 
-          {/* ─── TAB: CONTATOS ───────────────────────────────────────────────── */}
           {tab === 'contatos' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <Input placeholder="Buscar nome ou empresa..."
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    className="pl-8 text-sm" />
+                  <Input placeholder="Buscar nome ou empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 text-sm" />
                 </div>
                 <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
                   <option value="all">Todos os grupos</option>
                   <option value="none">Sem grupo</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
-                <Input placeholder="Filtrar por cidade..."
-                  value={filterCity} onChange={e => setFilterCity(e.target.value)}
-                  className="text-sm" />
+                <Input placeholder="Filtrar por cidade..." value={filterCity} onChange={e => setFilterCity(e.target.value)} className="text-sm" />
               </div>
 
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <button onClick={selectAll}
-                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                  <button onClick={selectAll} className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
                     <CheckSquare className="w-3.5 h-3.5" /> Selecionar disponíveis
                   </button>
                   {selected.size > 0 && (
-                    <>
-                      <span className="text-muted-foreground">·</span>
-                      <button onClick={clearSelection}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        <Square className="w-3.5 h-3.5" /> Limpar
-                      </button>
-                    </>
+                    <><span className="text-muted-foreground">·</span>
+                    <button onClick={clearSelection} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      <Square className="w-3.5 h-3.5" /> Limpar
+                    </button></>
                   )}
                 </div>
                 {selected.size > 0 && (
@@ -862,13 +848,9 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
               </div>
 
               {loadingContacts ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-                </div>
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary/50" /></div>
               ) : contacts.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">
-                  Nenhum contato encontrado com esses filtros.
-                </div>
+                <div className="text-center py-12 text-muted-foreground text-sm">Nenhum contato encontrado com esses filtros.</div>
               ) : (
                 <div className="space-y-1.5">
                   <p className="text-xs text-muted-foreground px-1">
@@ -877,35 +859,22 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
                   {contacts.map(contact => {
                     const isSelected = selected.has(contact.id)
                     return (
-                      <div key={contact.id}
-                        onClick={() => !contact.in_queue && toggleSelect(contact.id)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${contact.in_queue
-                          ? 'bg-muted/30 border-border opacity-60 cursor-not-allowed'
-                          : isSelected
-                            ? 'bg-primary/5 border-primary/30 cursor-pointer'
-                            : 'bg-card border-border hover:border-primary/20 cursor-pointer'
-                          }`}>
+                      <div key={contact.id} onClick={() => !contact.in_queue && toggleSelect(contact.id)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                          contact.in_queue ? 'bg-muted/30 border-border opacity-60 cursor-not-allowed'
+                          : isSelected ? 'bg-primary/5 border-primary/30 cursor-pointer'
+                          : 'bg-card border-border hover:border-primary/20 cursor-pointer'
+                        }`}>
                         <div className="flex-shrink-0">
-                          {contact.in_queue ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          ) : isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Square className="w-4 h-4 text-muted-foreground" />
-                          )}
+                          {contact.in_queue ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            : isSelected ? <CheckSquare className="w-4 h-4 text-primary" />
+                            : <Square className="w-4 h-4 text-muted-foreground" />}
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-foreground truncate">{contact.name}</span>
-                            {contact.group_name && contact.group_color && (
-                              <GroupBadge name={contact.group_name} color={contact.group_color} />
-                            )}
-                            {contact.in_queue && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                                Na fila
-                              </span>
-                            )}
+                            {contact.group_name && contact.group_color && <GroupBadge name={contact.group_name} color={contact.group_color} />}
+                            {contact.in_queue && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">Na fila</span>}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 truncate">
                             {contact.company_name && <span>{contact.company_name} · </span>}
@@ -924,15 +893,8 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
       </div>
 
       {showEdit && (
-        <EditCampaignDialog
-          open={showEdit}
-          onClose={() => setShowEdit(false)}
-          campaign={campaign}
-          onSaved={() => {
-            onRefresh()
-            setShowEdit(false)
-          }}
-        />
+        <EditCampaignDialog open={showEdit} onClose={() => setShowEdit(false)} campaign={campaign}
+          onSaved={() => { onRefresh(); setShowEdit(false) }} />
       )}
     </div>
   )
@@ -949,11 +911,7 @@ export default function CampanhasPage() {
   const loadCampaigns = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data } = await supabase
-      .from('campaigns')
-      .select('*')
-      .eq('org_id', ORG_ID)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('campaigns').select('*').eq('org_id', ORG_ID).order('created_at', { ascending: false })
     if (data) setCampaigns(data)
     setLoading(false)
   }, [])
@@ -962,20 +920,15 @@ export default function CampanhasPage() {
 
   function handleCreated(id: string) {
     loadCampaigns().then(() => {
-      const supabase = createClient()
-      supabase.from('campaigns').select('*').eq('id', id).single()
+      createClient().from('campaigns').select('*').eq('id', id).single()
         .then(({ data }) => { if (data) setSelectedCampaign(data) })
     })
   }
 
   function refreshSelected() {
     if (!selectedCampaign) return
-    const supabase = createClient()
-    supabase.from('campaigns').select('*').eq('id', selectedCampaign.id).single()
-      .then(({ data }) => {
-        if (data) setSelectedCampaign(data)
-        loadCampaigns()
-      })
+    createClient().from('campaigns').select('*').eq('id', selectedCampaign.id).single()
+      .then(({ data }) => { if (data) setSelectedCampaign(data); loadCampaigns() })
   }
 
   const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter)
@@ -989,11 +942,7 @@ export default function CampanhasPage() {
   if (selectedCampaign) {
     return (
       <div className="space-y-6">
-        <CampaignDetail
-          campaign={selectedCampaign}
-          onBack={() => setSelectedCampaign(null)}
-          onRefresh={refreshSelected}
-        />
+        <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} onRefresh={refreshSelected} />
       </div>
     )
   }
@@ -1005,13 +954,9 @@ export default function CampanhasPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Megaphone className="w-6 h-6 text-primary" /> Campanhas
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Disparos personalizados via WhatsApp com controle total
-          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">Disparos personalizados via WhatsApp com controle total</p>
         </div>
-        <Button onClick={() => setShowNew(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Nova Campanha
-        </Button>
+        <Button onClick={() => setShowNew(true)}><Plus className="w-4 h-4 mr-2" /> Nova Campanha</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1033,50 +978,35 @@ export default function CampanhasPage() {
 
       <div className="flex gap-2 flex-wrap">
         {[
-          { value: 'all', label: 'Todas' },
-          { value: 'draft', label: 'Rascunhos' },
-          { value: 'scheduled', label: 'Agendadas' },
-          { value: 'sending', label: 'Enviando' },
+          { value: 'all', label: 'Todas' }, { value: 'draft', label: 'Rascunhos' },
+          { value: 'scheduled', label: 'Agendadas' }, { value: 'sending', label: 'Enviando' },
           { value: 'sent', label: 'Enviadas' },
         ].map(f => (
           <button key={f.value} onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === f.value
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === f.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}>
             {f.label}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
-        </div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" /></div>
       ) : filtered.length === 0 ? (
         <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-16 bg-card/50">
           <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-4" />
           <h2 className="text-lg font-semibold text-foreground">Nenhuma campanha ainda</h2>
-          <p className="text-muted-foreground text-sm mt-2 max-w-sm">
-            Crie sua primeira campanha e adicione os contatos manualmente.
-          </p>
-          <Button className="mt-6" onClick={() => setShowNew(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Criar primeira campanha
-          </Button>
+          <p className="text-muted-foreground text-sm mt-2 max-w-sm">Crie sua primeira campanha e adicione os contatos manualmente.</p>
+          <Button className="mt-6" onClick={() => setShowNew(true)}><Plus className="w-4 h-4 mr-2" /> Criar primeira campanha</Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(c => (
-            <CampaignCard key={c.id} campaign={c} onOpen={() => setSelectedCampaign(c)} />
-          ))}
+          {filtered.map(c => <CampaignCard key={c.id} campaign={c} onOpen={() => setSelectedCampaign(c)} />)}
         </div>
       )}
 
-      <NewCampaignDialog
-        open={showNew}
-        onClose={() => setShowNew(false)}
-        onCreated={handleCreated}
-      />
+      <NewCampaignDialog open={showNew} onClose={() => setShowNew(false)} onCreated={handleCreated} />
     </div>
   )
 }
