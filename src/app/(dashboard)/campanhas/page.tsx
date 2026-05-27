@@ -672,6 +672,12 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   const failedCount = queue.filter(q => q.status === 'failed').length
   const mostrarDisparar = totalPending > 0 && campaign.status !== 'cancelled'
 
+  async function encerrarCampanha() {
+    if (!confirm('Encerrar esta campanha?\n\nO cron vai parar de processar. Contatos pendentes não serão enviados.')) return
+    await supabase.from('campaigns').update({ status: 'sent' }).eq('id', campaign.id)
+    onRefresh()
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -701,6 +707,13 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="gap-1.5">
             <Pencil className="w-3.5 h-3.5" /> Editar
           </Button>
+          {/* Encerrar — só aparece quando está enviando */}
+          {campaign.status === 'sending' && (
+            <Button variant="outline" size="sm" onClick={encerrarCampanha}
+              className="gap-1.5 border-red-500/30 text-red-500 hover:bg-red-50 hover:text-red-600">
+              <XCircle className="w-3.5 h-3.5" /> Encerrar
+            </Button>
+          )}
           {mostrarDisparar && (
             <Button onClick={disparar} disabled={disparando} className="gap-2">
               {disparando
