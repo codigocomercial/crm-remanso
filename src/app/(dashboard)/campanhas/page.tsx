@@ -21,12 +21,12 @@ const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 // ─── Paleta de cores dos grupos ───────────────────────────────────────────────
 const GROUP_COLORS: Record<string, { bg: string; text: string; hex: string }> = {
   emerald: { bg: '#D1FAE5', text: '#065F46', hex: '#10b981' },
-  blue:    { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
-  yellow:  { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
-  orange:  { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
-  red:     { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
-  purple:  { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
-  gray:    { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
+  blue: { bg: '#DBEAFE', text: '#1E40AF', hex: '#3b82f6' },
+  yellow: { bg: '#FEF9C3', text: '#854D0E', hex: '#eab308' },
+  orange: { bg: '#FFEDD5', text: '#9A3412', hex: '#f97316' },
+  red: { bg: '#FEE2E2', text: '#991B1B', hex: '#ef4444' },
+  purple: { bg: '#F3E8FF', text: '#6B21A8', hex: '#a855f7' },
+  gray: { bg: '#F3F4F6', text: '#374151', hex: '#6b7280' },
 }
 
 function GroupBadge({ name, color }: { name: string; color: string }) {
@@ -41,23 +41,23 @@ function GroupBadge({ name, color }: { name: string; color: string }) {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  draft:     { label: 'Rascunho',  color: 'bg-zinc-500/15 text-zinc-400',       icon: FileImage },
-  scheduled: { label: 'Agendada',  color: 'bg-blue-500/15 text-blue-400',       icon: Clock },
-  sending:   { label: 'Enviando',  color: 'bg-yellow-500/15 text-yellow-400',   icon: Loader2 },
-  sent:      { label: 'Enviada',   color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400',         icon: XCircle },
+  draft: { label: 'Rascunho', color: 'bg-zinc-500/15 text-zinc-400', icon: FileImage },
+  scheduled: { label: 'Agendada', color: 'bg-blue-500/15 text-blue-400', icon: Clock },
+  sending: { label: 'Enviando', color: 'bg-yellow-500/15 text-yellow-400', icon: Loader2 },
+  sent: { label: 'Enviada', color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
+  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400', icon: XCircle },
 } as const
 
 const CONTACT_STATUS_CONFIG = {
-  pending:   { label: 'Pendente',   color: 'text-zinc-400' },
-  queued:    { label: 'Na fila',    color: 'text-blue-400' },
-  sending:   { label: 'Enviando',   color: 'text-yellow-400' },
-  sent:      { label: 'Enviado',    color: 'text-emerald-500' },
-  failed:    { label: 'Falhou',     color: 'text-red-500' },
-  read:      { label: 'Lido',       color: 'text-emerald-400' },
-  replied:   { label: 'Respondeu',  color: 'text-primary' },
-  paused:    { label: 'Pausado',    color: 'text-zinc-400' },
-  cancelled: { label: 'Cancelado',  color: 'text-zinc-400' },
+  pending: { label: 'Pendente', color: 'text-zinc-400' },
+  queued: { label: 'Na fila', color: 'text-blue-400' },
+  sending: { label: 'Enviando', color: 'text-yellow-400' },
+  sent: { label: 'Enviado', color: 'text-emerald-500' },
+  failed: { label: 'Falhou', color: 'text-red-500' },
+  read: { label: 'Lido', color: 'text-emerald-400' },
+  replied: { label: 'Respondeu', color: 'text-primary' },
+  paused: { label: 'Pausado', color: 'text-zinc-400' },
+  cancelled: { label: 'Cancelado', color: 'text-zinc-400' },
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ function NewCampaignDialog({ open, onClose, onCreated }: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={() => { }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -345,7 +345,7 @@ function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={() => { }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -745,9 +745,8 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
               { value: 'contatos', label: 'Adicionar contatos' },
             ].map(t => (
               <button key={t.value} onClick={() => setTab(t.value as any)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}>
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}>
                 {t.label}
               </button>
             ))}
@@ -899,13 +898,12 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
                     return (
                       <div key={contact.id}
                         onClick={() => !contact.in_queue && toggleSelect(contact.id)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                          contact.in_queue
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${contact.in_queue
                             ? 'bg-muted/30 border-border opacity-60 cursor-not-allowed'
                             : isSelected
                               ? 'bg-primary/5 border-primary/30 cursor-pointer'
                               : 'bg-card border-border hover:border-primary/20 cursor-pointer'
-                        }`}>
+                          }`}>
                         <div className="flex-shrink-0">
                           {contact.in_queue ? (
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -1067,11 +1065,10 @@ export default function CampanhasPage() {
           { value: 'sent', label: 'Enviadas' },
         ].map(f => (
           <button key={f.value} onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.value
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === f.value
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
-            }`}>
+              }`}>
             {f.label}
           </button>
         ))}
