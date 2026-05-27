@@ -529,7 +529,7 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   onBack: () => void
   onRefresh: () => void
 }) {
-  const [tab, setTab] = useState<'fila' | 'contatos'>('fila')
+  const [tab, setTab] = useState<'fila' | 'enviados' | 'contatos'>('fila')
   const [contacts, setContacts] = useState<ContactRow[]>([])
   const [groups, setGroups] = useState<ContactGroup[]>([])
   const [loadingContacts, setLoadingContacts] = useState(false)
@@ -618,6 +618,17 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   }, [campaign.id])
 
   useEffect(() => { if (tab === 'fila') loadQueue() }, [tab, loadQueue])
+
+  // Auto-refresh a cada 30s enquanto campanha está sending e aba fila está ativa
+  useEffect(() => {
+    if (tab !== 'fila' || campaign.status !== 'sending') return
+    const interval = setInterval(() => {
+      loadQueue()
+      loadPendingCount()
+      onRefresh()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [tab, campaign.status, loadQueue, loadPendingCount, onRefresh])
 
   function toggleSelect(id: string) {
     setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
@@ -757,12 +768,21 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
         <div className="lg:col-span-3 space-y-4">
           <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
-            {[{ value: 'fila', label: 'Fila de envio' }, { value: 'contatos', label: 'Adicionar contatos' }].map(t => (
+            {[
+              { value: 'fila',     label: 'Pendentes', count: queue.filter(q => q.status === 'pending' || q.status === 'failed').length },
+              { value: 'enviados', label: 'Enviados',  count: sentCount },
+              { value: 'contatos', label: 'Adicionar', count: null },
+            ].map(t => (
               <button key={t.value} onClick={() => setTab(t.value as any)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}>
                 {t.label}
+                {t.count !== null && t.count > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    t.value === 'fila' ? 'bg-yellow-500/15 text-yellow-600' : 'bg-emerald-500/15 text-emerald-600'
+                  }`}>{t.count}</span>
+                )}
               </button>
             ))}
           </div>
@@ -787,7 +807,7 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
                     <button onClick={() => setTab('contatos')} className="text-primary hover:underline font-medium">+ Adicionar mais</button>
                   </div>
                   <div className="space-y-2">
-                    {queue.map(q => {
+                    {queue.filter(q => q.status === "pending" || q.status === "failed").map(q => {
                       const sc = CONTACT_STATUS_CONFIG[q.status as keyof typeof CONTACT_STATUS_CONFIG] ?? CONTACT_STATUS_CONFIG.pending
                       const podeReenviar = q.status === 'sent' || q.status === 'failed'
                       const estaRenviando = reenviadoId === q.id
@@ -816,6 +836,45 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
                         </div>
                       )
                     })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ─── TAB: ENVIADOS ──────────────────────────────────────────────── */}
+          {tab === 'enviados' && (
+            <div className="space-y-3">
+              {loadingQueue ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary/50" /></div>
+              ) : queue.filter(q => q.status === 'sent').length === 0 ? (
+                <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-12 bg-card/50">
+                  <CheckCircle2 className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-semibold text-foreground">Nenhum enviado ainda</p>
+                  <p className="text-xs text-muted-foreground mt-1">Os contatos enviados aparecerão aqui.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-xs text-muted-foreground px-1">
+                    <span>{queue.filter(q => q.status === 'sent').length} contato(s) enviado(s)</span>
+                  </div>
+                  <div className="space-y-2">
+                    {queue.filter(q => q.status === 'sent').map(q => (
+                      <div key={q.id} className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{q.company_name || q.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {q.company_name ? q.name : ''}{q.company_name && q.whatsapp ? ' · ' : ''}{q.whatsapp}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium text-emerald-500">Enviado</span>
+                        <button onClick={() => reenviarContato(q.id)} disabled={reenviadoId === q.id}
+                          title="Reenviar"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
+                          {reenviadoId === q.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
