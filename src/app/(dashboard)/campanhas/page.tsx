@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Megaphone, Plus, Send, Clock, CheckCircle2, XCircle, FileImage,
   Users, Loader2, ChevronRight, ImageIcon, ArrowLeft, Search,
-  Filter, CheckSquare, Square, UserCheck, AlertCircle,
+  Filter, CheckSquare, Square, UserCheck, AlertCircle, Pencil, RotateCcw,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -41,11 +41,11 @@ function GroupBadge({ name, color }: { name: string; color: string }) {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  draft:     { label: 'Rascunho',  color: 'bg-zinc-500/15 text-zinc-400',     icon: FileImage },
-  scheduled: { label: 'Agendada',  color: 'bg-blue-500/15 text-blue-400',     icon: Clock },
-  sending:   { label: 'Enviando',  color: 'bg-yellow-500/15 text-yellow-400', icon: Loader2 },
+  draft:     { label: 'Rascunho',  color: 'bg-zinc-500/15 text-zinc-400',       icon: FileImage },
+  scheduled: { label: 'Agendada',  color: 'bg-blue-500/15 text-blue-400',       icon: Clock },
+  sending:   { label: 'Enviando',  color: 'bg-yellow-500/15 text-yellow-400',   icon: Loader2 },
   sent:      { label: 'Enviada',   color: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400',       icon: XCircle },
+  cancelled: { label: 'Cancelada', color: 'bg-red-500/15 text-red-400',         icon: XCircle },
 } as const
 
 const CONTACT_STATUS_CONFIG = {
@@ -158,7 +158,11 @@ function CampaignCard({ campaign, onOpen }: { campaign: Campaign; onOpen: () => 
 }
 
 // ─── New Campaign Dialog ──────────────────────────────────────────────────────
-function NewCampaignDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+function NewCampaignDialog({ open, onClose, onCreated }: {
+  open: boolean
+  onClose: () => void
+  onCreated: (id: string) => void
+}) {
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [mediaFile, setMediaFile] = useState<File | null>(null)
@@ -202,7 +206,7 @@ function NewCampaignDialog({ open, onClose, onCreated }: { open: boolean; onClos
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>  {/* fechamento só pelos botões */}
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -247,7 +251,10 @@ function NewCampaignDialog({ open, onClose, onCreated }: { open: boolean; onClos
                   <span className="text-sm text-muted-foreground">Clique para enviar imagem</span>
                   <span className="text-xs text-muted-foreground/60 mt-1">JPG, PNG, WEBP até 10MB</span>
                   <input type="file" accept="image/*" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) { setMediaFile(f); setMediaPreview(URL.createObjectURL(f)) } }} />
+                    onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) { setMediaFile(f); setMediaPreview(URL.createObjectURL(f)) }
+                    }} />
                 </label>
               )}
             </div>
@@ -273,6 +280,157 @@ function NewCampaignDialog({ open, onClose, onCreated }: { open: boolean; onClos
   )
 }
 
+// ─── Edit Campaign Dialog ─────────────────────────────────────────────────────
+function EditCampaignDialog({ open, onClose, campaign, onSaved }: {
+  open: boolean
+  onClose: () => void
+  campaign: Campaign
+  onSaved: () => void
+}) {
+  const [name, setName] = useState(campaign.name)
+  const [message, setMessage] = useState(campaign.message_template)
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(campaign.media_url)
+  const [removeImage, setRemoveImage] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  // Sincronizar quando a campanha mudar
+  useEffect(() => {
+    setName(campaign.name)
+    setMessage(campaign.message_template)
+    setMediaPreview(campaign.media_url)
+    setMediaFile(null)
+    setRemoveImage(false)
+  }, [campaign.id])
+
+  async function handleSave() {
+    if (!name.trim() || !message.trim()) return
+    setLoading(true)
+    const supabase = createClient()
+
+    let media_url: string | null = campaign.media_url
+
+    // Upload nova imagem se selecionada
+    if (mediaFile) {
+      const ext = mediaFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { data: upload, error: uploadErr } = await supabase.storage
+        .from('campanhas').upload(path, mediaFile, { upsert: true })
+      if (!uploadErr && upload) {
+        const { data: { publicUrl } } = supabase.storage.from('campanhas').getPublicUrl(upload.path)
+        media_url = publicUrl
+      }
+    } else if (removeImage) {
+      media_url = null
+    }
+
+    const { error } = await supabase.from('campaigns').update({
+      name: name.trim(),
+      message_template: message.trim(),
+      media_url,
+      status: 'draft', // volta para draft ao editar
+    }).eq('id', campaign.id)
+
+    setLoading(false)
+    if (!error) {
+      onSaved()
+      onClose()
+    }
+  }
+
+  function handleRemoveImage() {
+    setMediaFile(null)
+    setMediaPreview(null)
+    setRemoveImage(true)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" /> Editar Campanha
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Aviso de volta para rascunho */}
+        {campaign.status !== 'draft' && (
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3">
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              Salvar irá voltar esta campanha para <strong>Rascunho</strong>. Você precisará disparar novamente.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-4 py-2">
+          <div>
+            <Label>Nome da campanha</Label>
+            <Input placeholder="Ex: Mudança de número — Maio 2026"
+              value={name} onChange={e => setName(e.target.value)} className="mt-1.5" />
+          </div>
+
+          <div>
+            <Label>Mensagem</Label>
+            <p className="text-xs text-muted-foreground mb-1.5">
+              Use{' '}
+              <code className="bg-muted px-1 rounded">{'{{nome}}'}</code>,{' '}
+              <code className="bg-muted px-1 rounded">{'{{empresa}}'}</code>,{' '}
+              <code className="bg-muted px-1 rounded">{'{{cidade}}'}</code>
+            </p>
+            <Textarea placeholder="Bom dia {{nome}}! Gostaríamos de informar..."
+              value={message} onChange={e => setMessage(e.target.value)}
+              rows={5} className="mt-1.5 resize-none" />
+          </div>
+
+          <div>
+            <Label>Banner / Foto</Label>
+            <div className="mt-1.5">
+              {mediaPreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={mediaPreview} alt="preview" className="w-full max-h-48 object-cover" />
+                  <button onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                  {/* Trocar imagem */}
+                  <label className="absolute bottom-2 right-2 bg-black/60 text-white rounded-lg px-2 py-1 text-xs cursor-pointer hover:bg-black/80 flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" /> Trocar
+                    <input type="file" accept="image/*" className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        if (f) { setMediaFile(f); setMediaPreview(URL.createObjectURL(f)); setRemoveImage(false) }
+                      }} />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-6 cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                  <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">Clique para enviar imagem</span>
+                  <span className="text-xs text-muted-foreground/60 mt-1">JPG, PNG, WEBP até 10MB</span>
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) { setMediaFile(f); setMediaPreview(URL.createObjectURL(f)); setRemoveImage(false) }
+                    }} />
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={loading || !name.trim() || !message.trim()}>
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Pencil className="w-4 h-4 mr-2" />}
+            Salvar alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Campaign Detail View ─────────────────────────────────────────────────────
 function CampaignDetail({ campaign, onBack, onRefresh }: {
   campaign: Campaign
@@ -286,6 +444,8 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [adding, setAdding] = useState(false)
   const [disparando, setDisparando] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [reenviadoId, setReenviadoId] = useState<string | null>(null)
 
   // Filtros
   const [search, setSearch] = useState('')
@@ -307,7 +467,6 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
   const loadContacts = useCallback(async () => {
     setLoadingContacts(true)
 
-    // Buscar contatos elegíveis
     let query = supabase
       .from('crm_contacts_with_company')
       .select('id, name, company_name, city, state, whatsapp, group_id, group_name, group_color')
@@ -324,7 +483,6 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
     const { data: contactsData } = await query
 
-    // Buscar quem já está na fila desta campanha
     const { data: queueData } = await supabase
       .from('campaign_contacts')
       .select('contact_id, status')
@@ -345,10 +503,9 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     if (tab === 'contatos') loadContacts()
   }, [tab, loadContacts])
 
-  // Contador de pendentes — carregado independente da aba ativa
+  // Contador de pendentes
   const [totalPending, setTotalPending] = useState<number>(0)
 
-  // Carregar contador de pendentes (sempre, não depende da aba)
   const loadPendingCount = useCallback(async () => {
     const { count } = await supabase
       .from('campaign_contacts')
@@ -377,7 +534,6 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
     if (!data) { setLoadingQueue(false); return }
 
-    // Buscar nomes
     const ids = data.map(d => d.contact_id)
     const { data: contactsInfo } = await supabase
       .from('crm_contacts_with_company')
@@ -428,7 +584,6 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
 
     await supabase.from('campaign_contacts').upsert(rows, { onConflict: 'campaign_id,contact_id' })
 
-    // Atualizar total_contacts na campanha
     const { count } = await supabase
       .from('campaign_contacts')
       .select('id', { count: 'exact', head: true })
@@ -465,6 +620,19 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     onRefresh()
   }
 
+  // ── NOVO: Reenviar contato (sent ou failed → pending) ──────────────────────
+  async function reenviarContato(queueItemId: string) {
+    setReenviadoId(queueItemId)
+    await supabase
+      .from('campaign_contacts')
+      .update({ status: 'pending', sent_at: null, error_msg: null })
+      .eq('id', queueItemId)
+
+    await loadQueue()
+    await loadPendingCount()
+    setReenviadoId(null)
+  }
+
   // Disparar campanha
   async function disparar() {
     const pendingCount = queue.filter(q => q.status === 'pending').length
@@ -491,7 +659,7 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
     }
   }
 
-  const pendingCount = totalPending  // usa contador independente de aba
+  const pendingCount = totalPending
   const sentCount = queue.filter(q => q.status === 'sent').length
   const failedCount = queue.filter(q => q.status === 'failed').length
 
@@ -517,16 +685,23 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
           </div>
         </div>
 
-        {/* Botão disparar */}
-        {(campaign.status === 'draft' || campaign.status === 'sending') && (
-          <Button onClick={disparar} disabled={disparando || pendingCount === 0}
-            className="gap-2">
-            {disparando
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Disparando...</>
-              : <><Send className="w-4 h-4" /> Disparar ({pendingCount})</>
-            }
+        {/* Botões de ação */}
+        <div className="flex items-center gap-2">
+          {/* ── NOVO: Botão Editar ── */}
+          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="gap-1.5">
+            <Pencil className="w-3.5 h-3.5" /> Editar
           </Button>
-        )}
+
+          {/* Botão disparar */}
+          {(campaign.status === 'draft' || campaign.status === 'sending') && (
+            <Button onClick={disparar} disabled={disparando || pendingCount === 0} className="gap-2">
+              {disparando
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Disparando...</>
+                : <><Send className="w-4 h-4" /> Disparar ({pendingCount})</>
+              }
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Layout duas colunas */}
@@ -563,193 +738,224 @@ function CampaignDetail({ campaign, onBack, onRefresh }: {
         {/* Coluna direita — fila + contatos (3/5) */}
         <div className="lg:col-span-3 space-y-4">
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
-        {[
-          { value: 'fila', label: 'Fila de envio' },
-          { value: 'contatos', label: 'Adicionar contatos' },
-        ].map(t => (
-          <button key={t.value} onClick={() => setTab(t.value as any)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ─── TAB: FILA ─────────────────────────────────────────────────────── */}
-      {tab === 'fila' && (
-        <div className="space-y-3">
-          {loadingQueue ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-            </div>
-          ) : queue.length === 0 ? (
-            <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-12 bg-card/50">
-              <Users className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm font-semibold text-foreground">Fila vazia</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Vá em "Adicionar contatos" para selecionar quem vai receber esta campanha.
-              </p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => setTab('contatos')}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar contatos
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                <span>{queue.length} contato(s) na fila · {pendingCount} pendente(s)</span>
-                <button onClick={() => setTab('contatos')}
-                  className="text-primary hover:underline font-medium">
-                  + Adicionar mais
-                </button>
-              </div>
-              <div className="space-y-2">
-                {queue.map(q => {
-                  const sc = CONTACT_STATUS_CONFIG[q.status as keyof typeof CONTACT_STATUS_CONFIG]
-                    ?? CONTACT_STATUS_CONFIG.pending
-                  return (
-                    <div key={q.id}
-                      className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{q.company_name || q.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {q.company_name ? q.name : ''}{q.company_name && q.whatsapp ? ' · ' : ''}{q.whatsapp}
-                        </p>
-                      </div>
-                      <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
-                      {q.status === 'pending' && (
-                        <button onClick={() => removeFromQueue(q.contact_id)}
-                          className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors">
-                          <XCircle className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ─── TAB: CONTATOS ───────────────────────────────────────────────── */}
-      {tab === 'contatos' && (
-        <div className="space-y-4">
-          {/* Filtros */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar nome ou empresa..."
-                value={search} onChange={e => setSearch(e.target.value)}
-                className="pl-8 text-sm" />
-            </div>
-            <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="all">Todos os grupos</option>
-              <option value="none">Sem grupo</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-            <Input placeholder="Filtrar por cidade..."
-              value={filterCity} onChange={e => setFilterCity(e.target.value)}
-              className="text-sm" />
+          {/* Tabs */}
+          <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
+            {[
+              { value: 'fila', label: 'Fila de envio' },
+              { value: 'contatos', label: 'Adicionar contatos' },
+            ].map(t => (
+              <button key={t.value} onClick={() => setTab(t.value as any)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  tab === t.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}>
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {/* Barra de ações */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button onClick={selectAll}
-                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-                <CheckSquare className="w-3.5 h-3.5" /> Selecionar disponíveis
-              </button>
-              {selected.size > 0 && (
+          {/* ─── TAB: FILA ─────────────────────────────────────────────────────── */}
+          {tab === 'fila' && (
+            <div className="space-y-3">
+              {loadingQueue ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
+                </div>
+              ) : queue.length === 0 ? (
+                <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-12 bg-card/50">
+                  <Users className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-semibold text-foreground">Fila vazia</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vá em "Adicionar contatos" para selecionar quem vai receber esta campanha.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => setTab('contatos')}>
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Adicionar contatos
+                  </Button>
+                </div>
+              ) : (
                 <>
-                  <span className="text-muted-foreground">·</span>
-                  <button onClick={clearSelection}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    <Square className="w-3.5 h-3.5" /> Limpar
-                  </button>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                    <span>{queue.length} contato(s) na fila · {pendingCount} pendente(s)</span>
+                    <button onClick={() => setTab('contatos')}
+                      className="text-primary hover:underline font-medium">
+                      + Adicionar mais
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {queue.map(q => {
+                      const sc = CONTACT_STATUS_CONFIG[q.status as keyof typeof CONTACT_STATUS_CONFIG]
+                        ?? CONTACT_STATUS_CONFIG.pending
+                      const podeReenviar = q.status === 'sent' || q.status === 'failed'
+                      const estaRenviando = reenviadoId === q.id
+
+                      return (
+                        <div key={q.id}
+                          className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{q.company_name || q.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {q.company_name ? q.name : ''}{q.company_name && q.whatsapp ? ' · ' : ''}{q.whatsapp}
+                            </p>
+                          </div>
+                          <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
+
+                          {/* ── NOVO: Botão Reenviar para sent/failed ── */}
+                          {podeReenviar && (
+                            <button
+                              onClick={() => reenviarContato(q.id)}
+                              disabled={estaRenviando}
+                              title="Voltar para pendente e reenviar"
+                              className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                            >
+                              {estaRenviando
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <RotateCcw className="w-3.5 h-3.5" />
+                              }
+                            </button>
+                          )}
+
+                          {/* Remover da fila só para pendentes */}
+                          {q.status === 'pending' && (
+                            <button onClick={() => removeFromQueue(q.contact_id)}
+                              className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors">
+                              <XCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </>
               )}
             </div>
-            {selected.size > 0 && (
-              <Button size="sm" onClick={addToQueue} disabled={adding}>
-                {adding
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Adicionando...</>
-                  : <><UserCheck className="w-3.5 h-3.5 mr-1.5" /> Adicionar {selected.size} à fila</>
-                }
-              </Button>
-            )}
-          </div>
+          )}
 
-          {/* Lista de contatos */}
-          {loadingContacts ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              Nenhum contato encontrado com esses filtros.
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground px-1">
-                {contacts.length} contato(s) · {contacts.filter(c => c.in_queue).length} já na fila
-              </p>
-              {contacts.map(contact => {
-                const isSelected = selected.has(contact.id)
-                return (
-                  <div key={contact.id}
-                    onClick={() => !contact.in_queue && toggleSelect(contact.id)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                      contact.in_queue
-                        ? 'bg-muted/30 border-border opacity-60 cursor-not-allowed'
-                        : isSelected
-                          ? 'bg-primary/5 border-primary/30 cursor-pointer'
-                          : 'bg-card border-border hover:border-primary/20 cursor-pointer'
-                    }`}>
-                    {/* Checkbox */}
-                    <div className="flex-shrink-0">
-                      {contact.in_queue ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Square className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
+          {/* ─── TAB: CONTATOS ───────────────────────────────────────────────── */}
+          {tab === 'contatos' && (
+            <div className="space-y-4">
+              {/* Filtros */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input placeholder="Buscar nome ou empresa..."
+                    value={search} onChange={e => setSearch(e.target.value)}
+                    className="pl-8 text-sm" />
+                </div>
+                <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring">
+                  <option value="all">Todos os grupos</option>
+                  <option value="none">Sem grupo</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <Input placeholder="Filtrar por cidade..."
+                  value={filterCity} onChange={e => setFilterCity(e.target.value)}
+                  className="text-sm" />
+              </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-foreground truncate">{contact.name}</span>
-                        {contact.group_name && contact.group_color && (
-                          <GroupBadge name={contact.group_name} color={contact.group_color} />
-                        )}
-                        {contact.in_queue && (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                            Na fila
-                          </span>
-                        )}
+              {/* Barra de ações */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={selectAll}
+                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                    <CheckSquare className="w-3.5 h-3.5" /> Selecionar disponíveis
+                  </button>
+                  {selected.size > 0 && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <button onClick={clearSelection}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        <Square className="w-3.5 h-3.5" /> Limpar
+                      </button>
+                    </>
+                  )}
+                </div>
+                {selected.size > 0 && (
+                  <Button size="sm" onClick={addToQueue} disabled={adding}>
+                    {adding
+                      ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Adicionando...</>
+                      : <><UserCheck className="w-3.5 h-3.5 mr-1.5" /> Adicionar {selected.size} à fila</>
+                    }
+                  </Button>
+                )}
+              </div>
+
+              {/* Lista de contatos */}
+              {loadingContacts ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary/50" />
+                </div>
+              ) : contacts.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  Nenhum contato encontrado com esses filtros.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground px-1">
+                    {contacts.length} contato(s) · {contacts.filter(c => c.in_queue).length} já na fila
+                  </p>
+                  {contacts.map(contact => {
+                    const isSelected = selected.has(contact.id)
+                    return (
+                      <div key={contact.id}
+                        onClick={() => !contact.in_queue && toggleSelect(contact.id)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                          contact.in_queue
+                            ? 'bg-muted/30 border-border opacity-60 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-primary/5 border-primary/30 cursor-pointer'
+                              : 'bg-card border-border hover:border-primary/20 cursor-pointer'
+                        }`}>
+                        <div className="flex-shrink-0">
+                          {contact.in_queue ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          ) : isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Square className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-foreground truncate">{contact.name}</span>
+                            {contact.group_name && contact.group_color && (
+                              <GroupBadge name={contact.group_name} color={contact.group_color} />
+                            )}
+                            {contact.in_queue && (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
+                                Na fila
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {contact.company_name && <span>{contact.company_name} · </span>}
+                            {[contact.city, contact.state].filter(Boolean).join(', ')}
+                            {contact.whatsapp && <span> · {contact.whatsapp}</span>}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {contact.company_name && <span>{contact.company_name} · </span>}
-                        {[contact.city, contact.state].filter(Boolean).join(', ')}
-                        {contact.whatsapp && <span> · {contact.whatsapp}</span>}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── NOVO: Modal de edição ── */}
+      {showEdit && (
+        <EditCampaignDialog
+          open={showEdit}
+          onClose={() => setShowEdit(false)}
+          campaign={campaign}
+          onSaved={() => {
+            onRefresh()
+            setShowEdit(false)
+          }}
+        />
       )}
-        </div> {/* fim coluna direita */}
-      </div> {/* fim grid duas colunas */}
     </div>
   )
 }
@@ -778,7 +984,6 @@ export default function CampanhasPage() {
 
   function handleCreated(id: string) {
     loadCampaigns().then(() => {
-      // Abrir a campanha recém-criada direto na tela de contatos
       const supabase = createClient()
       supabase.from('campaigns').select('*').eq('id', id).single()
         .then(({ data }) => { if (data) setSelectedCampaign(data) })
@@ -803,7 +1008,7 @@ export default function CampanhasPage() {
     draft: campaigns.filter(c => c.status === 'draft').length,
   }
 
-  // ─── Detail view ────────────────────────────────────────────────────────────
+  // ─── Detail view ─────────────────────────────────────────────────────────────
   if (selectedCampaign) {
     return (
       <div className="space-y-6">
@@ -816,7 +1021,7 @@ export default function CampanhasPage() {
     )
   }
 
-  // ─── List view ───────────────────────────────────────────────────────────────
+  // ─── List view ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
