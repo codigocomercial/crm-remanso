@@ -26,8 +26,8 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<{
     dia: string
     custoFixo: number
-    receita: number
-    margem: number
+    receita: number | null
+    margem: number | null
   }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
 
