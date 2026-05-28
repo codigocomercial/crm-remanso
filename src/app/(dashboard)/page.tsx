@@ -63,12 +63,13 @@ export default function DashboardPage() {
           .select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest, units_produced')
           .eq('year', now.getFullYear()).eq('month', now.getMonth() + 1)
           .single(),
-        // Pedidos do mês com vínculo de carga para calcular custo frete proporcional
-        supabase.rpc('get_orders_with_freight_cost', {
-          p_org_id: process.env.NEXT_PUBLIC_ORG_ID!,
-          p_date_start: mesInicio,
-          p_date_end: mesFim,
-        }),
+        // Pedidos do mês com custo frete proporcional da carga
+        supabase.from('crm_orders_freight')
+          .select('ordered_at, total_value, tax_amount, cost_mp, units_count, custo_frete_proporcional')
+          .eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!)
+          .gte('ordered_at', mesInicio)
+          .lte('ordered_at', mesFim)
+          .order('ordered_at', { ascending: true }),
         // Top 5 clientes do mês
         supabase.from('crm_orders')
           .select('client_name, company_id, total_value, units_count')
