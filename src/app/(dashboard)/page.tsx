@@ -96,7 +96,7 @@ export default function DashboardPage() {
       // Agrupa por dia: custo variável e margem de contribuição
       const pedidosPorDia = new Map<string, { custoVariavel: number; margem: number }>()
 
-      for (const p of (pedidosDiarios as any)?.data ?? []) {
+      for (const p of (pedidosDiarios as any[]) ?? []) {
         const dia = new Date(p.ordered_at).getDate()
         const key = String(dia).padStart(2, '0')
 
