@@ -98,7 +98,8 @@ export default function DashboardPage() {
       for (const p of pedidosDiarios ?? []) {
         const dia = new Date(p.ordered_at).getDate()
         const key = String(dia).padStart(2, '0')
-        const margem = Number(p.total_value ?? 0) - Number(p.cost_mp ?? 0) - Number(p.freight ?? 0) - Number(p.tax_amount ?? 0)
+        // Margem de Contribuição = Receita - Frete - Imposto - Custo MP (SEM custo fixo)
+        const margem = Number(p.total_value ?? 0) - Number(p.freight ?? 0) - Number(p.tax_amount ?? 0) - Number(p.cost_mp ?? 0)
         const prev = pedidosPorDia.get(key) ?? { receita: 0, margem: 0 }
         pedidosPorDia.set(key, {
           receita: prev.receita + Number(p.total_value ?? 0),
@@ -106,22 +107,27 @@ export default function DashboardPage() {
         })
       }
 
-      // Monta array dia a dia acumulando
-      const diasPassados = now.getDate()
+      // Monta array dia a dia acumulando — mostra TODOS os dias do mês
+      // Dias futuros mostram só a linha de custo fixo (projeção)
       const chartArr = []
       let receitaAcum = 0
       let margemAcum = 0
 
-      for (let d = 1; d <= diasPassados; d++) {
+      for (let d = 1; d <= diasNoMes; d++) {
         const key = String(d).padStart(2, '0')
         const dia = pedidosPorDia.get(key) ?? { receita: 0, margem: 0 }
-        receitaAcum += dia.receita
-        margemAcum += dia.margem
+        const ehFuturo = d > now.getDate()
+
+        if (!ehFuturo) {
+          receitaAcum += dia.receita
+          margemAcum += dia.margem
+        }
+
         chartArr.push({
-          dia: `Dia ${d}`,
+          dia: `${d}`,
           custoFixo: Math.round(custoPorDia * d),
-          receita: Math.round(receitaAcum),
-          margem: Math.round(margemAcum),
+          receita: ehFuturo ? null : Math.round(receitaAcum),
+          margem: ehFuturo ? null : Math.round(margemAcum),
         })
       }
       setChartData(chartArr)
@@ -148,8 +154,8 @@ export default function DashboardPage() {
   }, [])
 
   // Ponto de equilíbrio atingido?
-  const peAtingido = chartData.length > 0 && chartData[chartData.length - 1].margem >= chartData[chartData.length - 1].custoFixo
-  const diaEquilibrio = chartData.findIndex(d => d.margem >= d.custoFixo)
+  const peAtingido = chartData.some(d => d.margem !== null && d.margem >= d.custoFixo)
+  const diaEquilibrio = chartData.findIndex(d => d.margem !== null && d.margem >= d.custoFixo)
 
   return (
     <div className="space-y-5 animate-fade-in">
