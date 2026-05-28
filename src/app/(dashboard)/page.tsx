@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<{
     dia: string
     custoFixo: number
-    receita: number | null
+    custoVariavel: number | null
     margem: number | null
   }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
@@ -63,11 +63,12 @@ export default function DashboardPage() {
           .select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest, units_produced')
           .eq('year', now.getFullYear()).eq('month', now.getMonth() + 1)
           .single(),
-        // Pedidos do mês agrupados por dia
-        supabase.from('crm_orders')
-          .select('ordered_at, total_value, cost_mp, freight, tax_amount')
-          .gte('ordered_at', mesInicio).lte('ordered_at', mesFim)
-          .order('ordered_at', { ascending: true }),
+        // Pedidos do mês com vínculo de carga para calcular custo frete proporcional
+        supabase.rpc('get_orders_with_freight_cost', {
+          p_org_id: process.env.NEXT_PUBLIC_ORG_ID!,
+          p_date_start: mesInicio,
+          p_date_end: mesFim,
+        }),
         // Top 5 clientes do mês
         supabase.from('crm_orders')
           .select('client_name, company_id, total_value, units_count')
@@ -87,46 +88,52 @@ export default function DashboardPage() {
       const custoFixoMensal = op
         ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest]
             .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
-        : 60000 // fallback
+        : 60000
 
       const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-      const custoPorDia = custoFixoMensal / diasNoMes
 
       // ── Gráfico Ponto de Equilíbrio ──────────────────────────────────────
-      // Agrupa pedidos por dia
-      const pedidosPorDia = new Map<string, { receita: number; margem: number }>()
-      for (const p of pedidosDiarios ?? []) {
+      // Agrupa por dia: custo variável e margem de contribuição
+      const pedidosPorDia = new Map<string, { custoVariavel: number; margem: number }>()
+
+      for (const p of (pedidosDiarios as any)?.data ?? []) {
         const dia = new Date(p.ordered_at).getDate()
         const key = String(dia).padStart(2, '0')
-        // Margem de Contribuição = Receita - Frete - Imposto - Custo MP (SEM custo fixo)
-        const margem = Number(p.total_value ?? 0) - Number(p.freight ?? 0) - Number(p.tax_amount ?? 0) - Number(p.cost_mp ?? 0)
-        const prev = pedidosPorDia.get(key) ?? { receita: 0, margem: 0 }
+
+        // Custo Variável = imposto + custo MP + custo frete proporcional da carga
+        const custoVar = Number(p.tax_amount ?? 0)
+          + Number(p.cost_mp ?? 0)
+          + Number(p.custo_frete_proporcional ?? 0)
+
+        // Margem de Contribuição = receita - custo variável
+        const margem = Number(p.total_value ?? 0) - custoVar
+
+        const prev = pedidosPorDia.get(key) ?? { custoVariavel: 0, margem: 0 }
         pedidosPorDia.set(key, {
-          receita: prev.receita + Number(p.total_value ?? 0),
+          custoVariavel: prev.custoVariavel + custoVar,
           margem: prev.margem + margem,
         })
       }
 
-      // Monta array dia a dia acumulando — mostra TODOS os dias do mês
-      // Dias futuros mostram só a linha de custo fixo (projeção)
+      // Monta array com todos os dias do mês
       const chartArr = []
-      let receitaAcum = 0
+      let custoVarAcum = 0
       let margemAcum = 0
 
       for (let d = 1; d <= diasNoMes; d++) {
         const key = String(d).padStart(2, '0')
-        const dia = pedidosPorDia.get(key) ?? { receita: 0, margem: 0 }
+        const dia = pedidosPorDia.get(key) ?? { custoVariavel: 0, margem: 0 }
         const ehFuturo = d > now.getDate()
 
         if (!ehFuturo) {
-          receitaAcum += dia.receita
+          custoVarAcum += dia.custoVariavel
           margemAcum += dia.margem
         }
 
         chartArr.push({
           dia: `${d}`,
-          custoFixo: custoFixoMensal, // linha horizontal — já existe desde dia 1
-          receita: ehFuturo ? null : Math.round(receitaAcum),
+          custoFixo: custoFixoMensal,
+          custoVariavel: ehFuturo ? null : Math.round(custoVarAcum),
           margem: ehFuturo ? null : Math.round(margemAcum),
         })
       }
@@ -217,27 +224,27 @@ export default function DashboardPage() {
               formatter={(value: any) => fmt(value)}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="custoFixo" name="Custo Fixo Acumulado"
+            <Line type="monotone" dataKey="custoFixo" name="Custo Fixo"
               stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-            <Line type="monotone" dataKey="receita" name="Receita Acumulada"
-              stroke="#3B82F6" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="custoVariavel" name="Custo Variável Acumulado"
+              stroke="#F97316" strokeWidth={2} dot={false} connectNulls={false} />
             <Line type="monotone" dataKey="margem" name="Margem de Contribuição"
-              stroke="#3E8F76" strokeWidth={2.5} dot={false} />
+              stroke="#3E8F76" strokeWidth={2.5} dot={false} connectNulls={false} />
           </LineChart>
         </ResponsiveContainer>
         <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           {chartData.length > 0 && (
             <>
               <div className="text-center">
-                <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Total</p>
+                <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
                 <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>
                   {fmt(chartData[chartData.length - 1].custoFixo)}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-[11px]" style={{ color: '#6B7280' }}>Receita Acumulada</p>
-                <p className="text-[14px] font-bold" style={{ color: '#3B82F6' }}>
-                  {fmt(chartData[chartData.length - 1].receita ?? 0)}
+                <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Variável Acumulado</p>
+                <p className="text-[14px] font-bold" style={{ color: '#F97316' }}>
+                  {fmt(chartData[chartData.length - 1].custoVariavel ?? 0)}
                 </p>
               </div>
               <div className="text-center">
