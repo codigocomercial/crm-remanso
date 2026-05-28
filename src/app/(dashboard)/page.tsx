@@ -125,7 +125,7 @@ export default function DashboardPage() {
 
         chartArr.push({
           dia: `${d}`,
-          custoFixo: Math.round(custoPorDia * d),
+          custoFixo: custoFixoMensal, // linha horizontal — já existe desde dia 1
           receita: ehFuturo ? null : Math.round(receitaAcum),
           margem: ehFuturo ? null : Math.round(margemAcum),
         })
