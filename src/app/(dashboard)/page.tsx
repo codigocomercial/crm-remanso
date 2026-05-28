@@ -237,13 +237,13 @@ export default function DashboardPage() {
               <div className="text-center">
                 <p className="text-[11px]" style={{ color: '#6B7280' }}>Receita Acumulada</p>
                 <p className="text-[14px] font-bold" style={{ color: '#3B82F6' }}>
-                  {fmt(chartData[chartData.length - 1].receita)}
+                  {fmt(chartData[chartData.length - 1].receita ?? 0)}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-[11px]" style={{ color: '#6B7280' }}>Margem de Contribuição</p>
                 <p className="text-[14px] font-bold" style={{ color: '#3E8F76' }}>
-                  {fmt(chartData[chartData.length - 1].margem)}
+                  {fmt(chartData[chartData.length - 1].margem ?? 0)}
                 </p>
               </div>
             </>
