@@ -239,7 +239,7 @@ export default function DashboardPage() {
       <PageHeader title="Dashboard" subtitle={hojeLabel}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={prevMonth} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: '#9CA3AF', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}>‹</button>
-          <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '120px', textAlign: 'center' }}>{mesLabel}</span>
+          <span style={{ fontSize: '30px', fontWeight: 600, minWidth: '120px', textAlign: 'center' }}>{mesLabel}</span>
           <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: isCurrentMonth ? '#374151' : '#9CA3AF', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: '16px', lineHeight: 1, opacity: isCurrentMonth ? 0.35 : 1 }}>›</button>
         </div>
       </PageHeader>
