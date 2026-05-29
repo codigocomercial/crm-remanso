@@ -181,10 +181,7 @@ export default function PropostasPage() {
         title="Pedidos de Venda"
         subtitle={`${orders.length} pedido(s) · ${totalUrnas} urnas · Total R$ ${fmt(totalVenda)}${can('view_margins') ? ` · Margem ${margemMedia.toFixed(1)}%` : ''}`}
       >
-        <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
-          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
-        </button>
+        <span style={{ fontSize: '30px', fontWeight: 600, color: 'white' }}>{mesLabel}</span>
       </PageHeader>
 
       {/* Filtros */}
@@ -200,7 +197,7 @@ export default function PropostasPage() {
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
             />
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap flex-1">
             <button onClick={() => navMonth(-1)}
               className="px-2.5 py-2 rounded-lg border text-[14px] leading-none"
               style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
@@ -222,6 +219,12 @@ export default function PropostasPage() {
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="px-3 py-2 text-[12px] rounded-lg border outline-none"
               style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
+            <div className="ml-auto">
+              <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
+                <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar Bling'}
+              </button>
+            </div>
           </div>
           {sellers.length > 0 && (
             <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)}
