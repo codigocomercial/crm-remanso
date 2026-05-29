@@ -239,7 +239,7 @@ export default function DashboardPage() {
             />
             <Tooltip
               contentStyle={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, fontSize: 12 }}
-              formatter={(value: any, name: string) => [fmt(value), name]}
+              formatter={(value: any) => fmt(value)}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <ReferenceLine y={0} stroke="rgba(0,0,0,0.12)" strokeWidth={1} />
