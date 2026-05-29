@@ -10,6 +10,10 @@ import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
+function toDateStr(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+
 const STATUS: Record<string, { label: string; color: string; bg: string }> = {
   em_aberto: { label: 'Em Aberto', color: '#1D6FA4', bg: '#EBF4FB' },
   em_andamento: { label: 'Em Andamento', color: '#B45309', bg: '#FEF3C7' },
@@ -60,8 +64,12 @@ export default function PropostasPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
   const [sellerFilter, setSellerFilter] = useState('todos')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom, setDateFrom] = useState(() => {
+    const n = new Date(); return toDateStr(new Date(n.getFullYear(), n.getMonth(), 1))
+  })
+  const [dateTo, setDateTo] = useState(() => {
+    const n = new Date(); return toDateStr(new Date(n.getFullYear(), n.getMonth() + 1, 0))
+  })
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [itemsMap, setItemsMap] = useState<Record<string, OrderItem[]>>({})
   const [sellers, setSellers] = useState<string[]>([])
@@ -139,6 +147,20 @@ export default function PropostasPage() {
 
   const fmt = (v: number | null) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+
+  function navMonth(dir: -1 | 1) {
+    const base = new Date(dateFrom + 'T12:00:00')
+    const first = new Date(base.getFullYear(), base.getMonth() + dir, 1)
+    const last  = new Date(first.getFullYear(), first.getMonth() + 1, 0)
+    setDateFrom(toDateStr(first))
+    setDateTo(toDateStr(last))
+  }
+
+  const mesLabel = (() => {
+    const d = new Date(dateFrom + 'T12:00:00')
+    const s = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  })()
   const clientName = (o: Order) => {
     if (o.company_id && companies[o.company_id]) {
       const c = companies[o.company_id]
@@ -178,7 +200,21 @@ export default function PropostasPage() {
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.backgroundColor = 'var(--neutral-100)' }}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button onClick={() => navMonth(-1)}
+              className="px-2.5 py-2 rounded-lg border text-[14px] leading-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
+              ‹
+            </button>
+            <span className="text-[13px] font-semibold min-w-[110px] text-center" style={{ color: 'var(--neutral-700)' }}>
+              {mesLabel}
+            </span>
+            <button onClick={() => navMonth(1)}
+              className="px-2.5 py-2 rounded-lg border text-[14px] leading-none"
+              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
+              ›
+            </button>
+            <span className="text-[11px] mx-1" style={{ color: 'var(--neutral-300)' }}>|</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="px-3 py-2 text-[12px] rounded-lg border outline-none"
               style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
