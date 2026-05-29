@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, TrendingUp, DollarSign, Package, Lightbulb } from 'lucide-react'
+import { ShoppingBag, TrendingUp, DollarSign, Package, Lightbulb, Bot } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, ReferenceLine
@@ -14,7 +14,6 @@ import { ptBR } from 'date-fns/locale'
 function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
-
 function pct(v: number) {
   return v.toFixed(1).replace('.', ',') + '%'
 }
@@ -101,26 +100,22 @@ export default function DashboardPage() {
         supabase.from('operational_costs').select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest').eq('year', selectedDate.getFullYear()).eq('month', selectedDate.getMonth() + 1).single(),
         supabase.from('crm_orders_freight').select('ordered_at, total_value, tax_amount, cost_mp, custo_frete_proporcional').gte('ordered_at', mesInicio).lte('ordered_at', mesFim).order('ordered_at', { ascending: true }),
         supabase.from('crm_orders').select('client_name, company_id, total_value, units_count').gte('ordered_at', mesInicio).lte('ordered_at', mesFim),
-        // Mês anterior
         supabase.from('crm_orders').select('id, total_value, ordered_at, units_count').gte('ordered_at', mesInicioPrev).lte('ordered_at', mesFimPrev),
         supabase.from('operational_costs').select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest').eq('year', selectedDate.getMonth() === 0 ? selectedDate.getFullYear() - 1 : selectedDate.getFullYear()).eq('month', selectedDate.getMonth() === 0 ? 12 : selectedDate.getMonth()).single(),
         supabase.from('crm_orders_freight').select('total_value, tax_amount, cost_mp, custo_frete_proporcional').gte('ordered_at', mesInicioPrev).lte('ordered_at', mesFimPrev),
       ])
 
-      // ── Custo fixo mês atual ─────────────────────────────────────────────
       const op = opCostData as any
       const custoFixo = op
         ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest].reduce((s: number, v: any) => s + Number(v ?? 0), 0)
         : 60000
       setCustoFixoMensal(custoFixo)
 
-      // ── Custo fixo mês anterior ──────────────────────────────────────────
       const opPrev = opCostPrevData as any
       const custoFixoPrev = opPrev
         ? [opPrev.labor, opPrev.admin, opPrev.truck, opPrev.maintenance, opPrev.misc, opPrev.icms, opPrev.freight_purchase, opPrev.interest].reduce((s: number, v: any) => s + Number(v ?? 0), 0)
         : 60000
 
-      // ── Agrupa margem por dia (mês atual) ────────────────────────────────
       const diasNoMesLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()
       const margemPorDia = new Map<string, number>()
       for (const p of (pedidosDiarios as any[]) ?? []) {
@@ -130,7 +125,6 @@ export default function DashboardPage() {
         margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + (Number(p.total_value ?? 0) - custoVar))
       }
 
-      // ── Monta array do gráfico ───────────────────────────────────────────
       const chartArr = []
       let margemAcum = 0
       let peDia = -1
@@ -146,13 +140,11 @@ export default function DashboardPage() {
       }
       setChartData(chartArr)
 
-      // ── Métricas mês atual ───────────────────────────────────────────────
       const valorVendas = (pedidosMesData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
       const pedidosMes = pedidosMesData?.length ?? 0
       const lucroReal = peDia !== -1 ? Math.max(0, margemAcum - custoFixo) : 0
       setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes })
 
-      // ── Métricas mês anterior ────────────────────────────────────────────
       const valorVendasPrev = (pedidosPrevData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
       const pedidosMesPrev = pedidosPrevData?.length ?? 0
       let margemAcumPrev = 0
@@ -163,7 +155,6 @@ export default function DashboardPage() {
       const lucroRealPrev = Math.max(0, margemAcumPrev - custoFixoPrev)
       setPrevMetrics({ valorVendas: valorVendasPrev, margemAcum: margemAcumPrev, lucroReal: lucroRealPrev, pedidosMes: pedidosMesPrev })
 
-      // ── Top clientes ─────────────────────────────────────────────────────
       const clienteMap = new Map<string, { nome: string; receita: number; urnas: number }>()
       for (const o of topData ?? []) {
         const key = o.company_id ?? o.client_name
@@ -176,11 +167,11 @@ export default function DashboardPage() {
     load()
   }, [selectedDate])
 
-  // ── Derivados ────────────────────────────────────────────────────────────
+  // ── Derivados ─────────────────────────────────────────────────────────────
   const diaEquilibrio = chartData.findIndex(d => d.lucro !== null)
   const peAtingido = diaEquilibrio >= 0
+  const mesNum = String(selectedDate.getMonth() + 1).padStart(2, '0')
 
-  // Deltas vs mês anterior
   const delta = (curr: number, prev: number) => prev > 0 ? ((curr - prev) / prev) * 100 : null
   const deltaVendas = prevMetrics ? delta(metrics.valorVendas, prevMetrics.valorVendas) : null
   const deltaLucro = prevMetrics ? delta(metrics.lucroReal, prevMetrics.lucroReal) : null
@@ -188,49 +179,55 @@ export default function DashboardPage() {
 
   const trendLabel = (d: number | null) => {
     if (d === null) return undefined
-    const sign = d >= 0 ? '▲' : '▼'
-    return `${sign} ${Math.abs(d).toFixed(0)}% vs ${prevMesLabel}`
+    return `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}% vs ${prevMesLabel}`
   }
-  const trendDir = (d: number | null): 'up' | 'down' | undefined => d === null ? undefined : d >= 0 ? 'up' : 'down'
+  const trendDir = (d: number | null): 'up' | 'down' | undefined =>
+    d === null ? undefined : d >= 0 ? 'up' : 'down'
 
-  // % lucro / faturamento
   const lucroSobreFaturamento = metrics.valorVendas > 0 && metrics.lucroReal > 0
     ? (metrics.lucroReal / metrics.valorVendas) * 100
     : null
 
-  // Projeção de fechamento
   const projecaoLucro = isCurrentMonth && diasDecorridos > 0 && metrics.margemAcum > 0
     ? Math.round((metrics.margemAcum / diasDecorridos) * diasNoMes - custoFixoMensal)
     : null
 
-  // ── Insights ─────────────────────────────────────────────────────────────
-  const insights: string[] = []
+  // ── Insights ──────────────────────────────────────────────────────────────
+  const insights: { label: string; value: string; color: string }[] = []
 
   if (peAtingido) {
-    const diaNum = chartData[diaEquilibrio]?.dia
-    const mesNum = String(selectedDate.getMonth() + 1).padStart(2, '0')
-    insights.push(`🎯 Custos fixos cobertos em ${diaNum}/${mesNum}`)
+    insights.push({ label: 'Ponto de equilíbrio', value: `🎯 Cobertos em ${chartData[diaEquilibrio]?.dia}/${mesNum}`, color: '#3E8F76' })
   } else if (diasDecorridos > 0 && metrics.margemAcum > 0) {
-    const ritmoDiario = metrics.margemAcum / diasDecorridos
-    const diasParaPE = Math.ceil((custoFixoMensal - metrics.margemAcum) / ritmoDiario)
-    const estimado = now.getDate() + diasParaPE
-    if (estimado <= diasNoMes) {
-      insights.push(`⏳ No ritmo atual, custos fixos cobertos por volta do dia ${estimado}`)
-    } else {
-      insights.push(`⚠️ No ritmo atual, o ponto de equilíbrio não será atingido este mês`)
-    }
+    const ritmo = metrics.margemAcum / diasDecorridos
+    const estimado = Math.ceil(custoFixoMensal / ritmo)
+    insights.push({
+      label: 'Ponto de equilíbrio',
+      value: estimado <= diasNoMes ? `⏳ Estimativa: dia ${estimado}` : '⚠️ Fora do alcance este mês',
+      color: '#D97706',
+    })
   }
 
   if (lucroSobreFaturamento !== null) {
-    insights.push(`💡 Lucro representa ${pct(lucroSobreFaturamento)} do faturamento do mês`)
+    insights.push({ label: 'Lucro sobre faturamento', value: `💰 ${pct(lucroSobreFaturamento)} do faturamento`, color: '#1D6FE8' })
   }
 
   if (projecaoLucro !== null && projecaoLucro > 0) {
-    insights.push(`📈 Projeção de fechamento: ${fmt(projecaoLucro)} de lucro`)
+    insights.push({ label: 'Projeção de fechamento', value: `📈 ${fmt(projecaoLucro)} de lucro`, color: '#3E8F76' })
   } else if (deltaLucro !== null && prevMetrics && prevMetrics.lucroReal > 0) {
-    const sign = deltaLucro >= 0 ? '▲' : '▼'
-    insights.push(`${sign} Lucro ${deltaLucro >= 0 ? '+' : ''}${deltaLucro.toFixed(0)}% comparado a ${prevMesLabel}`)
+    insights.push({
+      label: `vs ${prevMesLabel}`,
+      value: `${deltaLucro >= 0 ? '▲' : '▼'} Lucro ${deltaLucro >= 0 ? '+' : ''}${deltaLucro.toFixed(0)}%`,
+      color: deltaLucro >= 0 ? '#3E8F76' : '#EF4444',
+    })
   }
+
+  // Recomendação estática (preparada para IA futura)
+  const recomendacao = (() => {
+    if (!peAtingido && diasDecorridos > diasNoMes * 0.5) return 'Ritmo abaixo do esperado. Acelerar vendas na segunda metade do mês.'
+    if (lucroSobreFaturamento !== null && lucroSobreFaturamento > 20) return 'Margem saudável. Bom momento para avaliar expansão de carteira.'
+    if (projecaoLucro !== null && projecaoLucro > 0) return 'Margem crescendo acima do custo fixo. Ritmo favorável para superar a meta.'
+    return 'Acompanhe o ritmo diário para garantir o ponto de equilíbrio no prazo.'
+  })()
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -280,98 +277,120 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Insights da Gestão ── */}
-      {insights.length > 0 && (
-        <div className="rm-card" style={{ padding: '14px 20px' }}>
-          <div className="flex items-center gap-2 mb-3">
+      {/* ── Gráfico + Insights lado a lado ── */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+
+        {/* Gráfico — 75% */}
+        <div className="rm-card" style={{ flex: 3, minWidth: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
+                Ponto de Equilíbrio — {mesLabel}
+              </p>
+              {peAtingido ? (
+                <p className="text-[12px] mt-1" style={{ color: 'var(--brand-teal)' }}>
+                  🎯 Custos fixos cobertos em {chartData[diaEquilibrio]?.dia}/{mesNum}
+                </p>
+              ) : (
+                <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
+                  ⚠ Ponto de equilíbrio ainda não atingido
+                </p>
+              )}
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+              <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              {peAtingido && (
+                <ReferenceLine
+                  x={chartData[diaEquilibrio]?.dia}
+                  stroke="#F59E0B"
+                  strokeDasharray="5 4"
+                  strokeWidth={1.5}
+                  label={{ value: '⚑ PE atingido', position: 'insideTopRight', fontSize: 10, fill: '#D97706' }}
+                />
+              )}
+              <Line type="monotone" dataKey="custoFixo" name="Custo Fixo" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+              <Line type="monotone" dataKey="margem" name="Margem de Contribuição" stroke="#3E8F76" strokeWidth={2.5} dot={false} connectNulls={false} />
+              <Line
+                type="monotone" dataKey="lucro" name="Lucro Real" stroke="#1D6FE8" strokeWidth={2.5} connectNulls={false}
+                dot={(props: any) => {
+                  const { cx, cy, index } = props
+                  if (index === diaEquilibrio && cx != null && cy != null) {
+                    return <circle key="pe-dot" cx={cx} cy={cy} r={5} fill="#1D6FE8" stroke="white" strokeWidth={2} />
+                  }
+                  return <g key={`empty-${index}`} />
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+
+          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+            {chartData.length > 0 && (() => {
+              const last = chartData[chartData.findLastIndex(d => d.margem !== null)]
+              return (
+                <>
+                  <div className="text-center">
+                    <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
+                    <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>{fmt(last?.custoFixo ?? 0)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[11px]" style={{ color: '#6B7280' }}>Margem de Contribuição</p>
+                    <p className="text-[14px] font-bold" style={{ color: '#3E8F76' }}>{fmt(last?.margem ?? 0)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
+                    <p className="text-[14px] font-bold" style={{ color: '#1D6FE8' }}>
+                      {metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
+                    </p>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        </div>
+
+        {/* Insights — 25% */}
+        <div className="rm-card" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '16px' }}>
             <Lightbulb size={13} style={{ color: '#F59E0B', flexShrink: 0 }} />
-            <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
-              Insights da gestão
+            <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280', margin: 0 }}>
+              Insights
             </p>
           </div>
-          <div className="flex flex-col gap-1.5">
-            {insights.map((insight, i) => (
-              <p key={i} style={{ fontSize: '13px', color: 'var(--neutral-700)', lineHeight: 1.5 }}>
-                {insight}
-              </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            {insights.map((item, i) => (
+              <div key={i} style={{ paddingBottom: '12px', marginBottom: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: '10px', color: '#9CA3AF', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {item.label}
+                </p>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: item.color, margin: 0 }}>
+                  {item.value}
+                </p>
+              </div>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* ── Gráfico Ponto de Equilíbrio ── */}
-      <div className="rm-card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
-              Ponto de Equilíbrio — {mesLabel}
+          {/* Recomendação — preparada para IA */}
+          <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <Bot size={12} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9CA3AF', margin: 0 }}>
+                Recomendação
+              </p>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: 0, lineHeight: 1.55 }}>
+              {recomendacao}
             </p>
-            {peAtingido ? (
-              <p className="text-[12px] mt-1" style={{ color: 'var(--brand-teal)' }}>
-                🎯 Custos fixos cobertos em {chartData[diaEquilibrio]?.dia}/{String(selectedDate.getMonth() + 1).padStart(2, '0')}
-              </p>
-            ) : (
-              <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
-                ⚠ Ponto de equilíbrio ainda não atingido
-              </p>
-            )}
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            {peAtingido && (
-              <ReferenceLine
-                x={chartData[diaEquilibrio]?.dia}
-                stroke="#F59E0B"
-                strokeDasharray="5 4"
-                strokeWidth={1.5}
-                label={{ value: '⚑ PE atingido', position: 'insideTopRight', fontSize: 10, fill: '#D97706' }}
-              />
-            )}
-            <Line type="monotone" dataKey="custoFixo" name="Custo Fixo" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-            <Line type="monotone" dataKey="margem" name="Margem de Contribuição" stroke="#3E8F76" strokeWidth={2.5} dot={false} connectNulls={false} />
-            <Line
-              type="monotone" dataKey="lucro" name="Lucro Real" stroke="#1D6FE8" strokeWidth={2.5} connectNulls={false}
-              dot={(props: any) => {
-                const { cx, cy, index } = props
-                if (index === diaEquilibrio && cx != null && cy != null) {
-                  return <circle key="pe-dot" cx={cx} cy={cy} r={5} fill="#1D6FE8" stroke="white" strokeWidth={2} />
-                }
-                return <g key={`empty-${index}`} />
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-
-        <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-          {chartData.length > 0 && (() => {
-            const last = chartData[chartData.findLastIndex(d => d.margem !== null)]
-            return (
-              <>
-                <div className="text-center">
-                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
-                  <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>{fmt(last?.custoFixo ?? 0)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Margem de Contribuição</p>
-                  <p className="text-[14px] font-bold" style={{ color: '#3E8F76' }}>{fmt(last?.margem ?? 0)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
-                  <p className="text-[14px] font-bold" style={{ color: '#1D6FE8' }}>
-                    {metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
-                  </p>
-                </div>
-              </>
-            )
-          })()}
-        </div>
       </div>
 
       {/* ── Top Clientes do Mês ── */}
