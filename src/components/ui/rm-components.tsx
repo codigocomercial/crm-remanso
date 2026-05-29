@@ -53,12 +53,13 @@ interface StatCardProps {
   trendLabel?: string
   icon?: LucideIcon
   variant?: 'default' | 'teal' | 'gold'
+  valueColor?: string
   className?: string
 }
 
 export function StatCard({
   label, value, sub, trend, trendLabel, icon: Icon,
-  variant = 'default', className,
+  variant = 'default', valueColor, className,
 }: StatCardProps) {
   const isTeal = variant === 'teal'
   const isGold = variant === 'gold'
@@ -86,7 +87,7 @@ export function StatCard({
       }
 
   const labelColor = isColor ? 'rgba(255,255,255,0.72)' : 'var(--neutral-600)'
-  const valueColor = isColor ? '#FFFFFF' : 'var(--neutral-900)'
+  const valueColorDefault = isColor ? '#FFFFFF' : 'var(--neutral-900)'
   const iconBg = isColor ? 'rgba(255,255,255,0.15)' : '#F1F5F9'
   const iconColor = isColor ? 'rgba(255,255,255,0.85)' : '#3E8F76'
   const trendColor = isColor
@@ -121,7 +122,7 @@ export function StatCard({
 
       {/* Número principal — grande e bold */}
       <p style={{
-        color: valueColor,
+        color: valueColor ?? valueColorDefault,
         fontSize: '32px',
         fontWeight: 700,
         letterSpacing: '-1.5px',
