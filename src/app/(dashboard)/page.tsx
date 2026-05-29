@@ -15,6 +15,31 @@ function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
 
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null
+  const margem = payload.find((p: any) => p.dataKey === 'margem')?.value
+  const custoFixo = payload.find((p: any) => p.dataKey === 'custoFixo')?.value
+  const lucro = payload.find((p: any) => p.dataKey === 'lucro')?.value
+  const temLucro = lucro !== null && lucro !== undefined
+  return (
+    <div style={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, padding: '10px 14px', fontSize: 12, minWidth: 200, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+      <p style={{ fontWeight: 600, marginBottom: 8, color: '#374151' }}>Dia {label}</p>
+      {margem != null && (
+        <p style={{ color: '#3E8F76', marginBottom: 3 }}>Margem acumulada: {fmt(margem)}</p>
+      )}
+      {custoFixo != null && (
+        <p style={{ color: '#EF4444', marginBottom: 3 }}>Custo fixo: {fmt(custoFixo)}</p>
+      )}
+      {temLucro && (
+        <p style={{ color: '#7C3AED', marginBottom: 3 }}>Lucro real: {fmt(lucro)}</p>
+      )}
+      <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid #F1F5F9', fontWeight: 600, color: temLucro ? '#3E8F76' : '#D97706' }}>
+        {temLucro ? '✓ Lucro positivo' : '→ Cobrindo custos fixos'}
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
@@ -214,8 +239,8 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Lucro Real"
-          value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'R$ 0'}
-          sub={metrics.lucroReal > 0 ? 'após ponto de equilíbrio' : 'aguardando PE'}
+          value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
+          sub={metrics.lucroReal > 0 ? 'após ponto de equilíbrio' : ' '}
           icon={DollarSign}
         />
         <StatCard
@@ -260,12 +285,17 @@ export default function DashboardPage() {
               tickLine={false}
               tickFormatter={v => `${(v / 1000).toFixed(0)}k`}
             />
-            <Tooltip
-              contentStyle={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, fontSize: 12 }}
-              formatter={(value: any) => fmt(value)}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <ReferenceLine y={0} stroke="rgba(0,0,0,0.12)" strokeWidth={1} />
+            {peAtingido && (
+              <ReferenceLine
+                x={chartData[diaEquilibrio]?.dia}
+                stroke="#F59E0B"
+                strokeDasharray="5 4"
+                strokeWidth={1.5}
+                label={{ value: '⚑ PE atingido', position: 'insideTopRight', fontSize: 10, fill: '#D97706' }}
+              />
+            )}
             <Line
               type="monotone"
               dataKey="custoFixo"
@@ -290,8 +320,14 @@ export default function DashboardPage() {
               name="Lucro Real"
               stroke="#7C3AED"
               strokeWidth={2.5}
-              dot={false}
               connectNulls={false}
+              dot={(props: any) => {
+                const { cx, cy, index } = props
+                if (index === diaEquilibrio && cx != null && cy != null) {
+                  return <circle key={`pe-dot`} cx={cx} cy={cy} r={5} fill="#7C3AED" stroke="white" strokeWidth={2} />
+                }
+                return <g key={`empty-${index}`} />
+              }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -317,7 +353,7 @@ export default function DashboardPage() {
                 <div className="text-center">
                   <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
                   <p className="text-[14px] font-bold" style={{ color: '#7C3AED' }}>
-                    {fmt(metrics.lucroReal)}
+                    {metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
                   </p>
                 </div>
               </>
