@@ -2,12 +2,11 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, TrendingUp, DollarSign, Package, Plus } from 'lucide-react'
+import { ShoppingBag, TrendingUp, DollarSign, Package } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts'
-import Link from 'next/link'
 import { StatCard, PageHeader, SectionHeader } from '@/components/ui/rm-components'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -18,6 +17,7 @@ function fmt(v: number) {
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [metrics, setMetrics] = useState({
     valorVendas: 0,
     margemAcum: 0,
@@ -32,15 +32,29 @@ export default function DashboardPage() {
   }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
 
-  const hoje = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
+  const now = new Date()
+  const isCurrentMonth =
+    selectedDate.getFullYear() === now.getFullYear() &&
+    selectedDate.getMonth() === now.getMonth()
+  const isPastMonth = selectedDate < new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const hoje = format(now, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
   const hojeLabel = hoje.charAt(0).toUpperCase() + hoje.slice(1)
 
+  const mesLabel = (() => {
+    const s = format(selectedDate, 'MMMM yyyy', { locale: ptBR })
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  })()
+
+  const prevMonth = () => setSelectedDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+  const nextMonth = () => setSelectedDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+
   useEffect(() => {
+    setLoading(true)
     async function load() {
       const supabase = createClient()
-      const now = new Date()
-      const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-      const mesFim = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+      const mesInicio = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString()
+      const mesFim = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString()
 
       const [
         { data: pedidosMesData },
@@ -56,7 +70,7 @@ export default function DashboardPage() {
         // Custo operacional do mês
         supabase.from('operational_costs')
           .select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest')
-          .eq('year', now.getFullYear()).eq('month', now.getMonth() + 1)
+          .eq('year', selectedDate.getFullYear()).eq('month', selectedDate.getMonth() + 1)
           .single(),
 
         // Pedidos com margem (custo frete proporcional da carga)
@@ -80,7 +94,7 @@ export default function DashboardPage() {
         : 60000
 
       // ── Agrupa margem por dia ─────────────────────────────────────────────
-      const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const diasNoMes = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()
       const margemPorDia = new Map<string, number>()
 
       for (const p of (pedidosDiarios as any[]) ?? []) {
@@ -101,7 +115,8 @@ export default function DashboardPage() {
 
       for (let d = 1; d <= diasNoMes; d++) {
         const key = String(d).padStart(2, '0')
-        const ehFuturo = d > now.getDate()
+        // Mês passado: sem dias futuros | Mês atual: dias após hoje | Mês futuro: todos futuros
+        const ehFuturo = isPastMonth ? false : isCurrentMonth ? d > now.getDate() : true
 
         if (!ehFuturo) {
           margemAcum += margemPorDia.get(key) ?? 0
@@ -151,7 +166,7 @@ export default function DashboardPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selectedDate])
 
   // Ponto de equilíbrio
   const diaEquilibrio = chartData.findIndex(d => d.lucro !== null)
@@ -162,16 +177,24 @@ export default function DashboardPage() {
 
       {/* ── Header ── */}
       <PageHeader title="Dashboard" subtitle={hojeLabel}>
-        <a href="https://wa.me/5577981019659" target="_blank" rel="noreferrer" className="btn-wpp">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="white">
-            <path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.96-.27-.1-.47-.15-.67.15s-.77.96-.94 1.15c-.17.2-.35.22-.65.07a8.17 8.17 0 01-2.4-1.48 9.03 9.03 0 01-1.66-2.07c-.17-.3-.02-.46.13-.61l.44-.51c.14-.16.18-.3.27-.5.09-.2.05-.37-.02-.52s-.67-1.61-.91-2.2c-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37s-1.04 1.02-1.04 2.48 1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.11.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.19-.57-.34z" />
-            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.1-1.34A10 10 0 1012 2z" />
-          </svg>
-          WhatsApp
-        </a>
-        <Link href="/clientes/novo" className="btn-remanso">
-          <Plus size={13} /> Novo cliente
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={prevMonth}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: '#9CA3AF', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+          >
+            ‹
+          </button>
+          <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '120px', textAlign: 'center' }}>
+            {mesLabel}
+          </span>
+          <button
+            onClick={nextMonth}
+            disabled={isCurrentMonth}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: isCurrentMonth ? '#374151' : '#9CA3AF', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: '16px', lineHeight: 1, opacity: isCurrentMonth ? 0.35 : 1 }}
+          >
+            ›
+          </button>
+        </div>
       </PageHeader>
 
       {/* ── Cards ── */}
@@ -208,7 +231,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
-              Ponto de Equilíbrio — {format(new Date(), 'MMMM/yyyy', { locale: ptBR })}
+              Ponto de Equilíbrio — {mesLabel}
             </p>
             {peAtingido ? (
               <p className="text-[12px] mt-1" style={{ color: 'var(--brand-teal)' }}>
