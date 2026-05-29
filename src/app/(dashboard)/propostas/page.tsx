@@ -211,14 +211,7 @@ export default function PropostasPage() {
               style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-500)' }}>
               ›
             </button>
-            <span className="text-[11px] mx-1" style={{ color: 'var(--neutral-300)' }}>|</span>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-3 py-2 text-[12px] rounded-lg border outline-none"
-              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
-            <span className="text-[12px]" style={{ color: 'var(--neutral-400)' }}>até</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-3 py-2 text-[12px] rounded-lg border outline-none"
-              style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'var(--neutral-100)' }} />
+
             <div className="ml-auto">
               <button onClick={syncPedidos} disabled={syncing} className="btn-remanso-outline flex items-center gap-1.5">
                 <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
