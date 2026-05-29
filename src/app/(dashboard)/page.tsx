@@ -2,17 +2,15 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, TrendingUp, Truck, Megaphone, Plus } from 'lucide-react'
+import { ShoppingBag, TrendingUp, DollarSign, Package, Plus } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend
+  ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts'
 import Link from 'next/link'
 import { StatCard, PageHeader, SectionHeader } from '@/components/ui/rm-components'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
@@ -21,13 +19,16 @@ function fmt(v: number) {
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState({
-    valorVendas: 0, pedidosMes: 0, cargasCriadas: 0, campanhasEnviadas: 0,
+    valorVendas: 0,
+    margemAcum: 0,
+    lucroReal: 0,
+    pedidosMes: 0,
   })
   const [chartData, setChartData] = useState<{
     dia: string
     custoFixo: number
-    custoVariavel: number | null
     margem: number | null
+    lucro: number | null
   }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
 
@@ -41,47 +42,35 @@ export default function DashboardPage() {
       const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       const mesFim = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
 
-      // ── Queries paralelas ────────────────────────────────────────────────
       const [
         { data: pedidosMesData },
-        { data: cargasData },
-        { data: campanhasData },
         { data: opCostData },
         { data: pedidosDiarios },
         { data: topData },
       ] = await Promise.all([
         // Pedidos do mês
         supabase.from('crm_orders')
-          .select('id, total_value, cost_mp, freight, tax_amount, ordered_at, units_count')
+          .select('id, total_value, ordered_at, units_count')
           .gte('ordered_at', mesInicio).lte('ordered_at', mesFim),
-        // Cargas
-        supabase.from('freight_loads').select('id').eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!),
-        // Campanhas enviadas
-        supabase.from('campaigns').select('id').eq('status', 'sent'),
+
         // Custo operacional do mês
         supabase.from('operational_costs')
-          .select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest, units_produced')
+          .select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest')
           .eq('year', now.getFullYear()).eq('month', now.getMonth() + 1)
           .single(),
-        // Pedidos do mês com custo frete proporcional da carga
+
+        // Pedidos com margem (custo frete proporcional da carga)
         supabase.from('crm_orders_freight')
-          .select('ordered_at, total_value, tax_amount, cost_mp, units_count, custo_frete_proporcional')
+          .select('ordered_at, total_value, tax_amount, cost_mp, custo_frete_proporcional')
           .gte('ordered_at', mesInicio)
           .lte('ordered_at', mesFim)
           .order('ordered_at', { ascending: true }),
-        // Top 5 clientes do mês
+
+        // Top clientes
         supabase.from('crm_orders')
           .select('client_name, company_id, total_value, units_count')
           .gte('ordered_at', mesInicio).lte('ordered_at', mesFim),
       ])
-
-      // ── Cards ────────────────────────────────────────────────────────────
-      const valorVendas = (pedidosMesData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
-      const pedidosMes = pedidosMesData?.length ?? 0
-      const cargasCriadas = cargasData?.length ?? 0
-      const campanhasEnviadas = campanhasData?.length ?? 0
-
-      setMetrics({ valorVendas, pedidosMes, cargasCriadas, campanhasEnviadas })
 
       // ── Custo fixo mensal ────────────────────────────────────────────────
       const op = opCostData as any
@@ -90,56 +79,60 @@ export default function DashboardPage() {
             .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
         : 60000
 
+      // ── Agrupa margem por dia ─────────────────────────────────────────────
       const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-
-      // ── Gráfico Ponto de Equilíbrio ──────────────────────────────────────
-      // Agrupa por dia: custo variável e margem de contribuição
-      const pedidosPorDia = new Map<string, { custoVariavel: number; margem: number }>()
+      const margemPorDia = new Map<string, number>()
 
       for (const p of (pedidosDiarios as any[]) ?? []) {
         const dia = new Date(p.ordered_at).getDate()
         const key = String(dia).padStart(2, '0')
-
-        // Custo Variável = imposto + custo MP + custo frete proporcional da carga
-        const custoVar = Number(p.tax_amount ?? 0)
-          + Number(p.cost_mp ?? 0)
-          + Number(p.custo_frete_proporcional ?? 0)
-
-        // Margem de Contribuição = receita - custo variável
+        const custoVar =
+          Number(p.tax_amount ?? 0) +
+          Number(p.cost_mp ?? 0) +
+          Number(p.custo_frete_proporcional ?? 0)
         const margem = Number(p.total_value ?? 0) - custoVar
-
-        const prev = pedidosPorDia.get(key) ?? { custoVariavel: 0, margem: 0 }
-        pedidosPorDia.set(key, {
-          custoVariavel: prev.custoVariavel + custoVar,
-          margem: prev.margem + margem,
-        })
+        margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + margem)
       }
 
-      // Monta array com todos os dias do mês
+      // ── Monta array do gráfico ────────────────────────────────────────────
       const chartArr = []
-      let custoVarAcum = 0
       let margemAcum = 0
+      let peDia = -1
 
       for (let d = 1; d <= diasNoMes; d++) {
         const key = String(d).padStart(2, '0')
-        const dia = pedidosPorDia.get(key) ?? { custoVariavel: 0, margem: 0 }
         const ehFuturo = d > now.getDate()
 
         if (!ehFuturo) {
-          custoVarAcum += dia.custoVariavel
-          margemAcum += dia.margem
+          margemAcum += margemPorDia.get(key) ?? 0
+          if (peDia === -1 && margemAcum >= custoFixoMensal) {
+            peDia = d
+          }
         }
+
+        // Lucro só nasce no dia que cruzar o PE — antes disso a linha não existe
+        const lucro: number | null =
+          !ehFuturo && peDia !== -1 && d >= peDia
+            ? Math.round(margemAcum - custoFixoMensal)
+            : null
 
         chartArr.push({
           dia: `${d}`,
           custoFixo: custoFixoMensal,
-          custoVariavel: ehFuturo ? null : Math.round(custoVarAcum),
           margem: ehFuturo ? null : Math.round(margemAcum),
+          lucro,
         })
       }
       setChartData(chartArr)
 
-      // ── Top clientes ─────────────────────────────────────────────────────
+      // ── Métricas dos cards ────────────────────────────────────────────────
+      const valorVendas = (pedidosMesData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
+      const pedidosMes = pedidosMesData?.length ?? 0
+      const lucroReal = peDia !== -1 ? Math.max(0, margemAcum - custoFixoMensal) : 0
+
+      setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes })
+
+      // ── Top clientes ──────────────────────────────────────────────────────
       const clienteMap = new Map<string, { nome: string; receita: number; urnas: number }>()
       for (const o of topData ?? []) {
         const key = o.company_id ?? o.client_name
@@ -160,9 +153,9 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  // Ponto de equilíbrio atingido?
-  const peAtingido = chartData.some(d => d.margem !== null && d.margem >= d.custoFixo)
-  const diaEquilibrio = chartData.findIndex(d => d.margem !== null && d.margem >= d.custoFixo)
+  // Ponto de equilíbrio
+  const diaEquilibrio = chartData.findIndex(d => d.lucro !== null)
+  const peAtingido = diaEquilibrio >= 0
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -183,14 +176,31 @@ export default function DashboardPage() {
 
       {/* ── Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard variant="teal" label="Valor em Vendas" value={fmt(metrics.valorVendas)}
-          sub="mês atual" icon={ShoppingBag} />
-        <StatCard label="Pedidos do Mês" value={metrics.pedidosMes}
-          sub="pedidos realizados" icon={TrendingUp} />
-        <StatCard label="Cargas Criadas" value={metrics.cargasCriadas}
-          sub="total de cargas" icon={Truck} />
-        <StatCard label="Campanhas Enviadas" value={metrics.campanhasEnviadas}
-          sub="campanhas ativas" icon={Megaphone} />
+        <StatCard
+          variant="teal"
+          label="Valor em Vendas"
+          value={fmt(metrics.valorVendas)}
+          sub="mês atual"
+          icon={ShoppingBag}
+        />
+        <StatCard
+          label="Margem de Contribuição"
+          value={fmt(metrics.margemAcum)}
+          sub="acumulada no mês"
+          icon={TrendingUp}
+        />
+        <StatCard
+          label="Lucro Real"
+          value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'R$ 0'}
+          sub={metrics.lucroReal > 0 ? 'após ponto de equilíbrio' : 'aguardando PE'}
+          icon={DollarSign}
+        />
+        <StatCard
+          label="Pedidos do Mês"
+          value={metrics.pedidosMes}
+          sub="pedidos realizados"
+          icon={Package}
+        />
       </div>
 
       {/* ── Gráfico Ponto de Equilíbrio ── */}
@@ -200,61 +210,96 @@ export default function DashboardPage() {
             <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
               Ponto de Equilíbrio — {format(new Date(), 'MMMM/yyyy', { locale: ptBR })}
             </p>
-            {diaEquilibrio >= 0 && (
+            {peAtingido ? (
               <p className="text-[12px] mt-1" style={{ color: 'var(--brand-teal)' }}>
-                ✓ Ponto de equilíbrio atingido no dia {diaEquilibrio + 1}
+                ✓ Ponto de equilíbrio atingido no dia {chartData[diaEquilibrio]?.dia}
               </p>
-            )}
-            {!peAtingido && chartData.length > 0 && (
+            ) : (
               <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
                 ⚠ Ponto de equilíbrio ainda não atingido
               </p>
             )}
           </div>
         </div>
+
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false}
-              tickFormatter={v => v.replace('Dia ', '')} />
-            <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false}
-              tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+            <XAxis
+              dataKey="dia"
+              tick={{ fontSize: 10, fill: '#aaa' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: '#aaa' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={v => `${(v / 1000).toFixed(0)}k`}
+            />
             <Tooltip
               contentStyle={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, fontSize: 12 }}
-              formatter={(value: any) => fmt(value)}
+              formatter={(value: any, name: string) => [fmt(value), name]}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="custoFixo" name="Custo Fixo"
-              stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-            <Line type="monotone" dataKey="custoVariavel" name="Custo Variável Acumulado"
-              stroke="#F97316" strokeWidth={2} dot={false} connectNulls={false} />
-            <Line type="monotone" dataKey="margem" name="Margem de Contribuição"
-              stroke="#3E8F76" strokeWidth={2.5} dot={false} connectNulls={false} />
+            <ReferenceLine y={0} stroke="rgba(0,0,0,0.12)" strokeWidth={1} />
+            <Line
+              type="monotone"
+              dataKey="custoFixo"
+              name="Custo Fixo"
+              stroke="#EF4444"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="margem"
+              name="Margem de Contribuição"
+              stroke="#3E8F76"
+              strokeWidth={2.5}
+              dot={false}
+              connectNulls={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="lucro"
+              name="Lucro Real"
+              stroke="#7C3AED"
+              strokeWidth={2.5}
+              dot={false}
+              connectNulls={false}
+            />
           </LineChart>
         </ResponsiveContainer>
+
+        {/* Resumo numérico */}
         <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-          {chartData.length > 0 && (
-            <>
-              <div className="text-center">
-                <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
-                <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>
-                  {fmt(chartData[chartData.length - 1].custoFixo)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Variável Acumulado</p>
-                <p className="text-[14px] font-bold" style={{ color: '#F97316' }}>
-                  {fmt(chartData[chartData.length - 1].custoVariavel ?? 0)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[11px]" style={{ color: '#6B7280' }}>Margem de Contribuição</p>
-                <p className="text-[14px] font-bold" style={{ color: '#3E8F76' }}>
-                  {fmt(chartData[chartData.length - 1].margem ?? 0)}
-                </p>
-              </div>
-            </>
-          )}
+          {chartData.length > 0 && (() => {
+            const last = chartData[chartData.findLastIndex(d => d.margem !== null)]
+            return (
+              <>
+                <div className="text-center">
+                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
+                  <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>
+                    {fmt(last?.custoFixo ?? 0)}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Margem de Contribuição</p>
+                  <p className="text-[14px] font-bold" style={{ color: '#3E8F76' }}>
+                    {fmt(last?.margem ?? 0)}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
+                  <p className="text-[14px] font-bold" style={{ color: '#7C3AED' }}>
+                    {fmt(metrics.lucroReal)}
+                  </p>
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
 
