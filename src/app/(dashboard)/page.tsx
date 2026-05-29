@@ -225,11 +225,11 @@ export default function DashboardPage() {
       {/* ── Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          variant="teal"
           label="Valor em Vendas"
           value={fmt(metrics.valorVendas)}
           sub="mês atual"
           icon={ShoppingBag}
+          valueColor="#3E8F76"
         />
         <StatCard
           label="Margem de Contribuição"
@@ -242,6 +242,7 @@ export default function DashboardPage() {
           value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
           sub={metrics.lucroReal > 0 ? 'após ponto de equilíbrio' : ' '}
           icon={DollarSign}
+          valueColor={metrics.lucroReal > 0 ? '#1D6FE8' : metrics.lucroReal < 0 ? '#DC2626' : '#D97706'}
         />
         <StatCard
           label="Pedidos do Mês"
