@@ -66,7 +66,6 @@ export default function DashboardPage() {
         // Pedidos do mês com custo frete proporcional da carga
         supabase.from('crm_orders_freight')
           .select('ordered_at, total_value, tax_amount, cost_mp, units_count, custo_frete_proporcional')
-          .eq('org_id', process.env.NEXT_PUBLIC_ORG_ID!)
           .gte('ordered_at', mesInicio)
           .lte('ordered_at', mesFim)
           .order('ordered_at', { ascending: true }),
