@@ -1,7 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useUserRole } from '@/hooks/useUserRole'
 import { ShoppingBag, TrendingUp, DollarSign, Package, Lightbulb, Bot } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -45,6 +47,16 @@ interface PrevMetrics {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const { role, loading: roleLoading } = useUserRole()
+
+  // Seller não acessa este dashboard — será redirecionado para página própria futuramente
+  useEffect(() => {
+    if (!roleLoading && role === 'seller') {
+      router.replace('/propostas')
+    }
+  }, [role, roleLoading, router])
+
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0 })
@@ -228,6 +240,9 @@ export default function DashboardPage() {
     if (projecaoLucro !== null && projecaoLucro > 0) return 'Margem crescendo acima do custo fixo. Ritmo favorável para superar a meta.'
     return 'Acompanhe o ritmo diário para garantir o ponto de equilíbrio no prazo.'
   })()
+
+  // Não renderiza nada enquanto verifica o role ou se for seller (redirect em andamento)
+  if (roleLoading || role === 'seller') return null
 
   return (
     <div className="space-y-5 animate-fade-in">
