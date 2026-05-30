@@ -43,7 +43,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <Image
-              src="/logo-remanso.png"
+              src="/remanso-logo.png"
               alt="Remanso CRM"
               width={180}
               height={120}
