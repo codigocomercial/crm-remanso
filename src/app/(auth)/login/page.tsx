@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,10 +42,13 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <img
+            <Image
               src="/logo-remanso.png"
               alt="Remanso CRM"
-              style={{ width: '180px', height: 'auto', objectFit: 'contain' }}
+              width={180}
+              height={120}
+              style={{ objectFit: 'contain' }}
+              priority
             />
           </div>
           <div className="space-y-1.5">
