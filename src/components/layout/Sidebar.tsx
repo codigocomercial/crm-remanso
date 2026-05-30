@@ -13,18 +13,6 @@ import {
     UserCheck, Calculator, MessageCircle, Truck, LogOut,
 } from 'lucide-react'
 
-function LogoMaos({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-            <ellipse cx="18" cy="16" rx="11" ry="13" stroke="white" strokeWidth="1.8" fill="none" opacity="0.9" />
-            <line x1="15" y1="10" x2="15" y2="26" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="18" y1="8" x2="18" y2="26" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="21" y1="10" x2="21" y2="26" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M13 26 C13 23 23 23 23 26" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        </svg>
-    )
-}
-
 interface NavItem {
     href: string
     label: string
@@ -107,21 +95,12 @@ export function Sidebar({
             }}
         >
             {/* Logo */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: '#3E8F76' }}>
-                    <LogoMaos className="w-6 h-6" />
-                </div>
-                <div>
-                    <p className="text-[13px] font-black tracking-wide leading-tight text-[var(--neutral-900)]"
-                        style={{ fontFamily: 'Inter, sans-serif' }}>
-                        REMANSO
-                    </p>
-                    <p className="text-[9px] font-bold tracking-[1.5px] uppercase"
-                        style={{ color: '#56AF90' }}>
-                        URNAS · CRM
-                    </p>
-                </div>
+            <div className="flex items-center justify-center px-4 py-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
+                <img
+                    src="/logo-remanso.png"
+                    alt="Remanso CRM"
+                    style={{ width: '148px', height: 'auto', objectFit: 'contain' }}
+                />
             </div>
 
             {/* Navegação */}
