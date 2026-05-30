@@ -263,6 +263,7 @@ export default function DashboardPage() {
           value={fmt(metrics.valorVendas)}
           sub="mês atual"
           icon={ShoppingBag}
+          valueColor="#D4A373"
           trend={trendDir(deltaVendas)}
           trendLabel={trendLabel(deltaVendas)}
         />
@@ -287,6 +288,7 @@ export default function DashboardPage() {
           value={metrics.pedidosMes}
           sub="pedidos realizados"
           icon={Package}
+          valueColor="#9CA3AF"
           trend={trendDir(deltaPedidos)}
           trendLabel={trendLabel(deltaPedidos)}
         />
