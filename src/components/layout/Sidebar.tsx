@@ -97,7 +97,7 @@ export function Sidebar({
             {/* Logo */}
             <div className="flex items-center justify-center px-4 py-4 border-b" style={{ borderColor: 'var(--surface-border)' }}>
                 <img
-                    src="/logo-remanso.png"
+                    src="/remanso-logo.png"
                     alt="Remanso CRM"
                     style={{ width: '148px', height: 'auto', objectFit: 'contain' }}
                 />
