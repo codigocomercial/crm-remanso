@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { KanbanSquare, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,14 +41,13 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-              <KanbanSquare className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img
+              src="/logo-remanso.png"
+              alt="Remanso CRM"
+              style={{ width: '180px', height: 'auto', objectFit: 'contain' }}
+            />
           </div>
           <div className="space-y-1.5">
-            <CardTitle className="text-2xl font-semibold tracking-tight">
-              Urnas Remanso
-            </CardTitle>
             <CardDescription>
               Acesse o CRM informando suas credenciais
             </CardDescription>
