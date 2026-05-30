@@ -276,8 +276,8 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Lucro Real"
-          value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
-          sub={lucroSobreFaturamento !== null ? `${pct(lucroSobreFaturamento)} do faturamento` : ' '}
+          value={metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : `Faltam ${fmt(Math.max(0, custoFixoMensal - metrics.margemAcum))}`}
+          sub={lucroSobreFaturamento !== null ? `${pct(lucroSobreFaturamento)} do faturamento` : `${pct(Math.min(100, (metrics.margemAcum / custoFixoMensal) * 100))} do PE`}
           icon={DollarSign}
           valueColor={metrics.lucroReal > 0 ? '#1D6FE8' : metrics.lucroReal < 0 ? '#DC2626' : '#D97706'}
           trend={trendDir(deltaLucro)}
@@ -363,7 +363,7 @@ export default function DashboardPage() {
                   <div className="text-center">
                     <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
                     <p className="text-[14px] font-bold" style={{ color: '#1D6FE8' }}>
-                      {metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : 'Aguardando PE'}
+                      {metrics.lucroReal > 0 ? fmt(metrics.lucroReal) : `Faltam ${fmt(Math.max(0, custoFixoMensal - metrics.margemAcum))}`}
                     </p>
                   </div>
                 </>
