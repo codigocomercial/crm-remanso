@@ -263,7 +263,6 @@ export default function DashboardPage() {
           value={fmt(metrics.valorVendas)}
           sub="mês atual"
           icon={ShoppingBag}
-          valueColor="#3E8F76"
           trend={trendDir(deltaVendas)}
           trendLabel={trendLabel(deltaVendas)}
         />
@@ -272,6 +271,7 @@ export default function DashboardPage() {
           value={fmt(metrics.margemAcum)}
           sub="acumulada no mês"
           icon={TrendingUp}
+          valueColor="#3E8F76"
         />
         <StatCard
           label="Lucro Real"
