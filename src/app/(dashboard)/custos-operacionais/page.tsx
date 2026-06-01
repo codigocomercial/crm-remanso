@@ -139,6 +139,7 @@ export default function CustosOperacionaisPage() {
     const payload = {
       ...form,
       org_id: ORG_ID,
+      units_produced: Number(String(form.units_produced).replace(/[^\d]/g, '')) || 0,
       ...CAMPOS.reduce((acc, c) => ({
         ...acc,
         [c.key]: parseInput(String((form as any)[c.key] || '0'))
