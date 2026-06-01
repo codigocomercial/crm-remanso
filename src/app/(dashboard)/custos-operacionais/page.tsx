@@ -136,8 +136,9 @@ export default function CustosOperacionaisPage() {
 
   async function save() {
     setSaving(true)
+    const { cost_per_unit: _, id: __, ...formClean } = form as any
     const payload = {
-      ...form,
+      ...formClean,
       org_id: ORG_ID,
       units_produced: Number(String(form.units_produced).replace(/[^\d]/g, '')) || 0,
       ...CAMPOS.reduce((acc, c) => ({
