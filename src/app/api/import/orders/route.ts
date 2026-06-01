@@ -10,18 +10,25 @@ function parseNum(val: string): number {
 }
 
 function parseDate(val: string): string {
-  // DD/MM/YYYY → YYYY-MM-DDT12:00:00Z
+  // DD/MM/YYYY ou YYYY-MM-DD → YYYY-MM-DDT12:00:00Z
   // Fixar meio-dia UTC evita que a data "volte" um dia ao ser convertida para UTC-3 (Brasil)
   if (!val) {
     const today = new Date().toISOString().split('T')[0]
     return `${today}T12:00:00Z`
   }
-  const parts = val.trim().split('/')
-  if (parts.length === 3) {
-    const iso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+  const trimmed = val.trim()
+  // Formato DD/MM/YYYY
+  const partsSlash = trimmed.split('/')
+  if (partsSlash.length === 3) {
+    const iso = `${partsSlash[2]}-${partsSlash[1].padStart(2, '0')}-${partsSlash[0].padStart(2, '0')}`
     return `${iso}T12:00:00Z`
   }
-  return val
+  // Formato YYYY-MM-DD (com ou sem hora)
+  const dateOnly = trimmed.split('T')[0].split(' ')[0]
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+    return `${dateOnly}T12:00:00Z`
+  }
+  return trimmed
 }
 
 function parseCSV(text: string): Record<string, string>[] {
