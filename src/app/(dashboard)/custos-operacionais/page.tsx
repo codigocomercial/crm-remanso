@@ -147,9 +147,21 @@ export default function CustosOperacionaisPage() {
     }
     // Gravando em crm.operational_costs
     if (editing) {
-      await supabase.schema('crm').from('operational_costs').update(payload).eq('id', editing.id)
+      const { error } = await supabase.schema('crm').from('operational_costs').update(payload).eq('id', editing.id)
+      if (error) {
+        console.error('Erro ao atualizar:', error)
+        alert(`Erro ao salvar: ${error.message}`)
+        setSaving(false)
+        return
+      }
     } else {
-      await supabase.schema('crm').from('operational_costs').insert(payload)
+      const { error } = await supabase.schema('crm').from('operational_costs').insert(payload)
+      if (error) {
+        console.error('Erro ao inserir:', error)
+        alert(`Erro ao salvar: ${error.message}`)
+        setSaving(false)
+        return
+      }
     }
     setSaving(false)
     setShowModal(false)
