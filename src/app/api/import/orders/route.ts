@@ -192,8 +192,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Atualizar métricas das empresas
+    // Atualizar métricas das empresas e last_order_at dos contatos
     await supabase.rpc('update_company_metrics', { p_org_id: ORG_ID })
+    await supabase.rpc('update_contacts_last_order', { p_org_id: ORG_ID })
 
     return NextResponse.json({
       success: errors === 0,
