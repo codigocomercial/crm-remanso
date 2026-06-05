@@ -258,23 +258,22 @@ export default function RecompraAlertsPage() {
                 <CardFooter className="pt-4 pb-5 px-5 border-t border-border/50 flex flex-col gap-2">
                   {/* Linha 1: WhatsApp + Reprogramar */}
                   <div className="flex gap-2 w-full">
-                    <Button
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                      disabled={!telefone}
-                      asChild={!!telefone}
-                    >
-                      {telefone ? (
-                        <a href={formatWhatsAppLink(contact)} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                          <MessageCircle className="w-4 h-4" />
-                          WhatsApp
-                        </a>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2 opacity-50">
-                          <MessageCircle className="w-4 h-4" />
-                          S/ Número
-                        </span>
-                      )}
-                    </Button>
+                    {telefone ? (
+                      <a
+                        href={formatWhatsAppLink(contact)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-2 shadow-sm transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        WhatsApp
+                      </a>
+                    ) : (
+                      <Button className="flex-1 bg-emerald-600 text-white opacity-50 cursor-not-allowed" disabled>
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        S/ Número
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="flex-1"
