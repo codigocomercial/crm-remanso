@@ -28,8 +28,9 @@ export default function RecompraAlertsPage() {
       const today = new Date().toISOString()
       
       const { data, error } = await supabase
+        .schema('crm')
         .from('contacts')
-        .select('id, full_name, phone, reorder_cycle_days, next_followup_at, average_order_value')
+        .select('id, full_name, phone, reorder_cycle_days, next_followup_at, average_order_value, last_order_at')
         .not('next_followup_at', 'is', null)
         .lte('next_followup_at', today)
         .order('next_followup_at', { ascending: true })
