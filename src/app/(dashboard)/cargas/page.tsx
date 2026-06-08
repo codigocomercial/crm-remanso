@@ -763,6 +763,7 @@ export default function CargasPage() {
   const [showNew, setShowNew] = useState(false)
   const [statusFilter, setStatusFilter] = useState('forming')
   const [search, setSearch] = useState('')
+  const [filterMes, setFilterMes] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -775,11 +776,23 @@ export default function CargasPage() {
 
   useEffect(() => { load() }, [load])
 
-  const filtered = loads.filter(l =>
-    !search ||
-    l.route_name?.toLowerCase().includes(search.toLowerCase()) ||
-    l.destination_city?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = loads.filter(l => {
+    const matchSearch = !search ||
+      l.route_name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.destination_city?.toLowerCase().includes(search.toLowerCase())
+    const matchMes = !filterMes || (
+      l.estimated_departure && l.estimated_departure.slice(0, 7) === filterMes
+    )
+    return matchSearch && matchMes
+  })
+
+  // Gerar lista de meses disponíveis nas cargas entregues
+  const mesesDisponiveis = statusFilter === 'delivered'
+    ? [...new Set(loads
+        .filter(l => l.estimated_departure)
+        .map(l => l.estimated_departure.slice(0, 7))
+      )].sort().reverse()
+    : []
 
   // Métricas do topo
   const totalLoads = loads.length
@@ -858,6 +871,21 @@ export default function CargasPage() {
             </button>
           ))}
         </div>
+        {statusFilter === 'delivered' && mesesDisponiveis.length > 0 && (
+          <select
+            value={filterMes}
+            onChange={e => setFilterMes(e.target.value)}
+            className="px-3 py-2 text-[12px] rounded-xl border outline-none"
+            style={{ borderColor: 'rgba(0,0,0,0.1)', color: 'var(--neutral-700)' }}
+          >
+            <option value="">Todos os meses</option>
+            {mesesDisponiveis.map(m => {
+              const [ano, mes] = m.split('-')
+              const nome = new Date(Number(ano), Number(mes) - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+              return <option key={m} value={m}>{nome}</option>
+            })}
+          </select>
+        )}
         <button onClick={load} className="p-2 rounded-xl hover:bg-neutral-100 transition-colors">
           <RefreshCw size={14} style={{ color: 'var(--neutral-500)' }} />
         </button>
