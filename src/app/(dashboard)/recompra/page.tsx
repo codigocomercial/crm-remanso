@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID
+const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 interface Contact {
   id: string
