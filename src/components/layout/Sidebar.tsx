@@ -25,7 +25,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     {
         section: 'Principal',
         items: [
-            { href: '/',         label: 'Dashboard',  icon: LayoutDashboard },
+            { href: '/',         label: 'Dashboard',  icon: LayoutDashboard, permission: 'view_dashboard' },
             { href: '/pipeline', label: 'Pipeline',   icon: KanbanSquare },
             { href: '/clientes', label: 'Contatos',   icon: Users },
             { href: '/recompra', label: 'Recompra',   icon: RefreshCw, badge: 'warn' },
