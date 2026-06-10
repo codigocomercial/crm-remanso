@@ -17,6 +17,7 @@ export type Permission =
   | 'manage_users'           // Gerenciar usuários
   | 'manage_margin_targets'  // Editar metas de margem
   // Operacional
+  | 'view_dashboard'         // Ver Dashboard financeiro
   | 'view_reports'           // Ver Relatórios
   | 'manage_campaigns'       // Criar/disparar Campanhas
   | 'view_all_sellers'       // Ver pedidos de todos os vendedores
@@ -35,6 +36,7 @@ const PERMISSIONS: Record<UserRole, Permission[]> = {
     'view_reports',
     'manage_campaigns',
     'view_all_sellers',
+    'view_dashboard',
     'delete_records',
   ],
   manager: [
@@ -46,6 +48,7 @@ const PERMISSIONS: Record<UserRole, Permission[]> = {
     'view_reports',
     'manage_campaigns',
     'view_all_sellers',
+    'view_dashboard',
   ],
   seller: [
     'view_reports',
