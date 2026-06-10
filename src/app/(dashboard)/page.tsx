@@ -50,10 +50,10 @@ export default function DashboardPage() {
   const router = useRouter()
   const { role, loading: roleLoading } = useUserRole()
 
-  // Seller não acessa este dashboard — será redirecionado para página própria futuramente
+  // Seller não acessa este dashboard — redireciona para Atendimentos
   useEffect(() => {
     if (!roleLoading && role === 'seller') {
-      router.replace('/propostas')
+      router.replace('/atendimentos')
     }
   }, [role, roleLoading, router])
 
