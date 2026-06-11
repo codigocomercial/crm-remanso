@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Headset, MessageCircle, Phone, Mail, Plus, Search, X,
   CheckCircle, Clock, Loader2, ListChecks, PencilLine, Trash2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ interface FilaItem {
   contact_id: string
   company_id?: string | null
   nome: string
+  company_name?: string | null
   telefone: string | null
   motivo?: string | null
   next_followup_at?: string | null
@@ -31,6 +33,7 @@ interface FilaItem {
 interface AtendimentoHoje {
   id: string
   contact_name: string | null
+  company_name: string | null
   canal: string
   resultado: string
   anotacao: string | null
@@ -69,6 +72,7 @@ export default function AtendimentosPage() {
   const [hoje, setHoje] = useState<AtendimentoHoje[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [diaAtual, setDiaAtual] = useState(() => new Date().toISOString().slice(0, 10))
 
   // Registro
   const [selecionado, setSelecionado] = useState<FilaItem | null>(null)
@@ -96,28 +100,31 @@ export default function AtendimentosPage() {
     if (user) setUserId(user.id)
 
     const agora = new Date().toISOString()
-    const inicioHoje = new Date(); inicioHoje.setHours(0, 0, 0, 0)
     const hojeStr = new Date().toISOString().slice(0, 10)
+
+    const inicioDia = new Date(diaAtual); inicioDia.setHours(0, 0, 0, 0)
+    const fimDia = new Date(diaAtual); fimDia.setHours(23, 59, 59, 999)
 
     const [filaManualRes, recompraRes, hojeRes] = await Promise.all([
       supabase
         .from('crm_atendimento_fila')
-        .select('id, contact_id, company_id, motivo, contact_name, contact_whatsapp, contact_phone, next_followup_at, last_order_at')
+        .select('id, contact_id, company_id, motivo, contact_name, contact_whatsapp, contact_phone, next_followup_at, last_order_at, company_name')
         .eq('concluido', false)
         .lte('data_alvo', hojeStr)
         .order('created_at', { ascending: true }),
       supabase
         .schema('crm')
         .from('contacts')
-        .select('id, company_id, full_name, phone, whatsapp, next_followup_at, last_order_at, reorder_cycle_days')
+        .select('id, company_id, full_name, phone, whatsapp, next_followup_at, last_order_at, reorder_cycle_days, companies(fantasy_name, corporate_name)')
         .eq('org_id', ORG_ID)
         .not('next_followup_at', 'is', null)
         .lte('next_followup_at', agora)
         .order('next_followup_at', { ascending: true }),
       supabase
         .from('crm_atendimentos')
-        .select('id, contact_name, canal, resultado, anotacao, created_at')
-        .gte('created_at', inicioHoje.toISOString())
+        .select('id, contact_name, company_name, canal, resultado, anotacao, created_at')
+        .gte('created_at', inicioDia.toISOString())
+        .lte('created_at', fimDia.toISOString())
         .order('created_at', { ascending: false }),
     ])
 
@@ -128,6 +135,7 @@ export default function AtendimentosPage() {
       contact_id: f.contact_id,
       company_id: f.company_id,
       nome: f.contact_name || 'Sem nome',
+      company_name: f.company_name || null,
       telefone: f.contact_whatsapp || f.contact_phone || null,
       motivo: f.motivo,
       next_followup_at: f.next_followup_at,
@@ -144,6 +152,9 @@ export default function AtendimentosPage() {
         contact_id: c.id,
         company_id: c.company_id,
         nome: c.full_name || 'Sem nome',
+        company_name: c.companies
+          ? (c.companies.fantasy_name || c.companies.corporate_name || null)
+          : null,
         telefone: c.whatsapp || c.phone || null,
         next_followup_at: c.next_followup_at,
         last_order_at: c.last_order_at,
@@ -155,7 +166,7 @@ export default function AtendimentosPage() {
     setLoading(false)
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => { carregar() }, [diaAtual])
 
   // ── Busca de contatos (modal fila) ───────────────────────────────────────
   useEffect(() => {
@@ -376,7 +387,7 @@ export default function AtendimentosPage() {
                     className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-colors ${ativo ? 'bg-primary/10' : 'hover:bg-muted/30'}`}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{item.nome}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{item.company_name || item.nome}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {item.source === 'manual' && item.motivo
                           ? item.motivo
@@ -433,7 +444,10 @@ export default function AtendimentosPage() {
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-base font-semibold text-foreground truncate">{selecionado.nome}</p>
+                  <p className="text-base font-semibold text-foreground truncate">{selecionado.company_name || selecionado.nome}</p>
+                  {selecionado.company_name && (
+                    <p className="text-xs text-muted-foreground truncate">{selecionado.nome}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">{formatTelefone(selecionado.telefone)}</p>
                 </div>
                 {selecionado.telefone && (
@@ -532,13 +546,40 @@ export default function AtendimentosPage() {
         </div>
       </div>
 
-      {/* Diário de hoje */}
+      {/* Diário */}
       <div className="bg-card border border-border rounded-xl">
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-sm font-semibold text-foreground">Diário de hoje</p>
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground">Diário de atendimentos</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const d = new Date(diaAtual); d.setDate(d.getDate() - 1)
+                setDiaAtual(d.toISOString().slice(0, 10))
+              }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-foreground font-medium min-w-[110px] text-center">
+              {diaAtual === new Date().toISOString().slice(0, 10)
+                ? 'Hoje'
+                : new Date(diaAtual + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+            <button
+              onClick={() => {
+                const d = new Date(diaAtual); d.setDate(d.getDate() + 1)
+                const amanha = d.toISOString().slice(0, 10)
+                if (amanha <= new Date().toISOString().slice(0, 10)) setDiaAtual(amanha)
+              }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
+              disabled={diaAtual >= new Date().toISOString().slice(0, 10)}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         {hoje.length === 0 ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">Nenhum atendimento registrado hoje.</p>
+          <p className="p-6 text-center text-sm text-muted-foreground">Nenhum atendimento registrado neste dia.</p>
         ) : (
           <div className="divide-y divide-border">
             {hoje.map(a => (
@@ -548,7 +589,7 @@ export default function AtendimentosPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground truncate">{a.contact_name || 'Sem nome'}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{a.company_name || a.contact_name || 'Sem nome'}</p>
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${a.resultado === 'pedido_fechado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : a.resultado === 'sem_resposta' || a.resultado === 'sem_interesse' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
                       {RESULTADO_LABEL[a.resultado] || a.resultado}
                     </span>
