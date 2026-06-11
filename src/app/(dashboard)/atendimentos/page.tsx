@@ -251,6 +251,7 @@ export default function AtendimentosPage() {
     setHoje(prev => [{
       id: crypto.randomUUID(),
       contact_name: selecionado.nome,
+      company_name: selecionado.company_name || null,
       canal,
       resultado,
       anotacao: anotacao.trim() || null,
