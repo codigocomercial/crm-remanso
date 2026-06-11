@@ -102,8 +102,10 @@ export default function AtendimentosPage() {
     const agora = new Date().toISOString()
     const hojeStr = new Date().toISOString().slice(0, 10)
 
-    const inicioDia = new Date(diaAtual); inicioDia.setHours(0, 0, 0, 0)
-    const fimDia = new Date(diaAtual); fimDia.setHours(23, 59, 59, 999)
+    // Constrói início e fim do dia no fuso de Brasília (UTC-3)
+    // '2026-06-11' → início = 2026-06-11T03:00:00Z, fim = 2026-06-12T02:59:59Z
+    const inicioDia = new Date(`${diaAtual}T00:00:00-03:00`)
+    const fimDia = new Date(`${diaAtual}T23:59:59-03:00`)
 
     const [filaManualRes, recompraRes, hojeRes] = await Promise.all([
       supabase
