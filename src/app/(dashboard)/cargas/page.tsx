@@ -51,6 +51,7 @@ interface FreightLoadOrder {
   margin: number
   margin_pct: number
   client_name: string
+  company_fantasia: string | null
   client_city: string
   client_state: string
   added_at: string
@@ -610,7 +611,7 @@ function LoadCard({ load, onRefresh }: { load: FreightLoad; onRefresh: () => voi
                     <div key={lo.id} className="grid grid-cols-12 gap-2 px-2 py-2 rounded-lg hover:bg-neutral-50 items-center">
                       <div className="col-span-4">
                         <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--neutral-900)' }}>
-                          {lo.client_name}
+                          {lo.company_fantasia || lo.client_name}
                         </p>
                         <p className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>
                           Ped. #{lo.order?.bling_number}
