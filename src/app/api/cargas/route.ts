@@ -32,11 +32,28 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    // Enriquecer com nome fantasia da empresa (via company_id do pedido)
+    const allOrderIds = (data || []).flatMap((l: any) =>
+      (l.freight_load_orders || []).map((flo: any) => flo.order_id).filter(Boolean)
+    )
+    const companyMap = new Map<string, string>()
+    if (allOrderIds.length > 0) {
+      const { data: ordersData } = await supabase
+        .from('crm_orders')
+        .select('id, company:crm_companies(fantasia, corporate_name)')
+        .in('id', allOrderIds)
+      ;(ordersData || []).forEach((o: any) => {
+        const name = o.company?.fantasia || o.company?.corporate_name || null
+        if (name) companyMap.set(o.id, name)
+      })
+    }
+
     // Montar estrutura compatível com o front (order.bling_number)
     const loads = (data || []).map((load: any) => ({
       ...load,
       freight_load_orders: (load.freight_load_orders || []).map((flo: any) => ({
         ...flo,
+        company_fantasia: companyMap.get(flo.order_id) || null,
         order: { id: flo.order_id, bling_number: flo.bling_number, status: null, ordered_at: null }
       }))
     }))
