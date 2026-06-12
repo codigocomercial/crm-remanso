@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
     if (allOrderIds.length > 0) {
       const { data: ordersData } = await supabase
         .from('crm_orders')
-        .select('id, company:crm_companies(fantasia, corporate_name)')
+        .select('id, company:crm_companies(fantasia, name)')
         .in('id', allOrderIds)
       ;(ordersData || []).forEach((o: any) => {
-        const name = o.company?.fantasia || o.company?.corporate_name || null
+        const name = o.company?.fantasia || o.company?.name || null
         if (name) companyMap.set(o.id, name)
       })
     }
