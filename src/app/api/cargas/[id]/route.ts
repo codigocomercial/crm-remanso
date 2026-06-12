@@ -30,15 +30,29 @@ export async function GET(
 
     if (error || !load) return NextResponse.json({ error: 'Carga não encontrada' }, { status: 404 })
 
+    const orderIdsInLoad = (load.freight_load_orders || []).map((o: any) => o.order_id).filter(Boolean)
+
+    // Enriquecer com nome fantasia da empresa
+    const companyMap = new Map<string, string>()
+    if (orderIdsInLoad.length > 0) {
+      const { data: ordersData } = await supabase
+        .from('crm_orders')
+        .select('id, company:crm_companies(fantasia, corporate_name)')
+        .in('id', orderIdsInLoad)
+      ;(ordersData || []).forEach((o: any) => {
+        const name = o.company?.fantasia || o.company?.corporate_name || null
+        if (name) companyMap.set(o.id, name)
+      })
+    }
+
     const loadFormatted = {
       ...load,
       freight_load_orders: (load.freight_load_orders || []).map((flo: any) => ({
         ...flo,
+        company_fantasia: companyMap.get(flo.order_id) || null,
         order: { id: flo.order_id, bling_number: flo.bling_number, status: null, ordered_at: null }
       }))
     }
-
-    const orderIdsInLoad = (load.freight_load_orders || []).map((o: any) => o.order_id).filter(Boolean)
 
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('date_from')
