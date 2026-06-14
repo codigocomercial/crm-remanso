@@ -390,13 +390,17 @@ export default function AtendimentosPage() {
                     className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-colors ${ativo ? 'bg-primary/10' : 'hover:bg-muted/30'}`}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{item.company_name || item.nome}</p>
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {item.nome && item.nome !== 'Sem nome' ? item.nome : item.company_name || item.nome}
+                      </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {item.source === 'manual' && item.motivo
-                          ? item.motivo
-                          : item.last_order_at
-                            ? `Último pedido: ${formatDate(item.last_order_at)}`
-                            : formatTelefone(item.telefone)}
+                        {item.nome && item.nome !== 'Sem nome' && item.company_name
+                          ? item.company_name
+                          : item.source === 'manual' && item.motivo
+                            ? item.motivo
+                            : item.last_order_at
+                              ? `Último pedido: ${formatDate(item.last_order_at)}`
+                              : formatTelefone(item.telefone)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -447,9 +451,11 @@ export default function AtendimentosPage() {
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-base font-semibold text-foreground truncate">{selecionado.company_name || selecionado.nome}</p>
-                  {selecionado.company_name && (
-                    <p className="text-xs text-muted-foreground truncate">{selecionado.nome}</p>
+                  <p className="text-base font-semibold text-foreground truncate">
+                    {selecionado.nome && selecionado.nome !== 'Sem nome' ? selecionado.nome : selecionado.company_name || selecionado.nome}
+                  </p>
+                  {selecionado.nome && selecionado.nome !== 'Sem nome' && selecionado.company_name && (
+                    <p className="text-xs text-muted-foreground truncate">{selecionado.company_name}</p>
                   )}
                   <p className="text-xs text-muted-foreground">{formatTelefone(selecionado.telefone)}</p>
                 </div>
@@ -592,7 +598,12 @@ export default function AtendimentosPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground truncate">{a.company_name || a.contact_name || 'Sem nome'}</p>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {a.contact_name && a.contact_name !== 'Sem nome' ? a.contact_name : a.company_name || a.contact_name || 'Sem nome'}
+                    </p>
+                    {a.contact_name && a.contact_name !== 'Sem nome' && a.company_name && (
+                      <p className="text-xs text-muted-foreground truncate">{a.company_name}</p>
+                    )}
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${a.resultado === 'pedido_fechado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : a.resultado === 'sem_resposta' || a.resultado === 'sem_interesse' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
                       {RESULTADO_LABEL[a.resultado] || a.resultado}
                     </span>
