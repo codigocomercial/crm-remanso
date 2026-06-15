@@ -47,7 +47,7 @@ export default function ContatosPage() {
           query = query.or(`full_name.ilike.%${searchTerm}%,company_id.in.(${companyIds.join(',')})`)
         } else {
           // Nenhuma empresa encontrada, busca só pelo nome do contato
-          query = query.ilike('full_name', \`%\${searchTerm}%\`)
+          query = query.ilike('full_name', `%${searchTerm}%`)
         }
       }
 
