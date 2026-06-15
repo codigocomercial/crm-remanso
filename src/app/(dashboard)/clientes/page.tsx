@@ -25,12 +25,32 @@ export default function ContatosPage() {
     const timeout = setTimeout(async () => {
       setLoading(true)
       const supabase = createClient()
+
       let query = supabase
         .schema('crm')
         .from('contacts')
         .select('id, full_name, whatsapp, city, state, company:companies(corporate_name, fantasy_name)')
         .order('full_name', { ascending: true })
-      if (searchTerm) query = query.ilike('full_name', `%${searchTerm}%`)
+
+      if (searchTerm) {
+        // Busca empresas cujo nome (razão social ou fantasia) bate com o termo
+        const { data: matchedCompanies } = await supabase
+          .schema('crm')
+          .from('companies')
+          .select('id')
+          .or(`corporate_name.ilike.%${searchTerm}%,fantasy_name.ilike.%${searchTerm}%`)
+
+        const companyIds = matchedCompanies?.map((c: any) => c.id) ?? []
+
+        if (companyIds.length > 0) {
+          // Filtra por nome do contato OU por empresa vinculada
+          query = query.or(`full_name.ilike.%${searchTerm}%,company_id.in.(${companyIds.join(',')})`)
+        } else {
+          // Nenhuma empresa encontrada, busca só pelo nome do contato
+          query = query.ilike('full_name', \`%\${searchTerm}%\`)
+        }
+      }
+
       const { data } = await query
       setContacts((data as any) ?? [])
       setLoading(false)
@@ -56,7 +76,7 @@ export default function ContatosPage() {
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome..."
+              placeholder="Buscar por contato ou funerária..."
               className="pl-9"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
