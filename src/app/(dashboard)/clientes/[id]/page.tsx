@@ -35,6 +35,7 @@ interface Contact {
   average_order_value: number | null
   customer_type: string | null
   distance_km: number | null
+  company: { corporate_name: string; fantasy_name: string | null } | null
 }
 
 interface Interaction {
@@ -73,7 +74,7 @@ export default function ClienteDetailPage() {
     const { data: contactData } = await supabase
       .schema('crm')
       .from('contacts')
-      .select('*')
+      .select('*, company:companies(corporate_name, fantasy_name)')
       .eq('id', id)
       .single()
     const { data: interactionsData } = await supabase
@@ -159,6 +160,11 @@ export default function ClienteDetailPage() {
     return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   }
 
+  const companyName = (c: Contact) => {
+    const co = c.company as any
+    return co?.fantasy_name || co?.corporate_name || null
+  }
+
   const interactionIcon = (type: string) => {
     switch (type) {
       case 'whatsapp': return <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
@@ -189,6 +195,7 @@ export default function ClienteDetailPage() {
   )
 
   const status = recompraStatus()
+  const empresa = companyName(contact)
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -201,7 +208,14 @@ export default function ClienteDetailPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">{contact.full_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {contact.job_title || 'Sem função definida'} {contact.city ? `• ${contact.city}/${contact.state}` : ''}
+              {empresa && (
+                <span className="inline-flex items-center gap-1 mr-2">
+                  <Building2 className="w-3.5 h-3.5" />
+                  {empresa}
+                </span>
+              )}
+              {contact.job_title && <span>{contact.job_title}</span>}
+              {contact.city ? ` • ${contact.city}/${contact.state}` : ''}
             </p>
           </div>
         </div>
@@ -228,6 +242,15 @@ export default function ClienteDetailPage() {
             Informações do Cliente
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            {empresa && (
+              <div className="sm:col-span-2 flex items-start gap-2">
+                <Building2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Funerária</p>
+                  <p className="text-foreground font-medium">{empresa}</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-start gap-2">
               <Phone className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
