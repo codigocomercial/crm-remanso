@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUserRole } from '@/hooks/useUserRole'
@@ -12,6 +12,9 @@ import {
 import { StatCard, PageHeader, SectionHeader } from '@/components/ui/rm-components'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const CUSTO_FIXO_PADRAO = 60000
 
 function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
@@ -28,7 +31,7 @@ function CustomTooltip({ active, payload, label }: any) {
   const temLucro = lucro !== null && lucro !== undefined
   return (
     <div style={{ background: 'white', border: '1px solid #F1F5F9', borderRadius: 10, padding: '10px 14px', fontSize: 12, minWidth: 200, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-      <p style={{ fontWeight: 600, marginBottom: 8, color: '#374151' }}>Dia {label}</p>
+      <p style={{ fontWeight: 600, marginBottom: 8, color: '#374151' }}>{label}</p>
       {margem != null && <p style={{ color: '#3E8F76', marginBottom: 3 }}>Margem acumulada: {fmt(margem)}</p>}
       {custoFixo != null && <p style={{ color: '#EF4444', marginBottom: 3 }}>Custo fixo: {fmt(custoFixo)}</p>}
       {temLucro && <p style={{ color: '#1D6FE8', marginBottom: 3 }}>Lucro real: {fmt(lucro)}</p>}
@@ -46,143 +49,293 @@ interface PrevMetrics {
   pedidosMes: number
 }
 
+// ── Pill helper ─────────────────────────────────────────────────────────────
+function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontSize: 12,
+        fontWeight: active ? 600 : 400,
+        padding: '4px 13px',
+        borderRadius: 999,
+        border: active ? '1px solid #1D9E75' : '1px solid rgba(255,255,255,0.12)',
+        background: active ? '#1D9E75' : 'transparent',
+        color: active ? '#fff' : '#9CA3AF',
+        cursor: 'pointer',
+        transition: 'all 0.12s',
+        lineHeight: 1.5,
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { role, loading: roleLoading } = useUserRole()
 
-  // Seller não acessa este dashboard — redireciona para Atendimentos
   useEffect(() => {
-    if (!roleLoading && role === 'seller') {
-      router.replace('/atendimentos')
-    }
+    if (!roleLoading && role === 'seller') router.replace('/atendimentos')
   }, [role, roleLoading, router])
 
+  const now = new Date()
+  const anoAtual = now.getFullYear()
+  const mesAtual = now.getMonth() + 1
+
+  const [selectedYear, setSelectedYear] = useState(anoAtual)
+  const [selectedMonths, setSelectedMonths] = useState<Set<number>>(() => new Set([mesAtual]))
+
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0 })
   const [prevMetrics, setPrevMetrics] = useState<PrevMetrics | null>(null)
-  const [custoFixoMensal, setCustoFixoMensal] = useState(60000)
-  const [chartData, setChartData] = useState<{
-    dia: string; custoFixo: number; margem: number | null; lucro: number | null
-  }[]>([])
+  const [custoFixoTotal, setCustoFixoTotal] = useState(CUSTO_FIXO_PADRAO)
+  const [chartData, setChartData] = useState<{ dia: string; custoFixo: number; margem: number | null; lucro: number | null }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
+  const [isSingleMonth, setIsSingleMonth] = useState(true)
 
-  const now = new Date()
-  const isCurrentMonth = selectedDate.getFullYear() === now.getFullYear() && selectedDate.getMonth() === now.getMonth()
-  const isPastMonth = selectedDate < new Date(now.getFullYear(), now.getMonth(), 1)
-  const diasNoMes = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()
-  const diasDecorridos = isPastMonth ? diasNoMes : isCurrentMonth ? now.getDate() : 0
+  // ── Anos disponíveis ──────────────────────────────────────────────────────
+  const availableYears = useMemo(() => {
+    const anos = []
+    for (let y = 2025; y <= anoAtual; y++) anos.push(y)
+    return anos
+  }, [anoAtual])
+
+  // ── Meses disponíveis para o ano selecionado ──────────────────────────────
+  const availableMonths = useMemo(() => {
+    const limite = selectedYear < anoAtual ? 12 : mesAtual
+    const meses = []
+    for (let m = 1; m <= limite; m++) meses.push(m)
+    return meses
+  }, [selectedYear, anoAtual, mesAtual])
+
+  // Quando muda de ano, limpa meses inválidos
+  useEffect(() => {
+    const limite = selectedYear < anoAtual ? 12 : mesAtual
+    setSelectedMonths(prev => {
+      const novos = new Set([...prev].filter(m => m <= limite))
+      return novos.size > 0 ? novos : new Set([limite])
+    })
+  }, [selectedYear])
+
+  function toggleMonth(m: number) {
+    setSelectedMonths(prev => {
+      const next = new Set(prev)
+      if (next.has(m)) {
+        next.delete(m)
+        if (next.size === 0) return prev // ao menos 1 mês
+      } else {
+        next.add(m)
+      }
+      return next
+    })
+  }
+
+  // ── Labels ────────────────────────────────────────────────────────────────
+  const sortedMonths = useMemo(() => [...selectedMonths].sort((a, b) => a - b), [selectedMonths])
+
+  const periodoLabel = useMemo(() => {
+    if (sortedMonths.length === 0) return ''
+    if (sortedMonths.length === 1) {
+      const s = format(new Date(selectedYear, sortedMonths[0] - 1, 1), 'MMMM yyyy', { locale: ptBR })
+      return s.charAt(0).toUpperCase() + s.slice(1)
+    }
+    const primeiro = MESES_PT[sortedMonths[0] - 1]
+    const ultimo = MESES_PT[sortedMonths[sortedMonths.length - 1] - 1]
+    return `${primeiro} – ${ultimo} ${selectedYear}`
+  }, [sortedMonths, selectedYear])
+
+  const prevMesLabel = useMemo(() => {
+    if (sortedMonths.length !== 1) return ''
+    const m = sortedMonths[0]
+    const d = new Date(selectedYear, m - 2, 1)
+    const s = format(d, 'MMMM', { locale: ptBR })
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  }, [sortedMonths, selectedYear])
 
   const hoje = format(now, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
   const hojeLabel = hoje.charAt(0).toUpperCase() + hoje.slice(1)
 
-  const mesLabel = (() => {
-    const s = format(selectedDate, 'MMMM yyyy', { locale: ptBR })
-    return s.charAt(0).toUpperCase() + s.slice(1)
-  })()
-
-  const prevMesLabel = (() => {
-    const d = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1)
-    const s = format(d, 'MMMM', { locale: ptBR })
-    return s.charAt(0).toUpperCase() + s.slice(1)
-  })()
-
-  const prevMonth = () => setSelectedDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-  const nextMonth = () => setSelectedDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
-
+  // ── Carregamento ──────────────────────────────────────────────────────────
   useEffect(() => {
+    if (selectedMonths.size === 0) return
     setLoading(true)
+
     async function load() {
       const supabase = createClient()
-      const mesInicio = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString()
-      const mesFim = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString()
-      const mesInicioPrev = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1).toISOString()
-      const mesFimPrev = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 0).toISOString()
+      const meses = [...selectedMonths].sort((a, b) => a - b)
+      const single = meses.length === 1
+      setIsSingleMonth(single)
+
+      // Range total do período selecionado
+      const rangeStart = new Date(selectedYear, meses[0] - 1, 1).toISOString()
+      const rangeEnd = new Date(selectedYear, meses[meses.length - 1], 0, 23, 59, 59).toISOString()
+
+      // Queries em paralelo
+      const opPromises = meses.map(m =>
+        supabase.from('operational_costs')
+          .select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest')
+          .eq('year', selectedYear).eq('month', m).single()
+      )
 
       const [
-        { data: pedidosMesData },
-        { data: opCostData },
-        { data: pedidosDiarios },
-        { data: topData },
-        { data: pedidosPrevData },
-        { data: opCostPrevData },
-        { data: pedidosDiariosPrev },
+        { data: allOrders },
+        { data: allFreight },
+        ...opResults
       ] = await Promise.all([
-        supabase.from('crm_orders').select('id, total_value, ordered_at, units_count').gte('ordered_at', mesInicio).lte('ordered_at', mesFim),
-        supabase.from('operational_costs').select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest').eq('year', selectedDate.getFullYear()).eq('month', selectedDate.getMonth() + 1).single(),
-        supabase.from('crm_orders_freight').select('ordered_at, total_value, tax_amount, cost_mp, custo_frete_proporcional').gte('ordered_at', mesInicio).lte('ordered_at', mesFim).order('ordered_at', { ascending: true }),
-        supabase.from('crm_orders').select('client_name, company_id, total_value, units_count').gte('ordered_at', mesInicio).lte('ordered_at', mesFim),
-        supabase.from('crm_orders').select('id, total_value, ordered_at, units_count').gte('ordered_at', mesInicioPrev).lte('ordered_at', mesFimPrev),
-        supabase.from('operational_costs').select('labor, admin, truck, maintenance, misc, icms, freight_purchase, interest').eq('year', selectedDate.getMonth() === 0 ? selectedDate.getFullYear() - 1 : selectedDate.getFullYear()).eq('month', selectedDate.getMonth() === 0 ? 12 : selectedDate.getMonth()).single(),
-        supabase.from('crm_orders_freight').select('total_value, tax_amount, cost_mp, custo_frete_proporcional').gte('ordered_at', mesInicioPrev).lte('ordered_at', mesFimPrev),
+        supabase.from('crm_orders')
+          .select('id,total_value,ordered_at,units_count,client_name,company_id')
+          .gte('ordered_at', rangeStart).lte('ordered_at', rangeEnd),
+        supabase.from('crm_orders_freight')
+          .select('ordered_at,total_value,tax_amount,cost_mp,custo_frete_proporcional')
+          .gte('ordered_at', rangeStart).lte('ordered_at', rangeEnd)
+          .order('ordered_at', { ascending: true }),
+        ...opPromises,
       ])
 
-      const op = opCostData as any
-      const custoFixo = op
-        ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest].reduce((s: number, v: any) => s + Number(v ?? 0), 0)
-        : 60000
-      setCustoFixoMensal(custoFixo)
-
-      const opPrev = opCostPrevData as any
-      const custoFixoPrev = opPrev
-        ? [opPrev.labor, opPrev.admin, opPrev.truck, opPrev.maintenance, opPrev.misc, opPrev.icms, opPrev.freight_purchase, opPrev.interest].reduce((s: number, v: any) => s + Number(v ?? 0), 0)
-        : 60000
-
-      const diasNoMesLocal = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()
-      const margemPorDia = new Map<string, number>()
-      for (const p of (pedidosDiarios as any[]) ?? []) {
-        const dia = new Date(p.ordered_at).getDate()
-        const key = String(dia).padStart(2, '0')
-        const custoVar = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
-        margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + (Number(p.total_value ?? 0) - custoVar))
+      // Filtra apenas meses selecionados (range pode incluir meses intermediários não selecionados)
+      function isMesSelecionado(dateStr: string) {
+        const m = new Date(dateStr).getMonth() + 1
+        return selectedMonths.has(m)
       }
+      const orders = (allOrders ?? []).filter(o => isMesSelecionado(o.ordered_at))
+      const freight = (allFreight ?? []).filter(o => isMesSelecionado(o.ordered_at))
 
-      const chartArr = []
+      // Custo fixo por mês
+      const cfPorMes = new Map<number, number>()
+      let totalCF = 0
+      meses.forEach((m, i) => {
+        const op = (opResults[i] as any)?.data as any
+        const cf = op
+          ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest]
+              .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
+          : CUSTO_FIXO_PADRAO
+        cfPorMes.set(m, cf)
+        totalCF += cf
+      })
+      setCustoFixoTotal(totalCF)
+
+      // Métricas agregadas
+      const valorVendas = orders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
+      const pedidosMes = orders.length
       let margemAcum = 0
-      let peDia = -1
-      for (let d = 1; d <= diasNoMesLocal; d++) {
-        const key = String(d).padStart(2, '0')
-        const ehFuturo = isPastMonth ? false : isCurrentMonth ? d > now.getDate() : true
-        if (!ehFuturo) {
-          margemAcum += margemPorDia.get(key) ?? 0
-          if (peDia === -1 && margemAcum >= custoFixo) peDia = d
-        }
-        const lucro: number | null = !ehFuturo && peDia !== -1 && d >= peDia ? Math.round(margemAcum - custoFixo) : null
-        chartArr.push({ dia: `${d}`, custoFixo, margem: ehFuturo ? null : Math.round(margemAcum), lucro })
+      for (const p of freight) {
+        const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+        margemAcum += Number(p.total_value ?? 0) - cv
       }
-      setChartData(chartArr)
-
-      const valorVendas = (pedidosMesData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
-      const pedidosMes = pedidosMesData?.length ?? 0
-      const lucroReal = peDia !== -1 ? Math.max(0, margemAcum - custoFixo) : 0
+      const lucroReal = Math.max(0, margemAcum - totalCF)
       setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes })
 
-      const valorVendasPrev = (pedidosPrevData ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
-      const pedidosMesPrev = pedidosPrevData?.length ?? 0
-      let margemAcumPrev = 0
-      for (const p of (pedidosDiariosPrev as any[]) ?? []) {
-        const custoVar = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
-        margemAcumPrev += Number(p.total_value ?? 0) - custoVar
-      }
-      const lucroRealPrev = Math.max(0, margemAcumPrev - custoFixoPrev)
-      setPrevMetrics({ valorVendas: valorVendasPrev, margemAcum: margemAcumPrev, lucroReal: lucroRealPrev, pedidosMes: pedidosMesPrev })
-
+      // Top clientes
       const clienteMap = new Map<string, { nome: string; receita: number; urnas: number }>()
-      for (const o of topData ?? []) {
+      for (const o of orders) {
         const key = o.company_id ?? o.client_name
         const prev = clienteMap.get(key) ?? { nome: o.client_name, receita: 0, urnas: 0 }
         clienteMap.set(key, { nome: prev.nome, receita: prev.receita + Number(o.total_value ?? 0), urnas: prev.urnas + Number(o.units_count ?? 0) })
       }
       setTopClientes(Array.from(clienteMap.values()).sort((a, b) => b.receita - a.receita).slice(0, 5))
+
+      // ── Gráfico ──────────────────────────────────────────────────────────
+      if (single) {
+        // Vista diária (comportamento original)
+        const m = meses[0]
+        const isCurrentM = selectedYear === anoAtual && m === mesAtual
+        const isPastM = selectedYear < anoAtual || (selectedYear === anoAtual && m < mesAtual)
+        const diasNoMes = new Date(selectedYear, m, 0).getDate()
+        const cf = cfPorMes.get(m) ?? CUSTO_FIXO_PADRAO
+
+        const margemPorDia = new Map<string, number>()
+        for (const p of freight) {
+          const dia = new Date(p.ordered_at).getDate()
+          const key = String(dia).padStart(2, '0')
+          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+          margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + (Number(p.total_value ?? 0) - cv))
+        }
+
+        const chartArr = []
+        let cumMargem = 0
+        let peDia = -1
+        for (let d = 1; d <= diasNoMes; d++) {
+          const key = String(d).padStart(2, '0')
+          const ehFuturo = isPastM ? false : isCurrentM ? d > now.getDate() : true
+          if (!ehFuturo) {
+            cumMargem += margemPorDia.get(key) ?? 0
+            if (peDia === -1 && cumMargem >= cf) peDia = d
+          }
+          const lucro = !ehFuturo && peDia !== -1 && d >= peDia ? Math.round(cumMargem - cf) : null
+          chartArr.push({ dia: `${d}`, custoFixo: cf, margem: ehFuturo ? null : Math.round(cumMargem), lucro })
+        }
+        setChartData(chartArr)
+
+        // prevMetrics (só no modo mês único)
+        const prevM = m === 1 ? 12 : m - 1
+        const prevY = m === 1 ? selectedYear - 1 : selectedYear
+        const prevStart = new Date(prevY, prevM - 1, 1).toISOString()
+        const prevEnd = new Date(prevY, prevM, 0, 23, 59, 59).toISOString()
+
+        const [{ data: prevOrders }, { data: prevFreight }, prevOpRes] = await Promise.all([
+          supabase.from('crm_orders').select('id,total_value').gte('ordered_at', prevStart).lte('ordered_at', prevEnd),
+          supabase.from('crm_orders_freight').select('total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lte('ordered_at', prevEnd),
+          supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
+        ])
+
+        const prevOp = (prevOpRes as any).data as any
+        const prevCF = prevOp
+          ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest]
+              .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
+          : CUSTO_FIXO_PADRAO
+        const prevValor = (prevOrders ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
+        let prevMargem = 0
+        for (const p of prevFreight ?? []) {
+          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+          prevMargem += Number(p.total_value ?? 0) - cv
+        }
+        setPrevMetrics({
+          valorVendas: prevValor,
+          margemAcum: prevMargem,
+          lucroReal: Math.max(0, prevMargem - prevCF),
+          pedidosMes: prevOrders?.length ?? 0,
+        })
+      } else {
+        // Vista mensal acumulada
+        const chartArr = []
+        let cumMargem = 0
+        let cumCF = 0
+        let peIdx = -1
+
+        for (let i = 0; i < meses.length; i++) {
+          const m = meses[i]
+          const isFuture = selectedYear > anoAtual || (selectedYear === anoAtual && m > mesAtual)
+          const cf = cfPorMes.get(m) ?? CUSTO_FIXO_PADRAO
+          cumCF += cf
+
+          if (!isFuture) {
+            const monthFreight = freight.filter(p => new Date(p.ordered_at).getMonth() + 1 === m)
+            for (const p of monthFreight) {
+              const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+              cumMargem += Number(p.total_value ?? 0) - cv
+            }
+            if (peIdx === -1 && cumMargem >= cumCF) peIdx = i
+          }
+
+          const lucro = !isFuture && peIdx !== -1 && i >= peIdx ? Math.round(cumMargem - cumCF) : null
+          chartArr.push({ dia: MESES_PT[m - 1], custoFixo: Math.round(cumCF), margem: isFuture ? null : Math.round(cumMargem), lucro })
+        }
+        setChartData(chartArr)
+        setPrevMetrics(null) // sem comparação em modo multi-mês
+      }
+
       setLoading(false)
     }
+
     load()
-  }, [selectedDate])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonths])
 
   // ── Derivados ─────────────────────────────────────────────────────────────
-  const diaEquilibrio = chartData.findIndex(d => d.lucro !== null)
-  const peAtingido = diaEquilibrio >= 0
-  const mesNum = String(selectedDate.getMonth() + 1).padStart(2, '0')
+  const peAtingidoIdx = chartData.findIndex(d => d.lucro !== null)
+  const peAtingido = peAtingidoIdx >= 0
 
   const delta = (curr: number, prev: number) => prev > 0 ? ((curr - prev) / prev) * 100 : null
   const deltaVendas = prevMetrics ? delta(metrics.valorVendas, prevMetrics.valorVendas) : null
@@ -190,7 +343,7 @@ export default function DashboardPage() {
   const deltaPedidos = prevMetrics ? delta(metrics.pedidosMes, prevMetrics.pedidosMes) : null
 
   const trendLabel = (d: number | null) => {
-    if (d === null) return undefined
+    if (d === null || !prevMesLabel) return undefined
     return `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}% vs ${prevMesLabel}`
   }
   const trendDir = (d: number | null): 'up' | 'down' | undefined =>
@@ -200,27 +353,44 @@ export default function DashboardPage() {
     ? (metrics.lucroReal / metrics.valorVendas) * 100
     : null
 
-  const projecaoLucro = isCurrentMonth && diasDecorridos > 0 && metrics.margemAcum > 0
-    ? Math.round((metrics.margemAcum / diasDecorridos) * diasNoMes - custoFixoMensal)
+  // Projeção só para mês único corrente
+  const isCurrentMonthOnly = sortedMonths.length === 1 && selectedYear === anoAtual && sortedMonths[0] === mesAtual
+  const diasNoMes = isCurrentMonthOnly ? new Date(anoAtual, mesAtual, 0).getDate() : 0
+  const diasDecorridos = isCurrentMonthOnly ? now.getDate() : 0
+  const projecaoLucro = isCurrentMonthOnly && diasDecorridos > 0 && metrics.margemAcum > 0
+    ? Math.round((metrics.margemAcum / diasDecorridos) * diasNoMes - custoFixoTotal)
     : null
 
   // ── Insights ──────────────────────────────────────────────────────────────
   const insights: { label: string; value: string; color: string }[] = []
 
   if (peAtingido) {
-    insights.push({ label: 'Ponto de equilíbrio', value: `🎯 Cobertos em ${chartData[diaEquilibrio]?.dia}/${mesNum}`, color: '#3E8F76' })
-  } else if (diasDecorridos > 0 && metrics.margemAcum > 0) {
-    const ritmo = metrics.margemAcum / diasDecorridos
-    const estimado = Math.ceil(custoFixoMensal / ritmo)
-    insights.push({
-      label: 'Ponto de equilíbrio',
-      value: estimado <= diasNoMes ? `⏳ Estimativa: dia ${estimado}` : '⚠️ Fora do alcance este mês',
-      color: '#D97706',
-    })
+    const label = isSingleMonth ? `dia ${chartData[peAtingidoIdx]?.dia}` : chartData[peAtingidoIdx]?.dia
+    insights.push({ label: 'Ponto de equilíbrio', value: `🎯 Cobertos em ${label}`, color: '#3E8F76' })
+  } else if (metrics.margemAcum > 0) {
+    if (isSingleMonth && diasDecorridos > 0) {
+      const ritmo = metrics.margemAcum / diasDecorridos
+      const estimado = Math.ceil(custoFixoTotal / ritmo)
+      insights.push({
+        label: 'Ponto de equilíbrio',
+        value: estimado <= diasNoMes ? `⏳ Estimativa: dia ${estimado}` : '⚠️ Fora do alcance este mês',
+        color: '#D97706',
+      })
+    } else {
+      insights.push({ label: 'Ponto de equilíbrio', value: '⚠️ Fora do alcance no período', color: '#D97706' })
+    }
   }
 
   if (lucroSobreFaturamento !== null) {
     insights.push({ label: 'Lucro sobre faturamento', value: `💰 ${pct(lucroSobreFaturamento)} do faturamento`, color: '#1D6FE8' })
+  }
+
+  if (!isSingleMonth) {
+    insights.push({
+      label: `${sortedMonths.length} meses | Custo fixo total`,
+      value: fmt(custoFixoTotal),
+      color: '#EF4444',
+    })
   }
 
   if (projecaoLucro !== null && projecaoLucro > 0) {
@@ -233,35 +403,60 @@ export default function DashboardPage() {
     })
   }
 
-  // Recomendação estática (preparada para IA futura)
   const recomendacao = (() => {
-    if (!peAtingido && diasDecorridos > diasNoMes * 0.5) return 'Ritmo abaixo do esperado. Acelerar vendas na segunda metade do mês.'
+    if (!peAtingido && isCurrentMonthOnly && diasDecorridos > diasNoMes * 0.5) return 'Ritmo abaixo do esperado. Acelerar vendas na segunda metade do mês.'
     if (lucroSobreFaturamento !== null && lucroSobreFaturamento > 20) return 'Margem saudável. Bom momento para avaliar expansão de carteira.'
     if (projecaoLucro !== null && projecaoLucro > 0) return 'Margem crescendo acima do custo fixo. Ritmo favorável para superar a meta.'
+    if (!isSingleMonth && peAtingido) return `Ponto de equilíbrio coberto no período de ${sortedMonths.length} meses.`
     return 'Acompanhe o ritmo diário para garantir o ponto de equilíbrio no prazo.'
   })()
 
-  // Não renderiza nada enquanto verifica o role ou se for seller (redirect em andamento)
   if (roleLoading || role === 'seller') return null
+
+  // ── Estilo dos pills ──────────────────────────────────────────────────────
+  const pillBase: React.CSSProperties = {
+    fontSize: 12, padding: '4px 13px', borderRadius: 999,
+    cursor: 'pointer', transition: 'all 0.12s', lineHeight: 1.5, border: '1px solid',
+  }
+  const pillActive: React.CSSProperties = { ...pillBase, background: '#1D9E75', borderColor: '#1D9E75', color: '#fff', fontWeight: 600 }
+  const pillInactive: React.CSSProperties = { ...pillBase, background: 'transparent', borderColor: 'rgba(255,255,255,0.12)', color: '#9CA3AF', fontWeight: 400 }
 
   return (
     <div className="space-y-5 animate-fade-in">
 
-      {/* ── Header ── */}
+      {/* ── Header com seletor de período ── */}
       <PageHeader title="Dashboard" subtitle={hojeLabel}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={prevMonth} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: '#9CA3AF', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}>‹</button>
-          <span style={{ fontSize: '30px', fontWeight: 600, minWidth: '120px', textAlign: 'center' }}>{mesLabel}</span>
-          <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', color: isCurrentMonth ? '#374151' : '#9CA3AF', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: '16px', lineHeight: 1, opacity: isCurrentMonth ? 0.35 : 1 }}>›</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+          {/* Anos */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {availableYears.map(y => (
+              <button key={y} onClick={() => setSelectedYear(y)} style={y === selectedYear ? pillActive : pillInactive}>
+                {y}
+              </button>
+            ))}
+          </div>
+          {/* Meses */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {availableMonths.map(m => (
+              <button key={m} onClick={() => toggleMonth(m)} style={selectedMonths.has(m) ? pillActive : pillInactive}>
+                {MESES_PT[m - 1]}
+              </button>
+            ))}
+          </div>
         </div>
       </PageHeader>
+
+      {/* ── Período selecionado ── */}
+      <div style={{ textAlign: 'right', fontSize: 28, fontWeight: 600, color: 'var(--color-text-primary, #f9fafb)', paddingRight: 2 }}>
+        {periodoLabel}
+      </div>
 
       {/* ── Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label="Valor em Vendas"
           value={fmt(metrics.valorVendas)}
-          sub="mês atual"
+          sub={isSingleMonth ? 'mês selecionado' : `${sortedMonths.length} meses`}
           icon={ShoppingBag}
           valueColor="#D4A373"
           trend={trendDir(deltaVendas)}
@@ -270,7 +465,7 @@ export default function DashboardPage() {
         <StatCard
           label="Margem de Contribuição"
           value={fmt(metrics.margemAcum)}
-          sub="acumulada no mês"
+          sub="acumulada no período"
           icon={TrendingUp}
           valueColor="#3E8F76"
         />
@@ -286,7 +481,7 @@ export default function DashboardPage() {
         <StatCard
           label="Pedidos do Mês"
           value={metrics.pedidosMes}
-          sub="pedidos realizados"
+          sub={isSingleMonth ? 'pedidos realizados' : `em ${sortedMonths.length} meses`}
           icon={Package}
           valueColor="#9CA3AF"
           trend={trendDir(deltaPedidos)}
@@ -294,7 +489,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Gráfico + Insights lado a lado ── */}
+      {/* ── Gráfico + Insights ── */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
 
         {/* Gráfico — 75% */}
@@ -302,11 +497,16 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6B7280' }}>
-                Ponto de Equilíbrio — {mesLabel}
+                Ponto de Equilíbrio — {periodoLabel}
               </p>
+              {!isSingleMonth && (
+                <p style={{ fontSize: '11px', color: '#6B7280', marginTop: 2 }}>
+                  Custo fixo acumulado: {fmt(custoFixoTotal)} ({sortedMonths.length}× {fmt(custoFixoTotal / sortedMonths.length)})
+                </p>
+              )}
               {peAtingido ? (
                 <p className="text-[12px] mt-1" style={{ color: 'var(--brand-teal)' }}>
-                  🎯 Custos fixos cobertos em {chartData[diaEquilibrio]?.dia}/{mesNum}
+                  🎯 Custos fixos cobertos em {chartData[peAtingidoIdx]?.dia}
                 </p>
               ) : (
                 <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
@@ -319,13 +519,19 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-              <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="dia"
+                tick={{ fontSize: 10, fill: '#aaa' }}
+                axisLine={false}
+                tickLine={false}
+                interval={isSingleMonth ? 'preserveStartEnd' : 0}
+              />
               <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {peAtingido && (
                 <ReferenceLine
-                  x={chartData[diaEquilibrio]?.dia}
+                  x={chartData[peAtingidoIdx]?.dia}
                   stroke="#F59E0B"
                   strokeDasharray="5 4"
                   strokeWidth={1.5}
@@ -338,7 +544,7 @@ export default function DashboardPage() {
                 type="monotone" dataKey="lucro" name="Lucro Real" stroke="#1D6FE8" strokeWidth={2.5} connectNulls={false}
                 dot={(props: any) => {
                   const { cx, cy, index } = props
-                  if (index === diaEquilibrio && cx != null && cy != null) {
+                  if (index === peAtingidoIdx && cx != null && cy != null) {
                     return <circle key="pe-dot" cx={cx} cy={cy} r={5} fill="#1D6FE8" stroke="white" strokeWidth={2} />
                   }
                   return <g key={`empty-${index}`} />
@@ -353,7 +559,7 @@ export default function DashboardPage() {
               return (
                 <>
                   <div className="text-center">
-                    <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo Mensal</p>
+                    <p className="text-[11px]" style={{ color: '#6B7280' }}>Custo Fixo {isSingleMonth ? 'Mensal' : 'Total'}</p>
                     <p className="text-[14px] font-bold" style={{ color: '#EF4444' }}>{fmt(last?.custoFixo ?? 0)}</p>
                   </div>
                   <div className="text-center">
@@ -362,9 +568,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-[11px]" style={{ color: '#6B7280' }}>Lucro Real</p>
-                    <p className="text-[14px] font-bold" style={{ color: '#1D6FE8' }}>
-                      {fmt(metrics.lucroReal)}
-                    </p>
+                    <p className="text-[14px] font-bold" style={{ color: '#1D6FE8' }}>{fmt(metrics.lucroReal)}</p>
                   </div>
                 </>
               )
@@ -394,7 +598,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Recomendação — preparada para IA */}
           <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
               <Bot size={12} style={{ color: '#9CA3AF', flexShrink: 0 }} />
@@ -410,9 +613,9 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* ── Top Clientes do Mês ── */}
+      {/* ── Top Clientes do Período ── */}
       <div className="rm-card">
-        <SectionHeader title="Top clientes do mês" linkHref="/empresas" linkLabel="Ver todos" />
+        <SectionHeader title={isSingleMonth ? 'Top clientes do mês' : `Top clientes do período`} linkHref="/empresas" linkLabel="Ver todos" />
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map(i => (
@@ -420,7 +623,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : topClientes.length === 0 ? (
-          <p className="text-[13px] text-center py-8" style={{ color: 'var(--neutral-300)' }}>Nenhum pedido este mês</p>
+          <p className="text-[13px] text-center py-8" style={{ color: 'var(--neutral-300)' }}>Nenhum pedido no período</p>
         ) : (
           <div className="space-y-2">
             {topClientes.map((c, i) => {
