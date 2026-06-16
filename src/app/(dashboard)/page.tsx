@@ -446,11 +446,6 @@ export default function DashboardPage() {
         </div>
       </PageHeader>
 
-      {/* ── Período selecionado ── */}
-      <div style={{ textAlign: 'right', fontSize: 28, fontWeight: 600, color: 'var(--color-text-primary, #f9fafb)', paddingRight: 2 }}>
-        {periodoLabel}
-      </div>
-
       {/* ── Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
