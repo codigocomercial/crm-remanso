@@ -32,6 +32,7 @@ interface FilaItem {
 
 interface AtendimentoHoje {
   id: string
+  contact_id?: string | null
   contact_name: string | null
   company_name: string | null
   canal: string
@@ -124,7 +125,7 @@ export default function AtendimentosPage() {
         .order('next_followup_at', { ascending: true }),
       supabase
         .from('crm_atendimentos')
-        .select('id, contact_name, company_name, canal, resultado, anotacao, created_at')
+        .select('id, contact_id, contact_name, company_name, canal, resultado, anotacao, created_at')
         .gte('created_at', inicioDia.toISOString())
         .lte('created_at', fimDia.toISOString())
         .order('created_at', { ascending: false }),
@@ -164,7 +165,31 @@ export default function AtendimentosPage() {
       }))
 
     setFila([...manuais, ...recompra])
-    setHoje((hojeRes.data as AtendimentoHoje[]) || [])
+    const atendimentos = (hojeRes.data as AtendimentoHoje[]) || []
+
+    // Batch lookup: para entradas sem contact_name, busca direto em crm.contacts
+    const semNome = atendimentos.filter(a => !a.contact_name && a.contact_id)
+    if (semNome.length > 0) {
+      const ids = [...new Set(semNome.map(a => a.contact_id!))]
+      const { data: contatosExtra } = await supabase
+        .schema('crm')
+        .from('contacts')
+        .select('id, full_name, company:companies(fantasy_name, corporate_name)')
+        .in('id', ids)
+      const nomeMap = new Map(
+        (contatosExtra ?? []).map((c: any) => [c.id, {
+          contact_name: c.full_name || null,
+          company_name: c.company?.fantasy_name || c.company?.corporate_name || null,
+        }])
+      )
+      setHoje(atendimentos.map(a =>
+        !a.contact_name && a.contact_id && nomeMap.has(a.contact_id)
+          ? { ...a, ...nomeMap.get(a.contact_id) }
+          : a
+      ))
+    } else {
+      setHoje(atendimentos)
+    }
     setLoading(false)
   }
 
