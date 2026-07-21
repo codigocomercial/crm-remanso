@@ -12,6 +12,11 @@ import {
 import { StatCard, PageHeader, SectionHeader } from '@/components/ui/rm-components'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import {
+  getCalendarDateParts,
+  startOfCalendarMonthUtc,
+  startOfNextCalendarMonthUtc,
+} from '@/lib/calendar-date'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const CUSTO_FIXO_PADRAO = 60000
@@ -169,8 +174,8 @@ export default function DashboardPage() {
       setIsSingleMonth(single)
 
       // Range total do período selecionado
-      const rangeStart = new Date(selectedYear, meses[0] - 1, 1).toISOString()
-      const rangeEnd = new Date(selectedYear, meses[meses.length - 1], 0, 23, 59, 59).toISOString()
+      const rangeStart = startOfCalendarMonthUtc(selectedYear, meses[0])
+      const rangeEndExclusive = startOfNextCalendarMonthUtc(selectedYear, meses[meses.length - 1])
 
       // Queries em paralelo
       const opPromises = meses.map(m =>
@@ -186,18 +191,18 @@ export default function DashboardPage() {
       ] = await Promise.all([
         supabase.from('crm_orders')
           .select('id,total_value,ordered_at,units_count,client_name,company_id')
-          .gte('ordered_at', rangeStart).lte('ordered_at', rangeEnd),
+          .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive),
         supabase.from('crm_orders_freight')
           .select('ordered_at,total_value,tax_amount,cost_mp,custo_frete_proporcional')
-          .gte('ordered_at', rangeStart).lte('ordered_at', rangeEnd)
+          .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive)
           .order('ordered_at', { ascending: true }),
         ...opPromises,
       ])
 
       // Filtra apenas meses selecionados (range pode incluir meses intermediários não selecionados)
       function isMesSelecionado(dateStr: string) {
-        const m = new Date(dateStr).getMonth() + 1
-        return selectedMonths.has(m)
+        const parts = getCalendarDateParts(dateStr)
+        return parts?.year === selectedYear && selectedMonths.has(parts.month)
       }
       const orders = (allOrders ?? []).filter(o => isMesSelecionado(o.ordered_at))
       const freight = (allFreight ?? []).filter(o => isMesSelecionado(o.ordered_at))
@@ -247,7 +252,8 @@ export default function DashboardPage() {
 
         const margemPorDia = new Map<string, number>()
         for (const p of freight) {
-          const dia = new Date(p.ordered_at).getDate()
+          const dia = getCalendarDateParts(p.ordered_at)?.day
+          if (!dia) continue
           const key = String(dia).padStart(2, '0')
           const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
           margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + (Number(p.total_value ?? 0) - cv))
@@ -271,12 +277,12 @@ export default function DashboardPage() {
         // prevMetrics (só no modo mês único)
         const prevM = m === 1 ? 12 : m - 1
         const prevY = m === 1 ? selectedYear - 1 : selectedYear
-        const prevStart = new Date(prevY, prevM - 1, 1).toISOString()
-        const prevEnd = new Date(prevY, prevM, 0, 23, 59, 59).toISOString()
+        const prevStart = startOfCalendarMonthUtc(prevY, prevM)
+        const prevEndExclusive = startOfNextCalendarMonthUtc(prevY, prevM)
 
         const [{ data: prevOrders }, { data: prevFreight }, prevOpRes] = await Promise.all([
-          supabase.from('crm_orders').select('id,total_value').gte('ordered_at', prevStart).lte('ordered_at', prevEnd),
-          supabase.from('crm_orders_freight').select('total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lte('ordered_at', prevEnd),
+          supabase.from('crm_orders').select('id,total_value').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+          supabase.from('crm_orders_freight').select('total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
         ])
 
@@ -311,7 +317,7 @@ export default function DashboardPage() {
           cumCF += cf
 
           if (!isFuture) {
-            const monthFreight = freight.filter(p => new Date(p.ordered_at).getMonth() + 1 === m)
+            const monthFreight = freight.filter(p => getCalendarDateParts(p.ordered_at)?.month === m)
             for (const p of monthFreight) {
               const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
               cumMargem += Number(p.total_value ?? 0) - cv

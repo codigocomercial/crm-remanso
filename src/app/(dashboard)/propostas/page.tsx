@@ -7,11 +7,16 @@ import { PageHeader } from '@/components/ui/rm-components'
 import { useUserRole } from '@/hooks/useUserRole'
 import { MarginDisplay } from '@/components/ui/MarginIndicator'
 import { RefreshCw, Search, ShoppingBag, MapPin } from 'lucide-react'
+import {
+  formatCalendarDate,
+  startOfCalendarDayUtc,
+  startOfNextCalendarDayUtc,
+} from '@/lib/calendar-date'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
 function toDateStr(d: Date) {
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 const STATUS: Record<string, { label: string; color: string; bg: string }> = {
@@ -93,8 +98,10 @@ export default function PropostasPage() {
     if (search.trim()) query = query.or(`client_name.ilike.%${search}%,bling_number.ilike.%${search}%`)
     if (statusFilter !== 'todos') query = query.eq('status', statusFilter)
     if (sellerFilter !== 'todos') query = query.eq('seller_name', sellerFilter)
-    if (dateFrom) query = query.gte('ordered_at', dateFrom)
-    if (dateTo) query = query.lte('ordered_at', `${dateTo}T23:59:59`)
+    const rangeStart = dateFrom ? startOfCalendarDayUtc(dateFrom) : null
+    const rangeEndExclusive = dateTo ? startOfNextCalendarDayUtc(dateTo) : null
+    if (rangeStart) query = query.gte('ordered_at', rangeStart)
+    if (rangeEndExclusive) query = query.lt('ordered_at', rangeEndExclusive)
 
     const { data } = await query
     const list = data ?? []
@@ -146,7 +153,7 @@ export default function PropostasPage() {
   }
 
   const fmt = (v: number | null) => (v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+  const fmtDate = (d: string | null) => formatCalendarDate(d)
 
   function navMonth(dir: -1 | 1) {
     const base = new Date(dateFrom + 'T12:00:00')
