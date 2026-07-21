@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
+import { mapBlingOrderStatus } from '@/lib/bling/order-status'
 import { createHmac } from 'crypto'
 
 const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET ?? '95bf4297fe093bab99e168f15737c7d31e5a454d944e21f1bc53e95f5aec'
@@ -135,14 +136,6 @@ export async function POST(req: NextRequest) {
       const { data: seller } = await supabase
         .from('sellers').select('id').eq('bling_id', o.vendedor?.id).single()
 
-      const mapStatus = (id: number) => {
-        if ([6, 9, 11].includes(id)) return 'em_aberto'
-        if ([15].includes(id)) return 'em_andamento'
-        if ([12].includes(id)) return 'atendido'
-        if ([13].includes(id)) return 'cancelado'
-        return 'em_aberto'
-      }
-
       const orderPayload = {
         org_id: ORG_ID,
         bling_id: o.id,
@@ -152,7 +145,7 @@ export async function POST(req: NextRequest) {
         company_id: companyId,
         seller_id: seller?.id ?? null,
         ordered_at: o.data ? new Date(o.data).toISOString() : new Date().toISOString(),
-        status: mapStatus(Number(o.situacao?.id ?? 6)),
+        status: mapBlingOrderStatus(o.situacao),
         total_value: totalVenda,
         freight: frete,
         total_cost: totalCost,

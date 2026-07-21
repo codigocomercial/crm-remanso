@@ -4,6 +4,7 @@
  * O Bling é a fonte de verdade — o CRM apenas espelha os dados
  */
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
+import { mapBlingOrderStatus } from '@/lib/bling/order-status'
 
 const BLING_URL = 'https://www.bling.com.br/Api/v3'
 const DELAY_MS = 350
@@ -235,14 +236,6 @@ export async function syncPedidos() {
   const { data: org } = await supabase.from('organizations').select('tax_rate').eq('id', ORG_ID).single()
   const taxRate = Number(org?.tax_rate ?? 4.5) / 100
 
-  const mapStatus = (id: number) => {
-    if ([6, 9, 11].includes(id)) return 'em_aberto'
-    if ([15].includes(id)) return 'em_andamento'
-    if ([12].includes(id)) return 'atendido'
-    if ([13].includes(id)) return 'cancelado'
-    return 'em_aberto'
-  }
-
   try {
     let page = 1
     while (true) {
@@ -316,7 +309,7 @@ export async function syncPedidos() {
           company_id: companyId,
           seller_id: seller?.id ?? null,
           ordered_at: detail?.data ? new Date(detail.data).toISOString() : new Date().toISOString(),
-          status: mapStatus(Number(detail?.situacao?.id ?? 6)),
+          status: mapBlingOrderStatus(detail?.situacao),
           total_value: totalVenda,
           freight: frete,
           total_cost: totalCost,

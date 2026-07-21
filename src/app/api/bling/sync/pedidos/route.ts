@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { mapBlingOrderStatus } from '@/lib/bling/order-status'
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
 
 const BLING_URL = 'https://www.bling.com.br/Api/v3'
@@ -6,11 +7,6 @@ const DELAY_MS = 400
 
 async function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
-}
-
-const STATUS_MAP: Record<number, string> = {
-  6: 'em_aberto', 9: 'em_aberto', 11: 'em_aberto',
-  15: 'em_andamento', 12: 'atendido', 13: 'cancelado'
 }
 
 export async function POST() {
@@ -144,7 +140,7 @@ export async function POST() {
           p_client_city: p.contato?.endereco?.municipio ?? null,
           p_client_state: p.contato?.endereco?.uf ?? null,
           p_ordered_at: p.data ?? new Date().toISOString().split('T')[0],
-          p_status: STATUS_MAP[Number(p.situacao?.id)] ?? 'em_aberto',
+          p_status: mapBlingOrderStatus(p.situacao),
           p_payment_notes: p.observacoes ?? null,
           p_total_value: totalVenda, p_freight: frete, p_discount: desconto,
           p_grand_total: totalVenda + frete, p_units_count: unitsCount,
@@ -174,7 +170,7 @@ export async function POST() {
         const desconto = Number(p.desconto?.valor ?? 0)
         const totalVenda = totalBruto - desconto
         const frete = Number(p.transporte?.frete ?? 0)
-        const status = STATUS_MAP[Number(p.situacao?.id)] ?? 'em_aberto'
+        const status = mapBlingOrderStatus(p.situacao)
 
         // Recalcular CML com novos valores
         const itens = p.itens ?? []
@@ -196,8 +192,25 @@ export async function POST() {
         // Vendedor
         const sellerId = await resolveSeller(p.vendedor?.nome ?? null)
 
+        const cnpj = p.contato?.numeroDocumento?.replace(/\D/g, '') ?? null
+        let companyId = null
+        if (cnpj) {
+          const { data: company } = await supabase.from('crm_companies').select('id')
+            .eq('cnpj', cnpj).eq('org_id', ORG_ID).maybeSingle()
+          companyId = company?.id ?? null
+        }
+
         const updatePayload: any = {
+          bling_number: String(p.numero ?? ''),
+          company_id: companyId,
+          seller_id: sellerId,
+          client_name: p.contato?.nome ?? '',
+          client_cnpj: p.contato?.numeroDocumento ?? null,
+          client_city: p.contato?.endereco?.municipio ?? null,
+          client_state: p.contato?.endereco?.uf ?? null,
+          ordered_at: p.data ?? new Date().toISOString().split('T')[0],
           status,
+          payment_notes: p.observacoes ?? null,
           total_value: totalVenda,
           freight: frete,
           discount: desconto,
@@ -213,11 +226,33 @@ export async function POST() {
           updated_at: new Date().toISOString(),
         }
 
-        if (sellerId) updatePayload.seller_id = sellerId
-
-        await supabase.schema('crm').from('orders')
+        const { error: orderError } = await supabase.schema('crm').from('orders')
           .update(updatePayload)
           .eq('id', orderId)
+
+        if (orderError) throw orderError
+
+        const { error: deleteItemsError } = await supabase.schema('crm').from('order_items')
+          .delete()
+          .eq('org_id', ORG_ID)
+          .eq('order_id', orderId)
+
+        if (deleteItemsError) throw deleteItemsError
+
+        if (itens.length > 0) {
+          const { error: insertItemsError } = await supabase.schema('crm').from('order_items')
+            .insert(itens.map((item: any) => ({
+              order_id: orderId,
+              org_id: ORG_ID,
+              sku: item.codigo?.trim(),
+              description: item.descricao ?? '',
+              quantity: Number(item.quantidade ?? 1),
+              unit_price: Number(item.valor ?? 0),
+              total_price: Number(item.valor ?? 0) * Number(item.quantidade ?? 1),
+            })))
+
+          if (insertItemsError) throw insertItemsError
+        }
 
         updated++
       } catch (err: any) {
