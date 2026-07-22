@@ -69,13 +69,20 @@ export async function POST() {
     const blingIdsWithItems = new Set(
       (existingOrders ?? []).filter((o: any) => idsWithItems.has(o.id)).map((o: any) => o.bling_id)
     )
+    const existingBlingIds = new Set((existingOrders ?? []).map((o: any) => o.bling_id))
 
     // Mapa bling_id → crm order id
     const blingIdToOrderId = new Map(
       (existingOrders ?? []).map((o: any) => [o.bling_id, o.id])
     )
 
-    const toProcess = blingIds.filter(id => !blingIdsWithItems.has(id))
+    // Pedidos totalmente ausentes têm prioridade. Sem essa separação, eles podem
+    // ficar atrás de muitos pedidos antigos sem itens e o proxy encerrar a conexão.
+    const missingOrders = blingIds.filter(id => !existingBlingIds.has(id))
+    const incompleteOrders = blingIds.filter(id =>
+      existingBlingIds.has(id) && !blingIdsWithItems.has(id)
+    )
+    const toProcess = [...missingOrders, ...incompleteOrders]
     const toUpdate = blingIds.filter(id => blingIdsWithItems.has(id))
 
     // ─── 3. Buscar configurações ──────────────────────────────────────────
