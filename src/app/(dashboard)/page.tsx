@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUserRole } from '@/hooks/useUserRole'
-import { ShoppingBag, TrendingUp, DollarSign, Package, Lightbulb, Bot } from 'lucide-react'
+import { ShoppingBag, TrendingUp, DollarSign, Package, Boxes, Lightbulb, Bot } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, ReferenceLine
@@ -53,6 +53,7 @@ interface PrevMetrics {
   margemAcum: number
   lucroReal: number
   pedidosMes: number
+  urnasVendidas: number
 }
 
 // ── Pill helper ─────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ export default function DashboardPage() {
   const [selectedMonths, setSelectedMonths] = useState<Set<number>>(() => new Set([mesAtual]))
 
   const [loading, setLoading] = useState(true)
-  const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0 })
+  const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0, urnasVendidas: 0 })
   const [prevMetrics, setPrevMetrics] = useState<PrevMetrics | null>(null)
   const [custoFixoTotal, setCustoFixoTotal] = useState(CUSTO_FIXO_PADRAO)
   const [chartData, setChartData] = useState<{ dia: string; custoFixo: number; margem: number | null; lucro: number | null }[]>([])
@@ -230,13 +231,14 @@ export default function DashboardPage() {
       // Métricas agregadas
       const valorVendas = orders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
       const pedidosMes = orders.length
+      const urnasVendidas = orders.reduce((s, o) => s + Number(o.units_count ?? 0), 0)
       let margemAcum = 0
       for (const p of freight) {
         const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
         margemAcum += Number(p.total_value ?? 0) - cv
       }
       const lucroReal = Math.max(0, margemAcum - totalCF)
-      setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes })
+      setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes, urnasVendidas })
 
       // Top clientes
       const clienteMap = new Map<string, { nome: string; receita: number; urnas: number }>()
@@ -287,7 +289,7 @@ export default function DashboardPage() {
         const prevEndExclusive = startOfNextCalendarMonthUtc(prevY, prevM)
 
         const [{ data: prevOrders }, { data: prevFreight }, prevOpRes] = await Promise.all([
-          supabase.from('crm_orders').select('id,total_value,status').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+          supabase.from('crm_orders').select('id,total_value,units_count,status').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('crm_orders_freight').select('id,total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
         ])
@@ -311,6 +313,7 @@ export default function DashboardPage() {
           margemAcum: prevMargem,
           lucroReal: Math.max(0, prevMargem - prevCF),
           pedidosMes: previousRevenueOrders.length,
+          urnasVendidas: previousRevenueOrders.reduce((s, o) => s + Number(o.units_count ?? 0), 0),
         })
       } else {
         // Vista mensal acumulada
@@ -356,6 +359,7 @@ export default function DashboardPage() {
   const deltaVendas = prevMetrics ? delta(metrics.valorVendas, prevMetrics.valorVendas) : null
   const deltaLucro = prevMetrics ? delta(metrics.lucroReal, prevMetrics.lucroReal) : null
   const deltaPedidos = prevMetrics ? delta(metrics.pedidosMes, prevMetrics.pedidosMes) : null
+  const deltaUrnas = prevMetrics ? delta(metrics.urnasVendidas, prevMetrics.urnasVendidas) : null
 
   const trendLabel = (d: number | null) => {
     if (d === null || !prevMesLabel) return undefined
@@ -462,7 +466,7 @@ export default function DashboardPage() {
       </PageHeader>
 
       {/* ── Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard
           label="Valor em Vendas"
           value={fmt(metrics.valorVendas)}
@@ -496,6 +500,15 @@ export default function DashboardPage() {
           valueColor="#9CA3AF"
           trend={trendDir(deltaPedidos)}
           trendLabel={trendLabel(deltaPedidos)}
+        />
+        <StatCard
+          label="Urnas Vendidas"
+          value={metrics.urnasVendidas}
+          sub={isSingleMonth ? 'unidades no mês' : `em ${sortedMonths.length} meses`}
+          icon={Boxes}
+          valueColor="#A78BFA"
+          trend={trendDir(deltaUrnas)}
+          trendLabel={trendLabel(deltaUrnas)}
         />
       </div>
 
