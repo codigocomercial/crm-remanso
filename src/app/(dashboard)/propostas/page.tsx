@@ -12,6 +12,7 @@ import {
   startOfCalendarDayUtc,
   startOfNextCalendarDayUtc,
 } from '@/lib/calendar-date'
+import { isRevenueOrderStatus } from '@/lib/orders/revenue-status'
 
 const ORG_ID = '402dff70-cbd7-4f5a-9f73-5cdfbd2e98e2'
 
@@ -138,6 +139,12 @@ export default function PropostasPage() {
       setSyncing(false)
       return
     }
+    if (data.errors > 0) {
+      const details = (data.errorDetails ?? [])
+        .map((item: { blingId: number; message: string }) => `${item.blingId}: ${item.message}`)
+        .join('\n')
+      alert(`Sincronização concluída com ${data.errors} erro(s).${details ? `\n\n${details}` : ''}`)
+    }
     // Recarregar a cada 30s por 30 minutos
     let attempts = 0
     const interval = setInterval(() => {
@@ -177,9 +184,10 @@ export default function PropostasPage() {
     return o.client_name ?? '—'
   }
 
-  const totalVenda = orders.reduce((s, o) => s + (o.total_value ?? 0), 0)
-  const totalMargem = orders.reduce((s, o) => s + (o.margin ?? 0), 0)
-  const totalUrnas = orders.reduce((s, o) => s + (o.units_count ?? 0), 0)
+  const revenueOrders = orders.filter(o => isRevenueOrderStatus(o.status))
+  const totalVenda = revenueOrders.reduce((s, o) => s + (o.total_value ?? 0), 0)
+  const totalMargem = revenueOrders.reduce((s, o) => s + (o.margin ?? 0), 0)
+  const totalUrnas = revenueOrders.reduce((s, o) => s + (o.units_count ?? 0), 0)
   const margemMedia = totalVenda > 0 ? (totalMargem / totalVenda) * 100 : 0
 
   return (

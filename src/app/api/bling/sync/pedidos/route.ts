@@ -88,6 +88,7 @@ export async function POST() {
     const opCostMap = new Map((opCosts ?? []).map((c: any) => [`${c.year}-${c.month}`, Number(c.cost_per_unit ?? 0)]))
 
     let processed = 0, updated = 0, sellerUpdated = 0, errors = 0
+    const errorDetails: Array<{ blingId: number; message: string }> = []
 
     // ─── 4. Processar pedidos novos (sem itens) ───────────────────────────
     for (const blingId of toProcess) {
@@ -131,7 +132,7 @@ export async function POST() {
 
         const sellerId = await resolveSeller(p.vendedor?.nome ?? null)
 
-        await supabase.rpc('upsert_crm_order_full', {
+        const { error: upsertError } = await supabase.rpc('upsert_crm_order_full', {
           p_org_id: ORG_ID, p_bling_id: p.id,
           p_bling_number: String(p.numero ?? ''),
           p_company_id: companyId, p_seller_id: sellerId,
@@ -149,10 +150,13 @@ export async function POST() {
           p_itens: itens,
         })
 
+        if (upsertError) throw upsertError
+
         processed++
       } catch (err: any) {
         console.error(`[sync/pedidos] erro pedido ${blingId}:`, err.message)
         errors++
+        errorDetails.push({ blingId, message: err.message })
       }
     }
 
@@ -258,6 +262,7 @@ export async function POST() {
       } catch (err: any) {
         console.error(`[sync/update] erro ${blingId}:`, err.message)
         errors++
+        errorDetails.push({ blingId, message: err.message })
       }
     }
 
@@ -288,6 +293,7 @@ export async function POST() {
       } catch (err: any) {
         console.error(`[sync/vendedor] erro ${order.bling_number}:`, err.message)
         errors++
+        errorDetails.push({ blingId: order.bling_id, message: err.message })
       }
     }
 
@@ -296,6 +302,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true, processed, updated, sellerUpdated, errors,
+      errorDetails: errorDetails.slice(0, 20),
       total_bling: blingIds.length,
       message: `${processed} pedidos novos, ${updated} atualizados, ${sellerUpdated} vendedores vinculados${errors > 0 ? `, ${errors} erros` : ''}`
     })

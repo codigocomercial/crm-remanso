@@ -17,6 +17,7 @@ import {
   startOfCalendarMonthUtc,
   startOfNextCalendarMonthUtc,
 } from '@/lib/calendar-date'
+import { isRevenueOrderStatus } from '@/lib/orders/revenue-status'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const CUSTO_FIXO_PADRAO = 60000
@@ -190,10 +191,10 @@ export default function DashboardPage() {
         ...opResults
       ] = await Promise.all([
         supabase.from('crm_orders')
-          .select('id,total_value,ordered_at,units_count,client_name,company_id')
+          .select('id,total_value,ordered_at,units_count,client_name,company_id,status')
           .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive),
         supabase.from('crm_orders_freight')
-          .select('ordered_at,total_value,tax_amount,cost_mp,custo_frete_proporcional')
+          .select('id,ordered_at,total_value,tax_amount,cost_mp,custo_frete_proporcional')
           .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive)
           .order('ordered_at', { ascending: true }),
         ...opPromises,
@@ -204,8 +205,13 @@ export default function DashboardPage() {
         const parts = getCalendarDateParts(dateStr)
         return parts?.year === selectedYear && selectedMonths.has(parts.month)
       }
-      const orders = (allOrders ?? []).filter(o => isMesSelecionado(o.ordered_at))
-      const freight = (allFreight ?? []).filter(o => isMesSelecionado(o.ordered_at))
+      const orders = (allOrders ?? [])
+        .filter(o => isMesSelecionado(o.ordered_at))
+        .filter(o => isRevenueOrderStatus(o.status))
+      const revenueOrderIds = new Set(orders.map(o => o.id))
+      const freight = (allFreight ?? [])
+        .filter(o => isMesSelecionado(o.ordered_at))
+        .filter(o => revenueOrderIds.has(o.id))
 
       // Custo fixo por mês
       const cfPorMes = new Map<number, number>()
@@ -281,8 +287,8 @@ export default function DashboardPage() {
         const prevEndExclusive = startOfNextCalendarMonthUtc(prevY, prevM)
 
         const [{ data: prevOrders }, { data: prevFreight }, prevOpRes] = await Promise.all([
-          supabase.from('crm_orders').select('id,total_value').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
-          supabase.from('crm_orders_freight').select('total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+          supabase.from('crm_orders').select('id,total_value,status').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+          supabase.from('crm_orders_freight').select('id,total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
         ])
 
@@ -291,9 +297,12 @@ export default function DashboardPage() {
           ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
-        const prevValor = (prevOrders ?? []).reduce((s, o) => s + Number(o.total_value ?? 0), 0)
+        const previousRevenueOrders = (prevOrders ?? []).filter(o => isRevenueOrderStatus(o.status))
+        const previousRevenueOrderIds = new Set(previousRevenueOrders.map(o => o.id))
+        const previousRevenueFreight = (prevFreight ?? []).filter(o => previousRevenueOrderIds.has(o.id))
+        const prevValor = previousRevenueOrders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
         let prevMargem = 0
-        for (const p of prevFreight ?? []) {
+        for (const p of previousRevenueFreight) {
           const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
           prevMargem += Number(p.total_value ?? 0) - cv
         }
@@ -301,7 +310,7 @@ export default function DashboardPage() {
           valorVendas: prevValor,
           margemAcum: prevMargem,
           lucroReal: Math.max(0, prevMargem - prevCF),
-          pedidosMes: prevOrders?.length ?? 0,
+          pedidosMes: previousRevenueOrders.length,
         })
       } else {
         // Vista mensal acumulada
