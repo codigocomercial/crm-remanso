@@ -188,16 +188,15 @@ export default function DashboardPage() {
 
       const [
         { data: allOrders },
-        { data: allFreight },
+        { data: allLoads },
         ...opResults
       ] = await Promise.all([
         supabase.from('crm_orders')
-          .select('id,total_value,ordered_at,units_count,client_name,company_id,status')
+          .select('id,total_value,ordered_at,units_count,client_name,company_id,status,tax_amount,cost_mp')
           .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive),
-        supabase.from('crm_orders_freight')
-          .select('id,ordered_at,total_value,tax_amount,cost_mp,custo_frete_proporcional')
-          .gte('ordered_at', rangeStart).lt('ordered_at', rangeEndExclusive)
-          .order('ordered_at', { ascending: true }),
+        supabase.from('freight_loads')
+          .select('estimated_departure,total_freight_cost,total_freight_charged')
+          .gte('estimated_departure', rangeStart).lt('estimated_departure', rangeEndExclusive),
         ...opPromises,
       ])
 
@@ -209,10 +208,7 @@ export default function DashboardPage() {
       const orders = (allOrders ?? [])
         .filter(o => isMesSelecionado(o.ordered_at))
         .filter(o => isRevenueOrderStatus(o.status))
-      const revenueOrderIds = new Set(orders.map(o => o.id))
-      const freight = (allFreight ?? [])
-        .filter(o => isMesSelecionado(o.ordered_at))
-        .filter(o => revenueOrderIds.has(o.id))
+      const loads = (allLoads ?? []).filter(load => isMesSelecionado(load.estimated_departure))
 
       // Custo fixo por mês
       const cfPorMes = new Map<number, number>()
@@ -233,10 +229,14 @@ export default function DashboardPage() {
       const pedidosMes = orders.length
       const urnasVendidas = orders.reduce((s, o) => s + Number(o.units_count ?? 0), 0)
       let margemAcum = 0
-      for (const p of freight) {
-        const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+      for (const p of orders) {
+        const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0)
         margemAcum += Number(p.total_value ?? 0) - cv
       }
+      // A margem absorve somente o déficit: custo da carga menos o frete cobrado dos clientes.
+      const deficitFrete = loads.reduce((s, load) =>
+        s + Number(load.total_freight_cost ?? 0) - Number(load.total_freight_charged ?? 0), 0)
+      margemAcum -= deficitFrete
       const lucroReal = Math.max(0, margemAcum - totalCF)
       setMetrics({ valorVendas, margemAcum, lucroReal, pedidosMes, urnasVendidas })
 
@@ -259,12 +259,20 @@ export default function DashboardPage() {
         const cf = cfPorMes.get(m) ?? CUSTO_FIXO_PADRAO
 
         const margemPorDia = new Map<string, number>()
-        for (const p of freight) {
+        for (const p of orders) {
           const dia = getCalendarDateParts(p.ordered_at)?.day
           if (!dia) continue
           const key = String(dia).padStart(2, '0')
-          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0)
           margemPorDia.set(key, (margemPorDia.get(key) ?? 0) + (Number(p.total_value ?? 0) - cv))
+        }
+        const deficitFretePorDia = new Map<string, number>()
+        for (const load of loads) {
+          const dia = getCalendarDateParts(load.estimated_departure)?.day
+          if (!dia) continue
+          const key = String(dia).padStart(2, '0')
+          const deficit = Number(load.total_freight_cost ?? 0) - Number(load.total_freight_charged ?? 0)
+          deficitFretePorDia.set(key, (deficitFretePorDia.get(key) ?? 0) + deficit)
         }
 
         const chartArr = []
@@ -274,7 +282,7 @@ export default function DashboardPage() {
           const key = String(d).padStart(2, '0')
           const ehFuturo = isPastM ? false : isCurrentM ? d > now.getDate() : true
           if (!ehFuturo) {
-            cumMargem += margemPorDia.get(key) ?? 0
+            cumMargem += (margemPorDia.get(key) ?? 0) - (deficitFretePorDia.get(key) ?? 0)
             if (peDia === -1 && cumMargem >= cf) peDia = d
           }
           const lucro = !ehFuturo && peDia !== -1 && d >= peDia ? Math.round(cumMargem - cf) : null
@@ -288,9 +296,9 @@ export default function DashboardPage() {
         const prevStart = startOfCalendarMonthUtc(prevY, prevM)
         const prevEndExclusive = startOfNextCalendarMonthUtc(prevY, prevM)
 
-        const [{ data: prevOrders }, { data: prevFreight }, prevOpRes] = await Promise.all([
-          supabase.from('crm_orders').select('id,total_value,units_count,status').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
-          supabase.from('crm_orders_freight').select('id,total_value,tax_amount,cost_mp,custo_frete_proporcional').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+        const [{ data: prevOrders }, { data: prevLoads }, prevOpRes] = await Promise.all([
+          supabase.from('crm_orders').select('id,total_value,units_count,status,tax_amount,cost_mp').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
+          supabase.from('freight_loads').select('total_freight_cost,total_freight_charged').gte('estimated_departure', prevStart).lt('estimated_departure', prevEndExclusive),
           supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
         ])
 
@@ -300,14 +308,14 @@ export default function DashboardPage() {
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
         const previousRevenueOrders = (prevOrders ?? []).filter(o => isRevenueOrderStatus(o.status))
-        const previousRevenueOrderIds = new Set(previousRevenueOrders.map(o => o.id))
-        const previousRevenueFreight = (prevFreight ?? []).filter(o => previousRevenueOrderIds.has(o.id))
         const prevValor = previousRevenueOrders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
         let prevMargem = 0
-        for (const p of previousRevenueFreight) {
-          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+        for (const p of previousRevenueOrders) {
+          const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0)
           prevMargem += Number(p.total_value ?? 0) - cv
         }
+        prevMargem -= (prevLoads ?? []).reduce((s, load) =>
+          s + Number(load.total_freight_cost ?? 0) - Number(load.total_freight_charged ?? 0), 0)
         setPrevMetrics({
           valorVendas: prevValor,
           margemAcum: prevMargem,
@@ -329,11 +337,15 @@ export default function DashboardPage() {
           cumCF += cf
 
           if (!isFuture) {
-            const monthFreight = freight.filter(p => getCalendarDateParts(p.ordered_at)?.month === m)
-            for (const p of monthFreight) {
-              const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0) + Number(p.custo_frete_proporcional ?? 0)
+            const monthOrders = orders.filter(p => getCalendarDateParts(p.ordered_at)?.month === m)
+            for (const p of monthOrders) {
+              const cv = Number(p.tax_amount ?? 0) + Number(p.cost_mp ?? 0)
               cumMargem += Number(p.total_value ?? 0) - cv
             }
+            const monthDeficitFrete = loads
+              .filter(load => getCalendarDateParts(load.estimated_departure)?.month === m)
+              .reduce((s, load) => s + Number(load.total_freight_cost ?? 0) - Number(load.total_freight_charged ?? 0), 0)
+            cumMargem -= monthDeficitFrete
             if (peIdx === -1 && cumMargem >= cumCF) peIdx = i
           }
 
