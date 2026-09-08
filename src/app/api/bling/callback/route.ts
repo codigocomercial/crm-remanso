@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { blingTokenRequest } from '@/lib/bling/api'
 
 const CLIENT_ID = process.env.BLING_CLIENT_ID!
 const CLIENT_SECRET = process.env.BLING_CLIENT_SECRET!
@@ -22,14 +23,7 @@ async function exchangeCode(code: string): Promise<{
     redirect_uri: REDIRECT_URI,
   })
 
-  const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${credentials}`,
-    },
-    body: body.toString(),
-  })
+  const res = await blingTokenRequest(credentials, body)
 
   if (!res.ok) {
     const text = await res.text()

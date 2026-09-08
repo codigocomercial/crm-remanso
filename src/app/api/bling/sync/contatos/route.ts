@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { BLING_API_URL, blingErrorMessage } from '@/lib/bling/api'
 
 const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID!
 
@@ -13,10 +14,10 @@ async function getBlingToken() {
 }
 
 async function blingFetch(path: string, token: string) {
-  const res = await fetch(`https://www.bling.com.br/Api/v3${path}`, {
+  const res = await fetch(`${BLING_API_URL}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) throw new Error(`Bling API error: ${res.status}`)
+  if (!res.ok) throw new Error(await blingErrorMessage(res, path))
   return res.json()
 }
 
