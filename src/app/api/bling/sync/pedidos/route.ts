@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { mapBlingOrderStatus } from '@/lib/bling/order-status'
 import { createServiceClient, ORG_ID } from '@/lib/supabase/service'
+import { BLING_API_URL, blingErrorMessage } from '@/lib/bling/api'
 
-const BLING_URL = 'https://www.bling.com.br/Api/v3'
 const DELAY_MS = 400
 
 async function sleep(ms: number) {
@@ -22,10 +22,10 @@ export async function POST() {
 
   async function blingGet(path: string) {
     await sleep(DELAY_MS)
-    const res = await fetch(`${BLING_URL}${path}`, {
+    const res = await fetch(`${BLING_API_URL}${path}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    if (!res.ok) throw new Error(`Bling ${res.status}: ${path}`)
+    if (!res.ok) throw new Error(await blingErrorMessage(res, path))
     return res.json()
   }
 

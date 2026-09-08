@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { BLING_API_URL } from '@/lib/bling/api'
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
 
     // Testar listagem de pedidos
     const dataInicio = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const url = `https://www.bling.com.br/Api/v3/pedidos/vendas?pagina=1&limite=5&dataInicial=${dataInicio}`
+    const url = `${BLING_API_URL}/pedidos/vendas?pagina=1&limite=5&dataInicial=${dataInicio}`
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
@@ -32,7 +33,7 @@ export async function GET() {
     let detalhe = null
     if (json?.data?.[0]?.id) {
       const res2 = await fetch(
-        `https://www.bling.com.br/Api/v3/pedidos/vendas/${json.data[0].id}`,
+        `${BLING_API_URL}/pedidos/vendas/${json.data[0].id}`,
         { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
       )
       detalhe = await res2.json()
