@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0, urnasVendidas: 0 })
   const [prevMetrics, setPrevMetrics] = useState<PrevMetrics | null>(null)
   const [custoFixoTotal, setCustoFixoTotal] = useState(CUSTO_FIXO_PADRAO)
+  const [mesesSemCusto, setMesesSemCusto] = useState<number[]>([])
   const [chartData, setChartData] = useState<{ dia: string; custoFixo: number; margem: number | null; lucro: number | null }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
   const [isSingleMonth, setIsSingleMonth] = useState(true)
@@ -212,9 +213,11 @@ export default function DashboardPage() {
 
       // Custo fixo por mês
       const cfPorMes = new Map<number, number>()
+      const semCusto: number[] = []
       let totalCF = 0
       meses.forEach((m, i) => {
         const op = (opResults[i] as any)?.data as any
+        if (!op) semCusto.push(m)
         const cf = op
           ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest, op.discount_boletos]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
@@ -223,6 +226,7 @@ export default function DashboardPage() {
         totalCF += cf
       })
       setCustoFixoTotal(totalCF)
+      setMesesSemCusto(semCusto)
 
       // Métricas agregadas
       const valorVendas = orders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
@@ -537,6 +541,12 @@ export default function DashboardPage() {
               {!isSingleMonth && (
                 <p style={{ fontSize: '11px', color: '#6B7280', marginTop: 2 }}>
                   Custo fixo acumulado: {fmt(custoFixoTotal)} ({sortedMonths.length}× {fmt(custoFixoTotal / sortedMonths.length)})
+                </p>
+              )}
+              {mesesSemCusto.length > 0 && (
+                <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
+                  ⚠ Sem custos cadastrados em {mesesSemCusto.map(m => MESES_PT[m - 1]).join(', ')} — usando {fmt(CUSTO_FIXO_PADRAO)} como estimativa.{' '}
+                  <a href="/custos-operacionais" style={{ textDecoration: 'underline' }}>Cadastrar</a>
                 </p>
               )}
               {peAtingido ? (
