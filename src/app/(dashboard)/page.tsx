@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState({ valorVendas: 0, margemAcum: 0, lucroReal: 0, pedidosMes: 0, urnasVendidas: 0 })
   const [prevMetrics, setPrevMetrics] = useState<PrevMetrics | null>(null)
   const [custoFixoTotal, setCustoFixoTotal] = useState(CUSTO_FIXO_PADRAO)
+  const [mesesSemCusto, setMesesSemCusto] = useState<number[]>([])
   const [chartData, setChartData] = useState<{ dia: string; custoFixo: number; margem: number | null; lucro: number | null }[]>([])
   const [topClientes, setTopClientes] = useState<any[]>([])
   const [isSingleMonth, setIsSingleMonth] = useState(true)
@@ -181,8 +182,8 @@ export default function DashboardPage() {
 
       // Queries em paralelo
       const opPromises = meses.map(m =>
-        supabase.from('operational_costs')
-          .select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest')
+        supabase.schema('crm').from('operational_costs')
+          .select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest,discount_boletos')
           .eq('year', selectedYear).eq('month', m).single()
       )
 
@@ -212,17 +213,20 @@ export default function DashboardPage() {
 
       // Custo fixo por mês
       const cfPorMes = new Map<number, number>()
+      const semCusto: number[] = []
       let totalCF = 0
       meses.forEach((m, i) => {
         const op = (opResults[i] as any)?.data as any
+        if (!op) semCusto.push(m)
         const cf = op
-          ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest]
+          ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest, op.discount_boletos]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
         cfPorMes.set(m, cf)
         totalCF += cf
       })
       setCustoFixoTotal(totalCF)
+      setMesesSemCusto(semCusto)
 
       // Métricas agregadas
       const valorVendas = orders.reduce((s, o) => s + Number(o.total_value ?? 0), 0)
@@ -299,12 +303,12 @@ export default function DashboardPage() {
         const [{ data: prevOrders }, { data: prevLoads }, prevOpRes] = await Promise.all([
           supabase.from('crm_orders').select('id,total_value,units_count,status,tax_amount,cost_mp').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('freight_loads').select('total_freight_cost,total_freight_charged').gte('estimated_departure', prevStart).lt('estimated_departure', prevEndExclusive),
-          supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
+          supabase.schema('crm').from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest,discount_boletos').eq('year', prevY).eq('month', prevM).single(),
         ])
 
         const prevOp = (prevOpRes as any).data as any
         const prevCF = prevOp
-          ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest]
+          ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest, prevOp.discount_boletos]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
         const previousRevenueOrders = (prevOrders ?? []).filter(o => isRevenueOrderStatus(o.status))
@@ -537,6 +541,12 @@ export default function DashboardPage() {
               {!isSingleMonth && (
                 <p style={{ fontSize: '11px', color: '#6B7280', marginTop: 2 }}>
                   Custo fixo acumulado: {fmt(custoFixoTotal)} ({sortedMonths.length}× {fmt(custoFixoTotal / sortedMonths.length)})
+                </p>
+              )}
+              {mesesSemCusto.length > 0 && (
+                <p className="text-[12px] mt-1" style={{ color: '#B45309' }}>
+                  ⚠ Sem custos cadastrados em {mesesSemCusto.map(m => MESES_PT[m - 1]).join(', ')} — usando {fmt(CUSTO_FIXO_PADRAO)} como estimativa.{' '}
+                  <a href="/custos-operacionais" style={{ textDecoration: 'underline' }}>Cadastrar</a>
                 </p>
               )}
               {peAtingido ? (

@@ -270,7 +270,7 @@ export async function syncPedidos() {
 
         // Custo operacional
         const orderedAt = detail?.data ? new Date(detail.data) : new Date()
-        const { data: opCost } = await supabase.from('operational_costs')
+        const { data: opCost } = await supabase.schema('crm').from('operational_costs')
           .select('*').eq('org_id', ORG_ID)
           .eq('year', orderedAt.getFullYear())
           .eq('month', orderedAt.getMonth() + 1)

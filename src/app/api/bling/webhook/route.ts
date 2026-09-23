@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       const month = orderedAt.getMonth() + 1
 
       const { data: opCost } = await supabase
-        .from('operational_costs')
+        .schema('crm').from('operational_costs')
         .select('*')
         .eq('org_id', ORG_ID)
         .eq('year', year)
