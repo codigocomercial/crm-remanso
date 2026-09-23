@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     const taxRate = Number(org?.tax_rate ?? 4.5) / 100
 
     // Buscar custos operacionais
-    const { data: opCosts } = await supabase.from('operational_costs').select('year, month, cost_per_unit').eq('org_id', ORG_ID)
+    const { data: opCosts } = await supabase.schema('crm').from('operational_costs').select('year, month, cost_per_unit').eq('org_id', ORG_ID)
     const opCostMap = new Map((opCosts ?? []).map((c: any) => [`${c.year}-${c.month}`, Number(c.cost_per_unit ?? 0)]))
 
     // Buscar produtos para custo MP

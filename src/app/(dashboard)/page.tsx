@@ -181,8 +181,8 @@ export default function DashboardPage() {
 
       // Queries em paralelo
       const opPromises = meses.map(m =>
-        supabase.from('operational_costs')
-          .select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest')
+        supabase.schema('crm').from('operational_costs')
+          .select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest,discount_boletos')
           .eq('year', selectedYear).eq('month', m).single()
       )
 
@@ -216,7 +216,7 @@ export default function DashboardPage() {
       meses.forEach((m, i) => {
         const op = (opResults[i] as any)?.data as any
         const cf = op
-          ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest]
+          ? [op.labor, op.admin, op.truck, op.maintenance, op.misc, op.icms, op.freight_purchase, op.interest, op.discount_boletos]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
         cfPorMes.set(m, cf)
@@ -299,12 +299,12 @@ export default function DashboardPage() {
         const [{ data: prevOrders }, { data: prevLoads }, prevOpRes] = await Promise.all([
           supabase.from('crm_orders').select('id,total_value,units_count,status,tax_amount,cost_mp').gte('ordered_at', prevStart).lt('ordered_at', prevEndExclusive),
           supabase.from('freight_loads').select('total_freight_cost,total_freight_charged').gte('estimated_departure', prevStart).lt('estimated_departure', prevEndExclusive),
-          supabase.from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest').eq('year', prevY).eq('month', prevM).single(),
+          supabase.schema('crm').from('operational_costs').select('labor,admin,truck,maintenance,misc,icms,freight_purchase,interest,discount_boletos').eq('year', prevY).eq('month', prevM).single(),
         ])
 
         const prevOp = (prevOpRes as any).data as any
         const prevCF = prevOp
-          ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest]
+          ? [prevOp.labor, prevOp.admin, prevOp.truck, prevOp.maintenance, prevOp.misc, prevOp.icms, prevOp.freight_purchase, prevOp.interest, prevOp.discount_boletos]
               .reduce((s: number, v: any) => s + Number(v ?? 0), 0)
           : CUSTO_FIXO_PADRAO
         const previousRevenueOrders = (prevOrders ?? []).filter(o => isRevenueOrderStatus(o.status))
